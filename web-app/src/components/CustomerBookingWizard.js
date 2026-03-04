@@ -90,8 +90,6 @@ export default function CustomerBookingWizard({ customerId, onBack }) {
         }
     };
 
-    const timeSlots = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
-
     const changeMonth = (increment) => {
         const newDate = new Date(currentMonth);
         newDate.setMonth(newDate.getMonth() + increment);
@@ -276,7 +274,7 @@ export default function CustomerBookingWizard({ customerId, onBack }) {
                 </div>
                 <div style={{display: 'flex', gap: '10px', fontSize: '0.9rem', color: '#6b7280'}}>
                     <span style={{color: step >= 1 ? '#daa520' : 'inherit', fontWeight: step >= 1 ? 'bold' : 'normal'}}>Artist</span>/
-                    <span style={{color: step >= 2 ? '#daa520' : 'inherit', fontWeight: step >= 2 ? 'bold' : 'normal'}}>Time</span>/
+                    <span style={{color: step >= 2 ? '#daa520' : 'inherit', fontWeight: step >= 2 ? 'bold' : 'normal'}}>Date</span>/
                     <span style={{color: step >= 3 ? '#daa520' : 'inherit', fontWeight: step >= 3 ? 'bold' : 'normal'}}>Details</span>
                 </div>
             </div>
