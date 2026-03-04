@@ -343,7 +343,7 @@ function AdminStaff() {
         <div className="admin-page-with-sidenav">
           {isManagerView ? <ManagerSideNav /> : <AdminSideNav />}
             <div className="admin-page page-container-enter">
-            <header className="admin-header">
+            <header className="admin-header" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb', boxShadow: 'none' }}>
                 <div>
                     <h1>Staff Management</h1>
                     <p>Manage profiles, schedules, and performance</p>
@@ -389,7 +389,9 @@ function AdminStaff() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredStaff.length > 0 ? (
+                            {loading ? (
+                                <tr><td colSpan="5" className="no-data" style={{textAlign: 'center', padding: '2rem'}}>Loading staff...</td></tr>
+                            ) : filteredStaff.length > 0 ? (
                                 filteredStaff.map((member) => (
                                     <tr key={member.id}>
                                         <td><strong>{member.name}</strong></td>

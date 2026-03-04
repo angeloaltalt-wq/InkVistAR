@@ -106,7 +106,7 @@ function AdminSettings() {
         <div className="admin-page-with-sidenav">
             <AdminSideNav />
             <div className="admin-page page-container-enter">
-            <header className="admin-header">
+            <header className="admin-header" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb', boxShadow: 'none' }}>
                 <div>
                     <h1>System Settings</h1>
                     <p>Configure your studio and system settings</p>

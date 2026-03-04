@@ -201,7 +201,7 @@ function AdminUsers() {
         <div className="admin-page-with-sidenav">
             {isManagerView ? <ManagerSideNav /> : <AdminSideNav />}
             <div className="admin-page page-container-enter">
-            <header className="admin-header">
+            <header className="admin-header" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb', boxShadow: 'none' }}>
                 <div>
                     <h1>User Management</h1>
                     <p>Manage system users and permissions</p>
@@ -280,9 +280,6 @@ function AdminUsers() {
                 </div>
             </div>
 
-            {loading ? (
-                <div className="no-data" style={{ padding: '4rem' }}>Loading users...</div>
-            ) : (
                 <div className="table-card">
                     <div className="table-responsive">
                         <table className="data-table">
@@ -298,7 +295,9 @@ function AdminUsers() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredUsers.length > 0 ? (
+                                {loading ? (
+                                    <tr><td colSpan="7" className="no-data" style={{textAlign: 'center', padding: '2rem'}}>Loading users...</td></tr>
+                                ) : filteredUsers.length > 0 ? (
                                     filteredUsers.map((user) => (
                                         <tr key={user.id}>
                                             <td>#{user.id}</td>
@@ -341,7 +340,6 @@ function AdminUsers() {
                         </table>
                     </div>
                 </div>
-            )}
 
             {/* Modal */}
             {userModal.mounted && (

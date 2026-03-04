@@ -99,7 +99,7 @@ function AdminBilling() {
         <div className="admin-page-with-sidenav">
             <AdminSideNav />
             <div className="admin-page page-container-enter">
-                <header className="admin-header">
+                <header className="admin-header" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb', boxShadow: 'none' }}>
                     <div>
                         <h1>Billing & Payments</h1>
                         <p>Manage invoices, deposits, and financial configuration</p>
@@ -114,8 +114,7 @@ function AdminBilling() {
                     </div>
                 </header>
 
-                {loading ? <div className="no-data">Loading billing data...</div> : (
-                    activeTab === 'invoices' ? (
+                {activeTab === 'invoices' ? (
                         <>
                         <div className="stats-row">
                             <div className="stat-item">
@@ -153,7 +152,9 @@ function AdminBilling() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {invoices.map(inv => (
+                                        {loading ? (
+                                            <tr><td colSpan="7" className="no-data" style={{textAlign: 'center', padding: '2rem'}}>Loading invoices...</td></tr>
+                                        ) : invoices.map(inv => (
                                             <tr key={inv.id}>
                                                 <td>INV-{inv.id}</td>
                                                 <td>{inv.client_name}</td>
@@ -176,7 +177,7 @@ function AdminBilling() {
                             </div>
                         </div>
                     </>
-                ) : (
+                ) : !loading && (
                     <div className="settings-container" style={{display: 'block', margin: '2rem'}}>
                         <div className="settings-panel">
                             <h2>General Pricing Rules</h2>
@@ -240,7 +241,7 @@ function AdminBilling() {
                         
                         <button className="btn btn-primary" style={{marginTop: '2rem'}} onClick={saveConfig}>Save Configuration</button>
                     </div>
-                ))}
+                )}
 
                 {/* Create Invoice Modal */}
                 {invoiceModal.mounted && (

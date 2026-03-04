@@ -60,29 +60,11 @@ function AdminAnalytics() {
         document.body.removeChild(link);
     };
 
-    if (loading) {
-        return (
-            <div className="admin-page-with-sidenav">
-                <AdminSideNav />
-                <div className="admin-page page-container-enter"><div className="no-data">Loading analytics...</div></div>
-            </div>
-        );
-    }
-
-    if (!analytics) {
-        return (
-            <div className="admin-page-with-sidenav">
-                <AdminSideNav />
-                <div className="admin-page page-container-enter"><div className="no-data">No analytics data available.</div></div>
-            </div>
-        );
-    }
-
     return (
         <div className="admin-page-with-sidenav">
                <AdminSideNav />
             <div className="admin-page page-container-enter">
-            <header className="admin-header">
+            <header className="admin-header" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb', boxShadow: 'none' }}>
                 <div>
                     <h1>Analytics & Reports</h1>
                     <p>Business performance insights and statistics</p>
@@ -105,6 +87,12 @@ function AdminAnalytics() {
                 </div>
             </header>
 
+            {loading ? (
+                <div className="no-data" style={{padding: '4rem'}}>Loading analytics...</div>
+            ) : !analytics ? (
+                <div className="no-data" style={{padding: '4rem'}}>No analytics data available.</div>
+            ) : (
+            <>
             {/* Key Metrics */}
             <div className="metrics-section">
                 <div className="metric-card primary">
@@ -294,6 +282,8 @@ function AdminAnalytics() {
                     </div>
                 </div>
             </div>
+            </>
+            )}
             </div>
         </div>
     );

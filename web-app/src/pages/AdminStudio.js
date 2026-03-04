@@ -122,7 +122,7 @@ function AdminStudio() {
         <div className="admin-page-with-sidenav">
             <AdminSideNav />
             <div className="admin-page page-container-enter">
-                <header className="admin-header">
+                <header className="admin-header" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb', boxShadow: 'none' }}>
                     <div>
                         <h1>Studio & Branch Management</h1>
                         <p>Manage studio locations and operating status</p>
@@ -149,7 +149,6 @@ function AdminStudio() {
                 </div>
 
                 <div className="portal-content">
-                    {loading ? <div className="no-data">Loading branches...</div> : (
                         <div className="table-card">
                             <div className="table-responsive">
                                 <table className="data-table">
@@ -164,7 +163,9 @@ function AdminStudio() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {branches && branches.length > 0 ? branches.map((branch) => {
+                                        {loading ? (
+                                            <tr><td colSpan="6" className="no-data" style={{textAlign: 'center', padding: '2rem'}}>Loading branches...</td></tr>
+                                        ) : branches && branches.length > 0 ? branches.map((branch) => {
                                             if (!branch) return null;
                                             const capacity = Number(branch.capacity) || 1;
                                             const occupancy = Number(branch.current_occupancy) || 0;
@@ -209,7 +210,6 @@ function AdminStudio() {
                                 </table>
                             </div>
                         </div>
-                    )}
                 </div>
 
                 {/* Add/Edit Modal */}

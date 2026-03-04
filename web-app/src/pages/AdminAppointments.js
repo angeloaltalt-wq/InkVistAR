@@ -23,6 +23,7 @@ function AdminAppointments() {
     const [dateFilter, setDateFilter] = useState('');
     const [sortBy, setSortBy] = useState('date');
     const [selectedAppointment, setSelectedAppointment] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [appointmentModal, setAppointmentModal] = useState({ mounted: false, visible: false });
     const [formData, setFormData] = useState({
         clientId: '',
@@ -66,6 +67,7 @@ function AdminAppointments() {
 
     const fetchAppointments = async () => {
         try {
+            setLoading(true);
             const response = await Axios.get(`${API_URL}/api/admin/appointments`);
             if (response.data.success) {
                 const mappedAppointments = response.data.data.map(apt => ({
@@ -83,8 +85,10 @@ function AdminAppointments() {
                 setAppointments(mappedAppointments);
                 setFilteredAppointments(mappedAppointments);
             }
+            setLoading(false);
         } catch (error) {
             console.error("Error fetching appointments:", error);
+            setLoading(false);
         }
     };
 
@@ -238,7 +242,7 @@ function AdminAppointments() {
         <div className="admin-page-with-sidenav">
           {isManagerView ? <ManagerSideNav /> : <AdminSideNav />}
             <div className="admin-page page-container-enter">
-            <header className="admin-header">
+            <header className="admin-header" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb', boxShadow: 'none' }}>
                 <div>
                     <h1>Appointment Management</h1>
                     <p>Manage all appointments and bookings</p>
@@ -398,7 +402,9 @@ function AdminAppointments() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredAppointments.length > 0 ? (
+                                    {loading ? (
+                                        <tr><td colSpan="8" className="no-data" style={{textAlign: 'center', padding: '2rem'}}>Loading appointments...</td></tr>
+                                    ) : filteredAppointments.length > 0 ? (
                                         filteredAppointments.map((appointment) => (
                                             <tr key={appointment.id}>
                                                 <td>#{appointment.id}</td>

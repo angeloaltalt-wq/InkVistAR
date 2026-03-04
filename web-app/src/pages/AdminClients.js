@@ -133,7 +133,7 @@ function AdminClients() {
         <div className="admin-page-with-sidenav">
             <AdminSideNav />
             <div className="admin-page page-container-enter">
-                <header className="admin-header">
+                <header className="admin-header" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb', boxShadow: 'none' }}>
                     <div>
                         <h1>Client Management</h1>
                         <p>View client profiles, history, and consent forms</p>
@@ -174,7 +174,9 @@ function AdminClients() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredClients.map(client => (
+                                {loading ? (
+                                    <tr><td colSpan="4" className="no-data" style={{textAlign: 'center', padding: '2rem'}}>Loading clients...</td></tr>
+                                ) : filteredClients.map(client => (
                                     <tr key={client.id}>
                                         <td>#{client.id}</td>
                                         <td><strong>{client.name}</strong></td>

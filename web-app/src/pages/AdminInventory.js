@@ -265,7 +265,7 @@ function AdminInventory() {
         <div className="admin-page-with-sidenav">
             {isManagerView ? <ManagerSideNav /> : <AdminSideNav />}
             <div className="admin-page page-container-enter">
-            <header className="admin-header">
+            <header className="admin-header" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb', boxShadow: 'none' }}>
                 <div>
                     <h1>Inventory Management</h1>
                     <p>Manage inventory and supplies</p>
@@ -360,7 +360,6 @@ function AdminInventory() {
                 </div>
             </div>
 
-            {loading ? <div className="no-data">Loading inventory...</div> : (
             <div className="table-card">
                 <div className="table-responsive">
                     <table className="data-table">
@@ -378,7 +377,9 @@ function AdminInventory() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredInventory.length > 0 ? (
+                            {loading ? (
+                                <tr><td colSpan="9" className="no-data" style={{textAlign: 'center', padding: '2rem'}}>Loading inventory...</td></tr>
+                            ) : filteredInventory.length > 0 ? (
                                 filteredInventory.map((item) => (
                                     <tr key={item.id} className={`status-${getStockStatus(item.currentStock, item.minStock, item.maxStock)}`}>
                                         <td><strong>{item.name}</strong></td>
@@ -431,7 +432,6 @@ function AdminInventory() {
                     </table>
                 </div>
             </div>
-            )}
 
             {/* Add/Edit Modal */}
             {addEditModal.mounted && (
