@@ -60,7 +60,7 @@ export default function CustomerBookingWizard({ customerId, onBack }) {
     };
 
     const handleSubmit = async () => {
-        if (!formData.artist || !formData.date || !formData.time || !formData.designTitle) {
+        if (!formData.artist || !formData.date || !formData.designTitle) {
             alert('Please fill in all required fields.');
             return;
         }
@@ -71,8 +71,8 @@ export default function CustomerBookingWizard({ customerId, onBack }) {
                 customerId: customerId,
                 artistId: formData.artist.id,
                 date: formData.date,
-                startTime: formData.time,
-                endTime: formData.time,
+                startTime: formData.time || '13:00',
+                endTime: formData.time || '13:00',
                 designTitle: formData.designTitle,
                 notes: formData.notes
             });
@@ -106,6 +106,8 @@ export default function CustomerBookingWizard({ customerId, onBack }) {
         const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         
         const days = [];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
         
         // Empty slots
         for (let i = 0; i < firstDay; i++) {
@@ -115,8 +117,9 @@ export default function CustomerBookingWizard({ customerId, onBack }) {
         // Days
         for (let i = 1; i <= daysInMonth; i++) {
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+            const checkDate = new Date(year, month, i);
             const isSelected = formData.date === dateStr;
-            const isPast = new Date(dateStr) < new Date(new Date().setHours(0,0,0,0));
+            const isPast = checkDate <= today;
             
             const dateData = bookedDates[dateStr] || { count: 0 };
             const isFull = dateData.count >= 3; 
@@ -207,26 +210,11 @@ export default function CustomerBookingWizard({ customerId, onBack }) {
 
     const renderStep2 = () => (
         <div>
-            <h3 style={{marginBottom: '20px'}}>2. Date & Time</h3>
-            <div style={{display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '30px'}}>
+            <h3 style={{marginBottom: '20px'}}>2. Select Date</h3>
+            <div style={{display: 'block'}}>
                 <div>
                     <label style={{display: 'block', marginBottom: '10px', fontWeight: '600'}}>Select Date</label>
                     {renderCalendar()}
-                </div>
-                <div>
-                    <label style={{display: 'block', marginBottom: '10px', fontWeight: '600'}}>Select Time</label>
-                    <div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px'}}>
-                        {timeSlots.map((time) => (
-                            <button
-                                key={time}
-                                onClick={() => setFormData({ ...formData, time })}
-                                className={`btn ${formData.time === time ? 'btn-primary' : 'btn-secondary'}`}
-                                style={{padding: '10px', fontSize: '0.9rem'}}
-                            >
-                                {time}
-                            </button>
-                        ))}
-                    </div>
                 </div>
             </div>
         </div>
@@ -300,7 +288,7 @@ export default function CustomerBookingWizard({ customerId, onBack }) {
             <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #e5e7eb'}}>
                 <button onClick={() => setStep(Math.max(1, step - 1))} disabled={step === 1} className="btn btn-secondary" style={{display: 'flex', alignItems: 'center', gap: '5px', opacity: step === 1 ? 0.5 : 1}}><ChevronLeft size={16} /> Back</button>
                 {step < 3 ? (
-                    <button onClick={() => { if (step === 1 && !formData.artist) return alert('Please select an artist'); if (step === 2 && (!formData.date || !formData.time)) return alert('Please select date and time'); setStep(step + 1); }} className="btn btn-primary" style={{display: 'flex', alignItems: 'center', gap: '5px'}}>Next <ChevronRight size={16} /></button>
+                    <button onClick={() => { if (step === 1 && !formData.artist) return alert('Please select an artist'); if (step === 2 && !formData.date) return alert('Please select a date'); setStep(step + 1); }} className="btn btn-primary" style={{display: 'flex', alignItems: 'center', gap: '5px'}}>Next <ChevronRight size={16} /></button>
                 ) : (
                     <button onClick={handleSubmit} disabled={loading} className="btn btn-primary" style={{display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: '#16a34a', borderColor: '#16a34a'}}>{loading ? 'Booking...' : 'Confirm Booking'} <CheckCircle size={16} /></button>
                 )}
