@@ -197,10 +197,6 @@ function AdminUsers() {
         openModal();
     };
 
-    if (loading) {
-        return <div className="admin-page">Loading users...</div>;
-    }
-
     return (
         <div className="admin-page-with-sidenav">
             {isManagerView ? <ManagerSideNav /> : <AdminSideNav />}
@@ -284,64 +280,68 @@ function AdminUsers() {
                 </div>
             </div>
 
-            <div className="table-card">
-                <div className="table-responsive">
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Phone</th>
-                                <th>Role</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredUsers.length > 0 ? (
-                                filteredUsers.map((user) => (
-                                    <tr key={user.id}>
-                                        <td>#{user.id}</td>
-                                        <td>{user.name}</td>
-                                        <td>{user.email}</td>
-                                        <td>{user.phone || '-'}</td>
-                                        <td>
-                                            <span className={`badge role-${user.user_type}`}>
-                                                {user.user_type}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span className={`badge status-${user.is_deleted ? 'inactive' : 'active'}`}>
-                                                {user.is_deleted ? 'Deactivated' : 'Active'}
-                                            </span>
-                                        </td>
-                                        <td className="actions-cell">
-                                            <button className="action-btn edit-btn" onClick={() => handleEdit(user)}>
-                                                Edit
-                                            </button>
-                                            {!user.is_deleted ? (
-                                                <button className="action-btn delete-btn" onClick={() => handleDelete(user.id)}>
-                                                    Deactivate
-                                                </button>
-                                            ) : (
-                                                <>
-                                                    <button className="action-btn view-btn" onClick={() => handleRestore(user.id)} style={{backgroundColor: '#10b981'}}>Restore</button>
-                                                    <button className="action-btn delete-btn" onClick={() => handlePermanentDelete(user.id)} style={{backgroundColor: '#991b1b'}}>Delete</button>
-                                                </>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
+            {loading ? (
+                <div className="no-data" style={{ padding: '4rem' }}>Loading users...</div>
+            ) : (
+                <div className="table-card">
+                    <div className="table-responsive">
+                        <table className="data-table">
+                            <thead>
                                 <tr>
-                                    <td colSpan="7" className="no-data">No users found</td>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
                                 </tr>
-                            )}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {filteredUsers.length > 0 ? (
+                                    filteredUsers.map((user) => (
+                                        <tr key={user.id}>
+                                            <td>#{user.id}</td>
+                                            <td>{user.name}</td>
+                                            <td>{user.email}</td>
+                                            <td>{user.phone || '-'}</td>
+                                            <td>
+                                                <span className={`badge role-${user.user_type}`}>
+                                                    {user.user_type}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span className={`badge status-${user.is_deleted ? 'inactive' : 'active'}`}>
+                                                    {user.is_deleted ? 'Deactivated' : 'Active'}
+                                                </span>
+                                            </td>
+                                            <td className="actions-cell">
+                                                <button className="action-btn edit-btn" onClick={() => handleEdit(user)}>
+                                                    Edit
+                                                </button>
+                                                {!user.is_deleted ? (
+                                                    <button className="action-btn delete-btn" onClick={() => handleDelete(user.id)}>
+                                                        Deactivate
+                                                    </button>
+                                                ) : (
+                                                    <>
+                                                        <button className="action-btn view-btn" onClick={() => handleRestore(user.id)} style={{backgroundColor: '#10b981'}}>Restore</button>
+                                                        <button className="action-btn delete-btn" onClick={() => handlePermanentDelete(user.id)} style={{backgroundColor: '#991b1b'}}>Delete</button>
+                                                    </>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="7" className="no-data">No users found</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Modal */}
             {userModal.mounted && (

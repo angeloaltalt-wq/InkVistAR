@@ -176,10 +176,6 @@ function AdminDashboard() {
     const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
     const displayedLogs = filteredLogs.slice((auditPage - 1) * itemsPerPage, auditPage * itemsPerPage);
 
-    if (loading) {
-        return <div className="dashboard-loading">Loading dashboard...</div>;
-    }
-
     return (
         <div className="admin-page-with-sidenav">
             <AdminSideNav />
@@ -189,256 +185,262 @@ function AdminDashboard() {
                     <button onClick={handleLogout} className="logout-btn">Logout</button>
                 </header>
 
-                <div className="dashboard-content">
-                    {/* Stats Grid */}
-                    <div className="stats-grid">
-                        <div className="stat-card">
-                            <div className="stat-icon users">
-                                <Users className="icon" size={32} />
-                            </div>
-                            <div className="stat-info">
-                                <p className="stat-label">Total Users</p>
-                                <p className="stat-value">{stats.totalUsers}</p>
-                            </div>
-                        </div>
-
-                        <div className="stat-card">
-                            <div className="stat-icon appointments">
-                                <Calendar className="icon" size={32} />
-                            </div>
-                            <div className="stat-info">
-                                <p className="stat-label">Total Appointments</p>
-                                <p className="stat-value">{stats.totalAppointments}</p>
-                            </div>
-                        </div>
-
-                        <div className="stat-card">
-                            <div className="stat-icon revenue">
-                                <DollarSign className="icon" size={32} />
-                            </div>
-                            <div className="stat-info">
-                                <p className="stat-label">Revenue (Month)</p>
-                                <p className="stat-value">₱{revenueData.monthly.toLocaleString()}</p>
-                                <small style={{ color: '#10b981', fontSize: '0.8rem' }}>
-                                    +₱{revenueData.daily.toLocaleString()} today
-                                </small>
-                            </div>
-                        </div>
-
-                        <div className="stat-card">
-                            <div className="stat-icon artists">
-                                <Palette className="icon" size={32} />
-                            </div>
-                            <div className="stat-info">
-                                <p className="stat-label">Active Artists</p>
-                                <p className="stat-value">{stats.activeArtists}</p>
-                            </div>
-                        </div>
+                {loading ? (
+                    <div className="dashboard-loading" style={{ height: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', color: '#6b7280' }}>
+                        Loading dashboard...
                     </div>
-
-                    <div className="dashboard-grid-row">
-                        {/* Weekly Activity Chart */}
-                        <div className="data-card chart-card">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
-                                <BarChart3 size={20} />
-                                <h2 style={{ margin: 0 }}>Weekly Appointments</h2>
+                ) : (
+                    <div className="dashboard-content">
+                        {/* Stats Grid */}
+                        <div className="stats-grid">
+                            <div className="stat-card">
+                                <div className="stat-icon users">
+                                    <Users className="icon" size={32} />
+                                </div>
+                                <div className="stat-info">
+                                    <p className="stat-label">Total Users</p>
+                                    <p className="stat-value">{stats.totalUsers}</p>
+                                </div>
                             </div>
-                            <div className="chart-container">
-                                {chartData.map((item, index) => (
-                                    <div key={index} className="chart-bar-group">
-                                        <div className="chart-bar-wrapper">
-                                            <div 
-                                                className="chart-bar" 
-                                                style={{ height: `${Math.min(item.count * 15, 100)}%` }}
-                                                title={`${item.count} appointments`}
-                                            ></div>
+
+                            <div className="stat-card">
+                                <div className="stat-icon appointments">
+                                    <Calendar className="icon" size={32} />
+                                </div>
+                                <div className="stat-info">
+                                    <p className="stat-label">Total Appointments</p>
+                                    <p className="stat-value">{stats.totalAppointments}</p>
+                                </div>
+                            </div>
+
+                            <div className="stat-card">
+                                <div className="stat-icon revenue">
+                                    <DollarSign className="icon" size={32} />
+                                </div>
+                                <div className="stat-info">
+                                    <p className="stat-label">Revenue (Month)</p>
+                                    <p className="stat-value">₱{revenueData.monthly.toLocaleString()}</p>
+                                    <small style={{ color: '#10b981', fontSize: '0.8rem' }}>
+                                        +₱{revenueData.daily.toLocaleString()} today
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div className="stat-card">
+                                <div className="stat-icon artists">
+                                    <Palette className="icon" size={32} />
+                                </div>
+                                <div className="stat-info">
+                                    <p className="stat-label">Active Artists</p>
+                                    <p className="stat-value">{stats.activeArtists}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="dashboard-grid-row">
+                            {/* Weekly Activity Chart */}
+                            <div className="data-card chart-card">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
+                                    <BarChart3 size={20} />
+                                    <h2 style={{ margin: 0 }}>Weekly Appointments</h2>
+                                </div>
+                                <div className="chart-container">
+                                    {chartData.map((item, index) => (
+                                        <div key={index} className="chart-bar-group">
+                                            <div className="chart-bar-wrapper">
+                                                <div 
+                                                    className="chart-bar" 
+                                                    style={{ height: `${Math.min(item.count * 15, 100)}%` }}
+                                                    title={`${item.count} appointments`}
+                                                ></div>
+                                            </div>
+                                            <span className="chart-label">{item.day}</span>
                                         </div>
-                                        <span className="chart-label">{item.day}</span>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Artist Availability */}
+                            <div className="data-card">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
+                                    <Palette size={20} />
+                                    <h2 style={{ margin: 0 }}>Artist Status (Today)</h2>
+                                </div>
+                                <div className="artist-status-list">
+                                    {artistStatus.length > 0 ? artistStatus.map(artist => (
+                                        <div key={artist.id} className="artist-status-item">
+                                            <span className="artist-name">{artist.name}</span>
+                                            <span className={`status-badge ${artist.status.toLowerCase() === 'available' ? 'completed' : 'scheduled'}`}>
+                                                {artist.status}
+                                            </span>
+                                        </div>
+                                    )) : <p className="no-data">No artists found</p>}
+                                </div>
                             </div>
                         </div>
 
-                        {/* Artist Availability */}
-                        <div className="data-card">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
-                                <Palette size={20} />
-                                <h2 style={{ margin: 0 }}>Artist Status (Today)</h2>
+                        <div className="dashboard-grid-row">
+                            {/* Today's Appointments */}
+                            <div className="data-card">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
+                                    <Clock size={20} />
+                                    <h2 style={{ margin: 0 }}>Today's Schedule</h2>
+                                </div>
+                                <div className="table-responsive">
+                                    {todaysAppointments.length > 0 ? (
+                                        <table className="admin-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Time</th>
+                                                    <th>Client</th>
+                                                    <th>Artist</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {todaysAppointments.map(apt => (
+                                                    <tr key={apt.id}>
+                                                        <td>{apt.start_time}</td>
+                                                        <td>{apt.client_name || 'Unknown'}</td>
+                                                        <td>{apt.artist_name}</td>
+                                                        <td><span className={`status-badge ${apt.status}`}>{apt.status}</span></td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    ) : <p className="no-data">No appointments for today.</p>}
+                                </div>
                             </div>
-                            <div className="artist-status-list">
-                                {artistStatus.length > 0 ? artistStatus.map(artist => (
-                                    <div key={artist.id} className="artist-status-item">
-                                        <span className="artist-name">{artist.name}</span>
-                                        <span className={`status-badge ${artist.status.toLowerCase() === 'available' ? 'completed' : 'scheduled'}`}>
-                                            {artist.status}
-                                        </span>
-                                    </div>
-                                )) : <p className="no-data">No artists found</p>}
+
+                            {/* Alerts Section */}
+                            <div className="data-card">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
+                                    <Bell size={20} />
+                                    <h2 style={{ margin: 0 }}>System Alerts</h2>
+                                </div>
+                                <div className="alerts-list">
+                                    {alerts.map(alert => (
+                                        <div key={alert.id} className={`alert-item ${alert.severity}`}>
+                                            <AlertTriangle size={16} />
+                                            <span>{alert.message}</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div className="dashboard-grid-row">
-                        {/* Today's Appointments */}
+                        {/* Appointments Overview */}
                         <div className="data-card">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
-                                <Clock size={20} />
-                                <h2 style={{ margin: 0 }}>Today's Schedule</h2>
+                            <h2>Appointments Overview</h2>
+                            <div className="table-responsive">
+                                <table className="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Client Name</th>
+                                            <th>Artist</th>
+                                            <th>Date</th>
+                                            <th>Time</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {appointments.map((appointment) => (
+                                            <tr key={appointment.id}>
+                                                <td>{appointment.client_name}</td>
+                                                <td>{appointment.artist_name}</td>
+                                                <td>{new Date(appointment.appointment_date).toLocaleDateString()}</td>
+                                                <td>{appointment.start_time}</td>
+                                                <td>
+                                                    <span className={`status-badge ${appointment.status.toLowerCase()}`}>
+                                                        {appointment.status}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    {appointment.status === 'pending' && (
+                                                        <>
+                                                            <button className="action-btn view" style={{backgroundColor: '#10b981'}} onClick={() => handleStatusUpdate(appointment.id, 'confirmed')}>Approve</button>
+                                                            <button className="action-btn delete-btn" onClick={() => handleStatusUpdate(appointment.id, 'cancelled')}>Reject</button>
+                                                        </>
+                                                    )}
+                                                    <button className="action-btn view">Details</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* System Audit Logs */}
+                        <div className="data-card">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <FileText size={20} />
+                                    <h2 style={{ margin: 0 }}>System Audit Logs</h2>
+                                </div>
+                                <div style={{ position: 'relative', maxWidth: '200px' }}>
+                                    <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Search logs..." 
+                                        value={auditSearch}
+                                        onChange={(e) => { setAuditSearch(e.target.value); setAuditPage(1); }}
+                                        style={{ width: '100%', padding: '6px 10px 6px 30px', borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '0.9rem' }}
+                                    />
+                                </div>
                             </div>
                             <div className="table-responsive">
-                                {todaysAppointments.length > 0 ? (
-                                    <table className="admin-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Time</th>
-                                                <th>Client</th>
-                                                <th>Artist</th>
-                                                <th>Status</th>
+                                <table className="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>User</th>
+                                            <th>Action</th>
+                                            <th>Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {displayedLogs.length > 0 ? displayedLogs.map((log) => (
+                                            <tr key={log.id}>
+                                                <td>{new Date(log.created_at).toLocaleString()}</td>
+                                                <td>
+                                                    <div style={{fontWeight: '500'}}>{log.user_name || 'System'}</div>
+                                                    <div style={{fontSize: '0.8rem', color: '#64748b'}}>{log.user_email}</div>
+                                                </td>
+                                                <td><span className="status-badge scheduled" style={{fontSize: '0.75rem'}}>{log.action}</span></td>
+                                                <td>
+                                                    <div>{log.details}</div>
+                                                    {log.ip_address && <div style={{fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px'}}>IP: {log.ip_address}</div>}
+                                                </td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            {todaysAppointments.map(apt => (
-                                                <tr key={apt.id}>
-                                                    <td>{apt.start_time}</td>
-                                                    <td>{apt.client_name || 'Unknown'}</td>
-                                                    <td>{apt.artist_name}</td>
-                                                    <td><span className={`status-badge ${apt.status}`}>{apt.status}</span></td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                ) : <p className="no-data">No appointments for today.</p>}
+                                        )) : (
+                                            <tr><td colSpan="4" className="no-data" style={{textAlign: 'center', padding: '1rem'}}>No logs found</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
-                        </div>
-
-                        {/* Alerts Section */}
-                        <div className="data-card">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
-                                <Bell size={20} />
-                                <h2 style={{ margin: 0 }}>System Alerts</h2>
-                            </div>
-                            <div className="alerts-list">
-                                {alerts.map(alert => (
-                                    <div key={alert.id} className={`alert-item ${alert.severity}`}>
-                                        <AlertTriangle size={16} />
-                                        <span>{alert.message}</span>
-                                    </div>
-                                ))}
-                            </div>
+                            
+                            {totalPages > 1 && (
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '1rem', gap: '10px' }}>
+                                    <button 
+                                        className="btn btn-secondary" 
+                                        disabled={auditPage === 1}
+                                        onClick={() => setAuditPage(p => p - 1)}
+                                        style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+                                    ><ChevronLeft size={16} /></button>
+                                    <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Page {auditPage} of {totalPages}</span>
+                                    <button 
+                                        className="btn btn-secondary" 
+                                        disabled={auditPage === totalPages}
+                                        onClick={() => setAuditPage(p => p + 1)}
+                                        style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+                                    ><ChevronRight size={16} /></button>
+                                </div>
+                            )}
                         </div>
                     </div>
-
-                    {/* Appointments Overview */}
-                    <div className="data-card">
-                        <h2>Appointments Overview</h2>
-                        <div className="table-responsive">
-                            <table className="admin-table">
-                                <thead>
-                                    <tr>
-                                        <th>Client Name</th>
-                                        <th>Artist</th>
-                                        <th>Date</th>
-                                        <th>Time</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {appointments.map((appointment) => (
-                                        <tr key={appointment.id}>
-                                            <td>{appointment.client_name}</td>
-                                            <td>{appointment.artist_name}</td>
-                                            <td>{new Date(appointment.appointment_date).toLocaleDateString()}</td>
-                                            <td>{appointment.start_time}</td>
-                                            <td>
-                                                <span className={`status-badge ${appointment.status.toLowerCase()}`}>
-                                                    {appointment.status}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                {appointment.status === 'pending' && (
-                                                    <>
-                                                        <button className="action-btn view" style={{backgroundColor: '#10b981'}} onClick={() => handleStatusUpdate(appointment.id, 'confirmed')}>Approve</button>
-                                                        <button className="action-btn delete-btn" onClick={() => handleStatusUpdate(appointment.id, 'cancelled')}>Reject</button>
-                                                    </>
-                                                )}
-                                                <button className="action-btn view">Details</button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {/* System Audit Logs */}
-                    <div className="data-card">
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <FileText size={20} />
-                                <h2 style={{ margin: 0 }}>System Audit Logs</h2>
-                            </div>
-                            <div style={{ position: 'relative', maxWidth: '200px' }}>
-                                <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
-                                <input 
-                                    type="text" 
-                                    placeholder="Search logs..." 
-                                    value={auditSearch}
-                                    onChange={(e) => { setAuditSearch(e.target.value); setAuditPage(1); }}
-                                    style={{ width: '100%', padding: '6px 10px 6px 30px', borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '0.9rem' }}
-                                />
-                            </div>
-                        </div>
-                        <div className="table-responsive">
-                            <table className="admin-table">
-                                <thead>
-                                    <tr>
-                                        <th>Time</th>
-                                        <th>User</th>
-                                        <th>Action</th>
-                                        <th>Details</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {displayedLogs.length > 0 ? displayedLogs.map((log) => (
-                                        <tr key={log.id}>
-                                            <td>{new Date(log.created_at).toLocaleString()}</td>
-                                            <td>
-                                                <div style={{fontWeight: '500'}}>{log.user_name || 'System'}</div>
-                                                <div style={{fontSize: '0.8rem', color: '#64748b'}}>{log.user_email}</div>
-                                            </td>
-                                            <td><span className="status-badge scheduled" style={{fontSize: '0.75rem'}}>{log.action}</span></td>
-                                            <td>
-                                                <div>{log.details}</div>
-                                                {log.ip_address && <div style={{fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px'}}>IP: {log.ip_address}</div>}
-                                            </td>
-                                        </tr>
-                                    )) : (
-                                        <tr><td colSpan="4" className="no-data" style={{textAlign: 'center', padding: '1rem'}}>No logs found</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        {totalPages > 1 && (
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '1rem', gap: '10px' }}>
-                                <button 
-                                    className="btn btn-secondary" 
-                                    disabled={auditPage === 1}
-                                    onClick={() => setAuditPage(p => p - 1)}
-                                    style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}
-                                ><ChevronLeft size={16} /></button>
-                                <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Page {auditPage} of {totalPages}</span>
-                                <button 
-                                    className="btn btn-secondary" 
-                                    disabled={auditPage === totalPages}
-                                    onClick={() => setAuditPage(p => p + 1)}
-                                    style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}
-                                ><ChevronRight size={16} /></button>
-                            </div>
-                        )}
-                    </div>
-                </div>
+                )}
             </div>
         </div>
     );
