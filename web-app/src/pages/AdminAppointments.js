@@ -138,6 +138,17 @@ function AdminAppointments() {
         });
     };
 
+    const handleStatusUpdate = async (id, status) => {
+        if (!window.confirm(`Are you sure you want to ${status} this appointment?`)) return;
+        try {
+            await Axios.put(`${API_URL}/api/appointments/${id}/status`, { status });
+            fetchAppointments();
+        } catch (error) {
+            console.error("Error updating status:", error);
+            alert("Failed to update status");
+        }
+    };
+
     const handleEdit = (appointment) => {
         setSelectedAppointment(appointment);
         setFormData({
@@ -402,6 +413,16 @@ function AdminAppointments() {
                                                     </span>
                                                 </td>
                                                 <td className="actions-cell">
+                                                    {appointment.status === 'pending' && (
+                                                        <>
+                                                            <button className="action-btn view-btn" style={{backgroundColor: '#10b981', marginRight: '5px'}} onClick={() => handleStatusUpdate(appointment.id, 'confirmed')}>
+                                                                Approve
+                                                            </button>
+                                                            <button className="action-btn delete-btn" style={{marginRight: '5px'}} onClick={() => handleStatusUpdate(appointment.id, 'cancelled')}>
+                                                                Reject
+                                                            </button>
+                                                        </>
+                                                    )}
                                                     <button className="action-btn edit-btn" onClick={() => handleEdit(appointment)}>
                                                         Edit
                                                     </button>

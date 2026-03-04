@@ -34,16 +34,6 @@ function ArtistAppointments(){
         }
     };
 
-    const handleStatusUpdate = async (id, status) => {
-        try {
-            await Axios.put(`${API_URL}/api/appointments/${id}/status`, { status });
-            fetch(); // Refresh list
-        } catch (error) {
-            console.error("Error updating status:", error);
-            alert("Failed to update status");
-        }
-    };
-
     const filteredAppointments = appointments.filter(apt => {
         if (activeTab === 'pending') return apt.status === 'pending';
         if (activeTab === 'upcoming') return ['confirmed', 'scheduled'].includes(apt.status);
