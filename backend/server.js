@@ -1590,6 +1590,22 @@ app.post('/api/customer/appointments', (req, res) => {
   console.log('📅 Customer booking request:', req.body);
   const { customerId, artistId, date, startTime, endTime, designTitle, notes, referenceImage } = req.body;
   
+  // Validation for time and date
+  const allowedTimes = ['13:00:00', '14:00:00', '15:00:00', '13:00', '14:00', '15:00'];
+  if (!allowedTimes.includes(startTime)) {
+    return res.status(400).json({ success: false, message: 'Selected time is not available. Please choose between 1 PM - 3 PM.' });
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Set to beginning of today
+  const appointmentDate = new Date(date);
+  appointmentDate.setHours(0, 0, 0, 0); // Also zero out time for comparison
+
+  if (appointmentDate <= today) {
+    return res.status(400).json({ success: false, message: 'Appointments cannot be booked for the same day or past dates.' });
+  }
+  // --- End Validation ---
+  
   // Ensure endTime has a value (default to startTime if missing)
   const finalEndTime = endTime || startTime;
 

@@ -157,7 +157,7 @@ function ArtistAppointments(){
                                     <div className="data-card">
                                         {filteredAppointments.length ? (
                                             <table className="portal-table">
-                                                <thead><tr><th>Client</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th>{activeTab === 'pending' && <th>Actions</th>}</tr></thead>
+                                                <thead><tr><th>Client</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th></tr></thead>
                                                 <tbody>{filteredAppointments.map(a => (
                                                     <tr key={a.id}>
                                                         <td>{a.client_name}</td>
@@ -165,14 +165,6 @@ function ArtistAppointments(){
                                                         <td>{new Date(a.appointment_date).toLocaleDateString()}</td>
                                                         <td>{a.start_time}</td>
                                                         <td><span className={`status-badge ${a.status}`}>{a.status}</span></td>
-                                                        {activeTab === 'pending' && (
-                                                            <td>
-                                                                <div style={{ display: 'flex', gap: '5px' }}>
-                                                                    <button className="action-btn edit-btn" onClick={() => handleStatusUpdate(a.id, 'confirmed')} title="Accept"><Check size={16}/></button>
-                                                                    <button className="action-btn delete-btn" onClick={() => handleStatusUpdate(a.id, 'cancelled')} title="Decline"><X size={16}/></button>
-                                                                </div>
-                                                            </td>
-                                                        )}
                                                     </tr>
                                                 ))}</tbody>
                                             </table>

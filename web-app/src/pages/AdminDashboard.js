@@ -17,7 +17,7 @@ function AdminDashboard() {
     const [todaysAppointments, setTodaysAppointments] = useState([]);
     const [artistStatus, setArtistStatus] = useState([]);
     const [chartData, setChartData] = useState([]);
-    const [recentAppointments, setRecentAppointments] = useState([]);
+    const [appointments, setAppointments] = useState([]);
     const [alerts, setAlerts] = useState([]);
     const [users, setUsers] = useState([]);
     const [auditLogs, setAuditLogs] = useState([]);
@@ -109,15 +109,7 @@ function AdminDashboard() {
                     activeArtists
                 });
 
-                // Recent appointments
-                setRecentAppointments(appointments.slice(0, 5).map((apt) => ({
-                    id: apt.id,
-                    clientName: apt.client_name || 'Unknown',
-                    artist: apt.artist_name || 'Unknown',
-                    date: new Date(apt.date).toLocaleDateString(),
-                    time: apt.time,
-                    status: apt.status
-                })));
+                setAppointments(appointments);
 
                 // Today's Appointments
                 const todayApptsList = appointments.filter(apt => {
@@ -153,6 +145,17 @@ function AdminDashboard() {
         } catch (error) {
             console.error("Error fetching dashboard data:", error);
             setLoading(false);
+        }
+    };
+
+    const handleStatusUpdate = async (id, status) => {
+        if (!window.confirm(`Are you sure you want to ${status} this appointment?`)) return;
+        try {
+            await Axios.put(`${API_URL}/api/appointments/${id}/status`, { status });
+            fetchDashboardData();
+        } catch (error) {
+            alert('Failed to update status.');
+            console.error(error);
         }
     };
 
@@ -325,9 +328,9 @@ function AdminDashboard() {
                         </div>
                     </div>
 
-                    {/* Recent Appointments */}
+                    {/* Appointments Overview */}
                     <div className="data-card">
-                        <h2>Recent Appointments</h2>
+                        <h2>Appointments Overview</h2>
                         <div className="table-responsive">
                             <table className="admin-table">
                                 <thead>
@@ -341,20 +344,25 @@ function AdminDashboard() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {recentAppointments.map((appointment) => (
+                                    {appointments.map((appointment) => (
                                         <tr key={appointment.id}>
-                                            <td>{appointment.clientName}</td>
-                                            <td>{appointment.artist}</td>
-                                            <td>{appointment.date}</td>
-                                            <td>{appointment.time}</td>
+                                            <td>{appointment.client_name}</td>
+                                            <td>{appointment.artist_name}</td>
+                                            <td>{new Date(appointment.appointment_date).toLocaleDateString()}</td>
+                                            <td>{appointment.start_time}</td>
                                             <td>
                                                 <span className={`status-badge ${appointment.status.toLowerCase()}`}>
                                                     {appointment.status}
                                                 </span>
                                             </td>
                                             <td>
-                                                <button className="action-btn view">View</button>
-                                                <button className="action-btn edit">Edit</button>
+                                                {appointment.status === 'pending' && (
+                                                    <>
+                                                        <button className="action-btn view" style={{backgroundColor: '#10b981'}} onClick={() => handleStatusUpdate(appointment.id, 'confirmed')}>Approve</button>
+                                                        <button className="action-btn delete-btn" onClick={() => handleStatusUpdate(appointment.id, 'cancelled')}>Reject</button>
+                                                    </>
+                                                )}
+                                                <button className="action-btn view">Details</button>
                                             </td>
                                         </tr>
                                     ))}
