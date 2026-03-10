@@ -27,6 +27,7 @@ function AdminInventory() {
     const [historyModal, setHistoryModal] = useState({ mounted: false, visible: false });
 
     const [transactions, setTransactions] = useState([]);
+    const [transactionError, setTransactionError] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     
     const [formData, setFormData] = useState({
@@ -237,15 +238,23 @@ function AdminInventory() {
             quantity: 1,
             reason: type === 'in' ? 'Restock' : 'Session Usage'
         });
+        setTransactionError('');
         openModal(setTransactionModal);
     };
 
     const handleTransaction = async (e) => {
         e.preventDefault();
+        setTransactionError('');
         try {
             const quantity = Number(transactionData.quantity);
             if (!quantity || quantity <= 0 || !Number.isInteger(quantity)) {
-                alert("Quantity must be a positive whole number.");
+                setTransactionError("Quantity must be a positive whole number.");
+                return;
+            }
+
+            // Prevent deducting more than available stock
+            if (transactionData.type === 'out' && quantity > selectedItem.currentStock) {
+                setTransactionError(`Cannot deduct more than the available stock. You have ${selectedItem.currentStock} ${selectedItem.unit} left.`);
                 return;
             }
 
@@ -257,7 +266,7 @@ function AdminInventory() {
             fetchInventory();
         } catch (error) {
             console.error("Error processing transaction:", error);
-            alert("Transaction failed");
+            setTransactionError("Transaction failed. Please try again.");
         }
     };
 
@@ -567,11 +576,20 @@ function AdminInventory() {
                         </div>
                         <form onSubmit={handleTransaction}>
                             <div className="modal-body">
+                                {transactionError && <p style={{ color: '#ef4444', textAlign: 'center', marginBottom: '1rem', background: '#fee2e2', padding: '0.5rem', borderRadius: '6px' }}>{transactionError}</p>}
                                 <p><strong>Item:</strong> {selectedItem?.name}</p>
                                 <p><strong>Current Stock:</strong> {selectedItem?.currentStock} {selectedItem?.unit}</p>
                                 <div className="form-group" style={{marginTop: '15px'}}>
                                     <label>Quantity *</label>
-                                    <input type="number" className="form-input" min="1" required value={transactionData.quantity} onChange={e => setTransactionData({...transactionData, quantity: e.target.value})} />
+                                    <input 
+                                        type="number" 
+                                        className="form-input" 
+                                        min="1" 
+                                        max={transactionData.type === 'out' ? selectedItem?.currentStock : undefined}
+                                        required 
+                                        value={transactionData.quantity} 
+                                        onChange={e => { setTransactionData({...transactionData, quantity: e.target.value}); setTransactionError(''); }} 
+                                    />
                                 </div>
                                 <div className="form-group">
                                     <label>Reason / Reference</label>
