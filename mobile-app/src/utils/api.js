@@ -1,21 +1,11 @@
 // src/utils/api.js - UPDATED VERSION
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// USE THIS FOR USB DEBUGGING (Most Reliable)
-// 1. Run in terminal: adb reverse tcp:3001 tcp:3001
-// 2. This allows the phone to access the computer's localhost directly
-// const API_URL = 'http://localhost:3001/api'; 
-
-// DEVELOPMENT
-import { API_URL as BASE_API_URL } from '../config';
-const API_URL = `${BASE_API_URL}/api`;
-//const API_URL = 'http://10.87.186.229:3001/api';
-// PRODUCTION (Security Requirement: HTTPS)
-// const API_URL = 'https://api.inkvistar.com/api'; 
+const API_URL = 'https://inkvistar-api.onrender.com/api';
 
 // Enhanced fetch helper with better error handling
 export const fetchAPI = async (endpoint, options = {}) => {
-  const url = `${API_URL}${endpoint}`;
+  const url = `${API_URL}${endpoint}`; // This now correctly uses the dev or prod URL
   
   console.log(`📤 API Request: ${options.method || 'GET'} ${url}`);
   

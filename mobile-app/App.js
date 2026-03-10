@@ -66,7 +66,8 @@ const ArtistClientDetailsScreen = ({ navigation, route }) => {
   
   useEffect(() => {
     if (client?.id) {
-      const baseUrl = Platform.OS === 'android' ? 'http://10.0.2.2:3001' : 'http://localhost:3001';
+      // Always use the production Render backend URL
+      const baseUrl = 'https://inkvistar-api.onrender.com';
       fetch(`${baseUrl}/api/customer/profile/${client.id}`)
         .then(res => res.json())
         .then(data => {
@@ -219,8 +220,8 @@ export default function App() {
 
   const handleResendVerification = async (email) => {
     try {
-      // Determine API URL (Android Emulator uses 10.0.2.2, iOS/Web uses localhost)
-      const baseUrl = Platform.OS === 'android' ? 'http://10.0.2.2:3001' : 'http://localhost:3001';
+      // Always use the production Render backend URL
+      const baseUrl = 'https://inkvistar-api.onrender.com';
       
       const response = await fetch(`${baseUrl}/api/resend-verification`, {
         method: 'POST',

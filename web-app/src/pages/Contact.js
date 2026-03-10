@@ -11,16 +11,16 @@ const Contact = () => {
     <>
       {/* Navigation Bar */}
       <nav className="home-nav">
-          <a href="/" className="home-logo">INKVICTUS</a>
+          <Link to="/" className="home-logo">INKVICTUS</Link>
           <div className="home-nav-links">
-              <a href="/#about">About</a>
+              <Link to="/#about">About</Link>
               <Link to="/artists">Artists</Link>
               <Link to="/gallery">Gallery</Link>
-              <a href="/#booking">Booking</a>
+              <Link to="/#booking">Booking</Link>
               <Link to="/contact" className="active-link">Contact</Link>
           </div>
           <div className="home-auth-buttons">
-              <a href="/login" className="login-link">Log In</a>
+              <Link to="/login" className="login-link">Log In</Link>
               <button onClick={() => navigate('/register')} className="signup-btn">Sign Up</button>
           </div>
       </nav>

@@ -171,7 +171,7 @@ function ArtistGallery() {
 
             {addWorkModal.mounted && (
                 <div className={`modal-overlay ${addWorkModal.visible ? 'open' : ''}`} onClick={() => closeModal(setAddWorkModal)}>
-                    <div className="modal-content">
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2>Add New Work</h2>
                             <button className="close-btn" onClick={() => closeModal(setAddWorkModal)}><X size={20}/></button>
