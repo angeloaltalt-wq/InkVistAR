@@ -121,14 +121,14 @@ function Register() {
           </div>
       </nav>
 
-    <div className="login-page-wrapper" style={{ minHeight: '100vh', boxSizing: 'border-box', padding: '100px 20px 40px' }}>
-      <div className="login-card" style={{ width: '90%', maxWidth: '580px', margin: '0 auto' }}>
+    <div className="login-page-wrapper" style={{ minHeight: '100vh', boxSizing: 'border-box', padding: '80px 20px 40px' }}>
+      <div className="login-card" style={{ width: '90%', maxWidth: '520px', margin: '0 auto' }}>
         <div className="login-header">
-            <h1 className="login-logo" style={{ fontSize: '1.5rem' }}>INKVICTUS TATTOO</h1>
+            <h1 className="login-logo" style={{ fontSize: '1.2rem' }}>INKVICTUS TATTOO</h1>
             <p className="login-tagline">BGC’s Premier Luxury Tattoo Studio</p>
         </div>
 
-        <h2 className="login-title" style={{ fontSize: '1.25rem', marginTop: '1.5rem' }}>Create Account</h2>
+        <h2 className="login-title" style={{ fontSize: '1.1rem', marginTop: '1.5rem' }}>Create Account</h2>
         {apiError && <p className="error-message" style={{textAlign: 'center'}}>{apiError}</p>}
 
         <form onSubmit={registerUser} className="login-form">

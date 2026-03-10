@@ -177,15 +177,15 @@ function Login() {
             </nav>
 
             <div className="login-page-wrapper" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-            <div className="login-card" style={{ width: '90%', maxWidth: '420px' }}>
+            <div className="login-card" style={{ width: '90%', maxWidth: '380px' }}>
                 <div className="login-header">
-                    <h1 className="login-logo" style={{ fontSize: '1.5rem' }}>INKVICTUS TATTOO</h1>
+                    <h1 className="login-logo" style={{ fontSize: '1.2rem' }}>INKVICTUS TATTOO</h1>
                     <p className="login-tagline">BGC’s Premier Luxury Tattoo Studio</p>
                 </div>
                 
                 {view === 'login' && (
                     <>
-                    <h2 className="login-title" style={{ fontSize: '1.25rem', marginTop: '1.5rem' }}>Login</h2>
+                    <h2 className="login-title" style={{ fontSize: '1.1rem', marginTop: '1.5rem' }}>Login</h2>
                     {error && <p className="error-message">{error}</p>}
                     {showResend && (
                         <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
@@ -242,7 +242,7 @@ function Login() {
 
                 {view === 'forgot-email' && (
                     <>
-                    <h2 className="login-title" style={{ fontSize: '1.25rem', marginTop: '1.5rem' }}>Reset Password</h2>
+                    <h2 className="login-title" style={{ fontSize: '1.1rem', marginTop: '1.5rem' }}>Reset Password</h2>
                     {error && <p className="error-message">{error}</p>}
                     <form onSubmit={sendResetOTP} className="login-form">
                         <div className="form-group">
@@ -258,7 +258,7 @@ function Login() {
 
                 {view === 'forgot-otp' && (
                     <>
-                    <h2 className="login-title" style={{ fontSize: '1.25rem', marginTop: '1.5rem' }}>Verify OTP</h2>
+                    <h2 className="login-title" style={{ fontSize: '1.1rem', marginTop: '1.5rem' }}>Verify OTP</h2>
                     {error && <p className="error-message">{error}</p>}
                     <form onSubmit={verifyResetOTP} className="login-form">
                         <div className="form-group">
@@ -274,7 +274,7 @@ function Login() {
 
                 {view === 'reset-password' && (
                     <>
-                    <h2 className="login-title" style={{ fontSize: '1.25rem', marginTop: '1.5rem' }}>New Password</h2>
+                    <h2 className="login-title" style={{ fontSize: '1.1rem', marginTop: '1.5rem' }}>New Password</h2>
                     {error && <p className="error-message">{error}</p>}
                     <form onSubmit={handlePasswordReset} className="login-form">
                         <div className="form-group">
