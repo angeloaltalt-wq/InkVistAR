@@ -196,6 +196,12 @@ function AdminInventory() {
             return;
         }
 
+        // Validate for negative numbers
+        if (Number(formData.currentStock) < 0 || Number(formData.minStock) < 0 || Number(formData.maxStock) < 0 || Number(formData.cost) < 0) {
+            alert("Stock and cost values cannot be negative.");
+            return;
+        }
+
         setIsSaving(true);
         try {
             // Ensure numbers are valid before sending
@@ -237,7 +243,16 @@ function AdminInventory() {
     const handleTransaction = async (e) => {
         e.preventDefault();
         try {
-            await Axios.post(`${API_URL}/api/admin/inventory/${selectedItem.id}/transaction`, transactionData);
+            const quantity = Number(transactionData.quantity);
+            if (!quantity || quantity <= 0 || !Number.isInteger(quantity)) {
+                alert("Quantity must be a positive whole number.");
+                return;
+            }
+
+            await Axios.post(`${API_URL}/api/admin/inventory/${selectedItem.id}/transaction`, {
+                ...transactionData,
+                quantity: quantity
+            });
             closeModal(setTransactionModal);
             fetchInventory();
         } catch (error) {
@@ -479,6 +494,7 @@ function AdminInventory() {
                                     <label>Current Stock *</label>
                                     <input
                                         type="number"
+                                        min="0"
                                         value={formData.currentStock}
                                         onChange={(e) => setFormData({...formData, currentStock: e.target.value})}
                                         className="form-input"
@@ -488,6 +504,7 @@ function AdminInventory() {
                                     <label>Min Stock *</label>
                                     <input
                                         type="number"
+                                        min="0"
                                         value={formData.minStock}
                                         onChange={(e) => setFormData({...formData, minStock: e.target.value})}
                                         className="form-input"
@@ -497,6 +514,7 @@ function AdminInventory() {
                                     <label>Max Stock *</label>
                                     <input
                                         type="number"
+                                        min="0"
                                         value={formData.maxStock}
                                         onChange={(e) => setFormData({...formData, maxStock: e.target.value})}
                                         className="form-input"
@@ -517,6 +535,7 @@ function AdminInventory() {
                                     <label>Cost per Unit</label>
                                     <input
                                         type="number"
+                                        min="0"
                                         step="0.01"
                                         value={formData.cost}
                                         onChange={(e) => setFormData({...formData, cost: e.target.value})}
@@ -552,7 +571,7 @@ function AdminInventory() {
                                 <p><strong>Current Stock:</strong> {selectedItem?.currentStock} {selectedItem?.unit}</p>
                                 <div className="form-group" style={{marginTop: '15px'}}>
                                     <label>Quantity *</label>
-                                    <input type="number" className="form-input" min="1" required value={transactionData.quantity} onChange={e => setTransactionData({...transactionData, quantity: parseInt(e.target.value)})} />
+                                    <input type="number" className="form-input" min="1" required value={transactionData.quantity} onChange={e => setTransactionData({...transactionData, quantity: e.target.value})} />
                                 </div>
                                 <div className="form-group">
                                     <label>Reason / Reference</label>

@@ -176,7 +176,7 @@ function Login() {
                 </div>
             </nav>
 
-            <div className="login-page-wrapper">
+            <div className="login-page-wrapper" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', padding: '80px 20px' }}>
             <div className="login-card">
                 <div className="login-header">
                     <h1 className="login-logo">INKVICTUS TATTOO</h1>

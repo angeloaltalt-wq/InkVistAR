@@ -37,10 +37,11 @@ function AdminDashboard() {
     const fetchDashboardData = async () => {
         try {
             setLoading(true);
-            const [usersResponse, appointmentsResponse, logsResponse] = await Promise.all([
+            const [usersResponse, appointmentsResponse, logsResponse, inventoryResponse] = await Promise.all([
                 Axios.get(`${API_URL}/api/debug/users`),
                 Axios.get(`${API_URL}/api/admin/appointments`),
-                Axios.get(`${API_URL}/api/admin/audit-logs`)
+                Axios.get(`${API_URL}/api/admin/audit-logs`),
+                Axios.get(`${API_URL}/api/admin/inventory?status=active`)
             ]);
 
             if (usersResponse.data.success) {
@@ -130,12 +131,37 @@ function AdminDashboard() {
                 });
                 setArtistStatus(statusMap);
 
-                // Mock Alerts for Dashboard
-                setAlerts([
-                    { id: 1, type: 'inventory', message: 'Low stock: Black Ink (Premium)', severity: 'high' },
-                    { id: 2, type: 'system', message: 'Backup completed successfully', severity: 'low' },
-                    { id: 3, type: 'staff', message: 'Artist license expiring: Alex Rivera', severity: 'medium' }
-                ]);
+                // --- Generate Functional Alerts ---
+                const generatedAlerts = [];
+                let alertId = 1;
+
+                // 1. Inventory Alerts
+                if (inventoryResponse.data.success) {
+                    const inventory = inventoryResponse.data.data;
+                    const lowStockItems = inventory.filter(item => item.current_stock <= item.min_stock);
+                    
+                    lowStockItems.slice(0, 2).forEach(item => { // Limit to 2 for UI cleanliness
+                        generatedAlerts.push({
+                            id: alertId++,
+                            type: 'inventory',
+                            message: `Low stock: ${item.name} (${item.current_stock} left)`,
+                            severity: 'high'
+                        });
+                    });
+                }
+
+                // 2. Pending Appointments Alert
+                const pendingAppointments = appointments.filter(apt => apt.status === 'pending');
+                if (pendingAppointments.length > 0) {
+                    generatedAlerts.push({
+                        id: alertId++,
+                        type: 'staff',
+                        message: `You have ${pendingAppointments.length} pending appointment requests.`,
+                        severity: 'medium'
+                    });
+                }
+
+                setAlerts(generatedAlerts);
             }
 
             if (logsResponse && logsResponse.data.success) {
@@ -319,12 +345,14 @@ function AdminDashboard() {
                                     <h2 style={{ margin: 0 }}>System Alerts</h2>
                                 </div>
                                 <div className="alerts-list">
-                                    {alerts.map(alert => (
+                                    {alerts.length > 0 ? alerts.map(alert => (
                                         <div key={alert.id} className={`alert-item ${alert.severity}`}>
                                             <AlertTriangle size={16} />
                                             <span>{alert.message}</span>
                                         </div>
-                                    ))}
+                                    )) : (
+                                        <p className="no-data">No new alerts.</p>
+                                    )}
                                 </div>
                             </div>
                         </div>

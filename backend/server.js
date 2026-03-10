@@ -2551,26 +2551,64 @@ app.post('/api/chat', async (req, res) => {
   // Try Groq if key exists
   if (GROQ_API_KEY) {
     try {
-      const chatCompletion = await groq.chat.completions.create({
-        messages: [
-          {
-            role: 'system',
-            content: `You are InkVistAR, a friendly and helpful AI assistant for a tattoo studio app.
-            - Studio Info: Specializing in Realism, Traditional, and Japanese styles.
-            - Pricing: Starts at $100-$150/hour. Varies by artist.
-            - Booking: Tell users to browse artists and tap 'Book Appointment'.
-            - Aftercare: Keep clean, moisturize, no sun/swimming for 2 weeks.
-            - Be concise, friendly, and encouraging.`
-          },
-          { role: 'user', content: message }
-        ],
-        model: 'llama-3.3-70b-versatile',
-      });
+      // Fetch settings from DB to build a dynamic context
+      db.query('SELECT * FROM app_settings', async (err, settingsResults) => {
+        if (err) {
+          console.error('❌ Chatbot DB Error (falling back):', err.message);
+          const fallback = getFallbackResponse(message);
+          return res.json({ success: true, response: fallback });
+        }
 
-      const response = chatCompletion.choices[0].message.content;
-      return res.json({ success: true, response: response });
+        const settings = {};
+        settingsResults.forEach(row => {
+          try {
+            settings[row.section] = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+          } catch (e) { settings[row.section] = row.data; }
+        });
+
+        const studioInfo = settings.studio || {};
+        const billingInfo = settings.billing || {};
+        const careInfo = settings.care || {};
+        const policiesInfo = settings.policies || {};
+
+        const systemPrompt = `
+          You are InkVistAR, a friendly and helpful AI assistant for the tattoo studio "${studioInfo.name || 'InkVistAR'}". Your goal is to answer user questions based on the following studio information. Be concise and friendly.
+
+          - Studio Info:
+            - Name: ${studioInfo.name || 'InkVistAR'}
+            - Description: ${studioInfo.description || 'A premium tattoo studio.'}
+            - Address: ${studioInfo.address || 'not specified'}.
+            - Phone: ${studioInfo.phone || 'not specified'}.
+            - Hours: Open from ${studioInfo.openingTime || '1 PM'} to ${studioInfo.closingTime || '8 PM'}.
+
+          - Pricing & Booking:
+            - Base Rate: Our base rate is around ₱${billingInfo.baseRate || 150} per hour, but this varies by artist and design complexity.
+            - Deposit Policy: ${policiesInfo.deposit || 'A deposit is required to book.'}
+            - Cancellation Policy: ${policiesInfo.cancellation || 'Please contact us at least 48 hours in advance to cancel or reschedule.'}
+            - How to Book: Tell users to browse artists and use the 'Booking' section of the app.
+
+          - Aftercare:
+            - Instructions: ${careInfo.instructions ? careInfo.instructions.split('\n').slice(0, 2).join(' ') : 'Keep it clean and moisturized, and avoid sun/swimming for 2 weeks.'}
+
+          - General Rules:
+            - If you don't know an answer, politely suggest they contact the studio directly at ${studioInfo.phone || 'our contact number'}.
+        `.trim().replace(/\s+/g, ' ');
+
+        const chatCompletion = await groq.chat.completions.create({
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: message }
+          ],
+          model: 'llama-3.3-70b-versatile',
+        });
+
+        const response = chatCompletion.choices[0].message.content;
+        return res.json({ success: true, response: response });
+      });
     } catch (error) {
-      console.error('❌ Groq API error (Falling back to local):', error.message);
+      console.error('❌ Groq API error (Falling back to local):', error);
+      const fallback = getFallbackResponse(message);
+      res.json({ success: true, response: fallback });
     }
   }
   
