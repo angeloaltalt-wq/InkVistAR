@@ -473,7 +473,7 @@ async function sendEmail(to, subject, html) {
     });
 
     if (!response.ok) {
-      const data = await response.json();
+      const data = await response.json().catch(() => ({ message: 'Non-JSON response' }));
       console.error('❌ Email API Error:', data);
     } else {
       console.log(`✅ Email sent to ${to}`);
@@ -2704,7 +2704,7 @@ app.post('/api/resend-verification', (req, res) => {
       const html = `<h2>Verify your email</h2><p>Click here: <a href="${verifyUrl}">Verify Account</a></p>`;
       sendEmail(email, 'Resend: Verify Your InkVistAR Account', html);
       
-      res.json({ success: true, message: 'Verification link resent! Check your email.' });
+      res.json({ success: true, message: 'Verification link resent! Check your email. (Debug: Check console for link if email fails)' });
     });
   });
 });
