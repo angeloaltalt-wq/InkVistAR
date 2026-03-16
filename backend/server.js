@@ -98,6 +98,15 @@ db.connect(err => {
     db.query(artistsTableQuery, (err) => {
       if (err) console.error('⚠️ Error checking artists table:', err.message);
       else console.log('🎨 Artists table ready');
+
+      // MIGRATION: Check if 'commission_rate' column exists, if not add it
+      db.query("SHOW COLUMNS FROM artists LIKE 'commission_rate'", (err, results) => {
+        if (!err && results.length === 0) {
+          console.log('🔄 Migrating artists table: Adding commission_rate column...');
+          db.query("ALTER TABLE artists ADD COLUMN commission_rate DECIMAL(5, 2) DEFAULT 0.60");
+          console.log('✅ Added commission_rate column');
+        }
+      });
     });
 
     // Create Notifications Table if not exists
