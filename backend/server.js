@@ -1134,31 +1134,11 @@ app.get('/api/artist/dashboard/:artistId', (req, res) => {
     if (err) {
       console.error('❌ Database error:', err.message);
       console.error('❌ Full error:', err);
-      
-      // Return mock data for testing
-      return res.json({
-        success: true,
-        artist: {
-          id: parseInt(artistId),
-          name: "Mike Chen",
-          email: "mike@inkvistar.com",
-          studio_name: "Ink Masters Studio",
-          experience_years: 8,
-          specialization: "Traditional, Japanese",
-          hourly_rate: 150,
-          rating: 4.9,
-          total_reviews: 89
-        },
-        appointments: [],
-        works: [],
-        stats: {
-          total_appointments: 0,
-          total_earnings: 0,
-          avg_rating: 0
-        },
-        notifications: [],
-        unreadCount: 0,
-        message: "Using mock data (database error)"
+
+      // Return a proper error instead of mock data
+      return res.status(500).json({
+        success: false,
+        message: `Database error fetching artist dashboard: ${err.message}`
       });
     }
     

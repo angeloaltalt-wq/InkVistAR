@@ -98,14 +98,15 @@ function AdminStaff() {
         setSelectedArtist(artist);
         setLoadingDetails(true);
         setActiveTab('profile');
+        openModal(); // Open modal immediately to show loading state
 
         try {
-            // Fetch Dashboard Data (Profile + Stats)
-            const dashboardRes = await Axios.get(`${API_URL}/api/artist/dashboard/${artist.id}`);
-            // Fetch Portfolio
-            const portfolioRes = await Axios.get(`${API_URL}/api/artist/${artist.id}/portfolio`);
+            const [dashboardRes, portfolioRes] = await Promise.all([
+                Axios.get(`${API_URL}/api/artist/dashboard/${artist.id}`),
+                Axios.get(`${API_URL}/api/artist/${artist.id}/portfolio`)
+            ]);
             
-            if (dashboardRes.data.success) {
+            if (dashboardRes.data.success && portfolioRes.data.success) {
                 const data = dashboardRes.data;
                 setArtistDetails({
                     profile: data.artist,
@@ -113,8 +114,6 @@ function AdminStaff() {
                     portfolio: portfolioRes.data.works || [],
                     stats: data.stats || {}
                 });
-                
-                // Init Form Data
                 setFormData({
                     name: data.artist.name,
                     specialization: data.artist.specialization,
@@ -122,12 +121,17 @@ function AdminStaff() {
                     experience_years: data.artist.experience_years,
                     commission_rate: data.artist.commission_rate
                 });
+            } else {
+                throw new Error(dashboardRes.data.message || portfolioRes.data.message || 'Failed to fetch artist details.');
             }
         } catch (error) {
             console.error("Error fetching artist details:", error);
+            const errorMessage = error.response?.data?.message || error.message || "An unknown error occurred.";
+            alert(`Could not load artist details: ${errorMessage}`);
+            closeModal();
+        } finally {
+            setLoadingDetails(false);
         }
-        openModal();
-        setLoadingDetails(false);
     };
 
     const handleUpdateProfile = async () => {

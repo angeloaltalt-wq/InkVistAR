@@ -12,8 +12,10 @@ import {
   Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { API_URL } from '../src/config';
 import * as ImagePicker from 'expo-image-picker';
+
+// Use the consistent production API URL to prevent connection errors.
+const API_URL = 'https://inkvistar-api.onrender.com';
 
 export function CustomerBooking({ customerId, onBack }) {
   const [loading, setLoading] = useState(false);
