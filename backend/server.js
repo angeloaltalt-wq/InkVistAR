@@ -2333,17 +2333,18 @@ app.get('/api/admin/inventory/transactions', (req, res) => {
 // Admin: Get All Appointments
 app.get('/api/admin/appointments', (req, res) => {
   const query = `
-    SELECT 
-      ap.id, 
+    SELECT
+      ap.id,
       ap.customer_id,
       ap.artist_id,
-      ap.appointment_date, 
-      ap.start_time, 
+      ap.appointment_date,
+      ap.start_time,
       ap.end_time,
       ap.status,
       ap.design_title,
       ap.notes,
       ap.reference_image,
+      ap.price,
       c.name as client_name,
       c.email as client_email,
       a.name as artist_name,
