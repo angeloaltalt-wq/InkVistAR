@@ -473,13 +473,15 @@ async function sendEmail(to, subject, html) {
     });
 
     if (!response.ok) {
-      const data = await response.json().catch(() => ({ message: 'Non-JSON response' }));
-      console.error('❌ Email API Error:', data);
+      const errorData = await response.json().catch(() => ({ message: 'Non-JSON response' }));
+      console.error('❌ Resend API Error:', response.status, errorData);
+      throw new Error(`Resend API Error: ${response.status} - ${JSON.stringify(errorData)}`);
     } else {
       console.log(`✅ Email sent to ${to}`);
     }
   } catch (error) {
     console.error('❌ Email Network Error:', error.message);
+    throw error;
   }
 }
 
@@ -755,6 +757,7 @@ app.post('/api/login', async (req, res) => {
       }
       
       const user = results[0];
+      console.log('User object before 403 checks:', user);
 
       // Check if soft deleted
       if (user.is_deleted) {

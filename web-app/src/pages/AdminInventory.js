@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Package, History, ArrowUpCircle, ArrowDownCircle, X, RotateCcw } from 'lucide-react';
+import { Plus, Edit2, Trash2, Package, History, ArrowUpCircle, ArrowDownCircle, X, RotateCcw, Printer, Download } from 'lucide-react';
 import AdminSideNav from '../components/AdminSideNav';
 import './AdminInventory.css';
 import ManagerSideNav from '../components/ManagerSideNav';
@@ -20,6 +20,8 @@ function AdminInventory() {
     const [stockStatusFilter, setStockStatusFilter] = useState('all');
     const [sortBy, setSortBy] = useState('name');
     const [selectedItem, setSelectedItem] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
     
     // State for modals to handle animations
     const [addEditModal, setAddEditModal] = useState({ mounted: false, visible: false });
@@ -98,8 +100,10 @@ function AdminInventory() {
             const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
             
             let matchesStockStatus = true;
-            if (stockStatusFilter === 'low') {
-                matchesStockStatus = item.currentStock <= item.minStock;
+            if (stockStatusFilter === 'out_of_stock') {
+                matchesStockStatus = item.currentStock === 0;
+            } else if (stockStatusFilter === 'low') {
+                matchesStockStatus = item.currentStock > 0 && item.currentStock <= item.minStock;
             } else if (stockStatusFilter === 'optimal') {
                 matchesStockStatus = item.currentStock > item.minStock && item.currentStock <= item.maxStock;
             } else if (stockStatusFilter === 'overstock') {
@@ -121,7 +125,63 @@ function AdminInventory() {
         setFilteredInventory(filtered);
     };
 
+    // Pagination logic
+    const totalPages = Math.ceil(filteredInventory.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedInventory = filteredInventory.slice(startIndex, endIndex);
+
+    const handlePrint = () => {
+        const printContent = filteredInventory.map(item =>
+            `${item.name} | ${item.category} | Stock: ${item.currentStock} | Min/Max: ${item.minStock}/${item.maxStock} | ${item.unit} | ${item.supplier} | Cost: P${item.cost}`
+        ).join('\n');
+        const printWindow = window.open('', '', 'width=800,height=600');
+        printWindow.document.write(`
+            <html>
+                <head><title>Inventory Report - InkVistAR</title></head>
+                <body style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h1>Inventory Report</h1>
+                    <p>Generated: ${new Date().toLocaleString()}</p>
+                    <p>Total Items: ${filteredInventory.length}</p>
+                    <hr/>
+                    <pre style="font-size: 12px; line-height: 1.6;">${printContent}</pre>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    };
+
+    const handleExportCSV = () => {
+        const headers = ['Item Name', 'Category', 'Current Stock', 'Min Stock', 'Max Stock', 'Unit', 'Supplier', 'Cost', 'Status'];
+        const csvData = filteredInventory.map(item => [
+            item.name,
+            item.category,
+            item.currentStock,
+            item.minStock,
+            item.maxStock,
+            item.unit,
+            item.supplier || '',
+            item.cost,
+            getStockStatus(item.currentStock, item.minStock, item.maxStock)
+        ]);
+
+        const csvContent = [
+            headers.join(','),
+            ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `inventory-export-${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+    };
+
     const getStockStatus = (current, min, max) => {
+        if (current === 0) return 'out_of_stock';
         if (current <= min) return 'low';
         if (current > max) return 'overstock';
         return 'optimal';
@@ -292,6 +352,12 @@ function AdminInventory() {
             <header className="admin-header" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb', boxShadow: 'none' }}>
                 <h1>Inventory Management</h1>
                 <div style={{ display: 'flex', gap: '1rem' }}>
+                    <button className="btn btn-secondary" onClick={handlePrint} style={{display:'flex', alignItems:'center', gap:'5px'}}>
+                        <Printer size={18}/> Print
+                    </button>
+                    <button className="btn btn-secondary" onClick={handleExportCSV} style={{display:'flex', alignItems:'center', gap:'5px'}}>
+                        <Download size={18}/> Export CSV
+                    </button>
                     <button className="btn btn-secondary" onClick={fetchHistory} style={{display:'flex', alignItems:'center', gap:'5px'}}>
                         <History size={18}/> History
                     </button>
@@ -337,13 +403,14 @@ function AdminInventory() {
                         <option value="aftercare">Aftercare</option>
                     </select>
 
-                    <select 
+                    <select
                         value={stockStatusFilter}
                         onChange={(e) => setStockStatusFilter(e.target.value)}
                         className="select-input"
                         style={{ maxWidth: '200px' }}
                     >
                         <option value="all">All Stock Levels</option>
+                        <option value="out_of_stock">Out of Stock</option>
                         <option value="low">Low Stock</option>
                         <option value="optimal">Optimal</option>
                         <option value="overstock">Overstock</option>
@@ -400,8 +467,8 @@ function AdminInventory() {
                         <tbody>
                             {loading ? (
                                 <tr><td colSpan="9" className="no-data" style={{textAlign: 'center', padding: '2rem'}}>Loading inventory...</td></tr>
-                            ) : filteredInventory.length > 0 ? (
-                                filteredInventory.map((item) => (
+                            ) : paginatedInventory.length > 0 ? (
+                                paginatedInventory.map((item) => (
                                     <tr key={item.id} className={`status-${getStockStatus(item.currentStock, item.minStock, item.maxStock)}`}>
                                         <td><strong>{item.name}</strong></td>
                                         <td>
@@ -453,6 +520,26 @@ function AdminInventory() {
                     </table>
                 </div>
             </div>
+
+            {/* Pagination Controls */}
+            {filteredInventory.length > 0 && (
+                <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <label>Items per page:</label>
+                        <select value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="select-input" style={{ width: '80px' }}>
+                            <option value={5}>5</option>
+                            <option value={10}>10</option>
+                            <option value={20}>20</option>
+                            <option value={50}>50</option>
+                        </select>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <span>Page {currentPage} of {totalPages} ({filteredInventory.length} items)</span>
+                        <button className="btn btn-secondary" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Previous</button>
+                        <button className="btn btn-secondary" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next</button>
+                    </div>
+                </div>
+            )}
 
             {/* Add/Edit Modal */}
             {addEditModal.mounted && (
