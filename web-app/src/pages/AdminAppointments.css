@@ -41,6 +41,14 @@
         display: none !important;
     }
 
+    .table-card, .data-card {
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+    }
+
     .admin-page-with-sidenav .admin-page {
         margin-left: 0 !important;
         padding: 0 !important;

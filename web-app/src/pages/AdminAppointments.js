@@ -288,7 +288,7 @@ function AdminAppointments() {
                     </div>
                 </div>
             </div>
-            <header className="admin-header" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb', boxShadow: 'none' }}>
+            <header className="admin-header" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb', boxShadow: 'none', color: '#1f2937' }}>
                 <h1>Appointment Management</h1>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                     <div className="view-toggle" style={{ display: 'flex', gap: '10px' }}>

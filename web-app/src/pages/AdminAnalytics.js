@@ -67,7 +67,7 @@ function AdminAnalytics() {
         <div className="admin-page-with-sidenav">
                <AdminSideNav />
             <div className="admin-page page-container-enter">
-            <header className="admin-header" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb', boxShadow: 'none' }}>
+            <header className="admin-header" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb', boxShadow: 'none', color: '#1f2937' }}>
                 <h1>Analytics & Reports</h1>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                     <button className="btn btn-secondary" onClick={handlePrint} style={{display: 'flex', alignItems: 'center', gap: '8px'}}>

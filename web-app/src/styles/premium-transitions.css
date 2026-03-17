@@ -61,3 +61,11 @@
     transform: translateY(0);
   }
 }
+
+@media print {
+  .page-container-enter {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
