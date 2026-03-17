@@ -632,8 +632,34 @@ app.get('/api/test', (req, res) => {
     success: true, 
     message: 'Backend is working!',
     timestamp: new Date().toISOString(),
-    database: 'MySQL connected'
+    database: 'MySQL connected',
+    env: process.env.NODE_ENV || 'development'
   });
+});
+
+// Debug: List all routes
+app.get('/api/debug/routes', (req, res) => {
+  const routes = [];
+  app._router.stack.forEach((middleware) => {
+    if (middleware.route) {
+      // Routes registered directly on the app
+      routes.push({
+        method: Object.keys(middleware.route.methods).join(', ').toUpperCase(),
+        path: middleware.route.path,
+      });
+    } else if (middleware.name === 'router') {
+      // Router middleware
+      middleware.handle.stack.forEach((handler) => {
+        if (handler.route) {
+          routes.push({
+            method: Object.keys(handler.route.methods).join(', ').toUpperCase(),
+            path: handler.route.path,
+          });
+        }
+      });
+    }
+  });
+  res.json({ success: true, count: routes.length, routes });
 });
 
 // Test database connection
@@ -2858,8 +2884,8 @@ app.use((err, req, res, next) => {
 });
 
 // ========== START SERVER ==========
-const PORT = 3001;
-app.listen(PORT, () => {
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, '0.0.0.0', () => {
   console.log('\n' + '='.repeat(50));
   console.log(`🚀 BACKEND SERVER STARTED`);
   console.log(`🌐 http://localhost:${PORT}`);
