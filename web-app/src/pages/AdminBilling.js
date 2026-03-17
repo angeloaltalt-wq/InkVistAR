@@ -23,7 +23,7 @@ function AdminBilling() {
 
     const [invoiceModal, setInvoiceModal] = useState({ mounted: false, visible: false });
     const [newInvoice, setNewInvoice] = useState({ client: '', amount: '', type: 'Tattoo Session', status: 'Pending' });
-    const [selectedInvoice, setSelectedInvoice] = useState(null);
+    const [previewModal, setPreviewModal] = useState({ mounted: false, visible: false, invoice: null });
 
     // Modal animation handlers
     const openModal = () => {
@@ -35,6 +35,18 @@ function AdminBilling() {
         setInvoiceModal(prev => ({ ...prev, visible: false }));
         setTimeout(() => {
             setInvoiceModal({ mounted: false, visible: false });
+        }, 400);
+    };
+
+    const openPreview = (invoice) => {
+        setPreviewModal({ mounted: true, visible: false, invoice });
+        setTimeout(() => setPreviewModal({ mounted: true, visible: true, invoice }), 10);
+    };
+
+    const closePreview = () => {
+        setPreviewModal(prev => ({ ...prev, visible: false }));
+        setTimeout(() => {
+            setPreviewModal({ mounted: false, visible: false, invoice: null });
         }, 400);
     };
 
@@ -89,18 +101,8 @@ function AdminBilling() {
         }
     };
 
-    const handlePrintInvoice = (invoice) => {
-        setSelectedInvoice(invoice);
-        // Wait for state to update and print
-        setTimeout(() => {
-            window.print();
-        }, 100);
-    };
-
-    const handleDownloadReceipt = (invoice) => {
-        // For simplicity and best layout, we reuse the print functionality
-        // which allows "Save as PDF" in modern browsers.
-        handlePrintInvoice(invoice);
+    const handlePrintAction = () => {
+        window.print();
     };
 
     const handleConfigChange = (section, key, value) => {
@@ -180,8 +182,9 @@ function AdminBilling() {
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <button className="action-btn" title="Download Receipt" onClick={() => handleDownloadReceipt(inv)}><Download size={16}/></button>
-                                                    <button className="action-btn" title="Print Invoice" onClick={() => handlePrintInvoice(inv)}><Printer size={16}/></button>
+                                                    <button className="action-btn" title="View / Print Invoice" onClick={() => openPreview(inv)}>
+                                                        <FileText size={16} style={{marginRight: '5px'}}/> View
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -297,58 +300,72 @@ function AdminBilling() {
                 )}
             </div>
 
-            {/* Hidden Printable Invoice Section */}
-            {selectedInvoice && (
-                <div id="printable-invoice" className="printable-only">
-                    <div className="invoice-header">
-                        <div className="invoice-biz-info">
-                            <h1 style={{color: '#667eea', margin: 0}}>InkVistAR Studio</h1>
-                            <p>123 Tattoo Street, Art District</p>
-                            <p>Metropolis, NY 10001</p>
-                            <p>Phone: (555) 001-2024</p>
+            {/* Invoice Preview Modal */}
+            {previewModal.mounted && (
+                <div className={`modal-overlay preview-modal-overlay ${previewModal.visible ? 'open' : ''}`} onClick={closePreview}>
+                    <div className="preview-modal-content" onClick={e => e.stopPropagation()}>
+                        <div className="preview-modal-header no-print">
+                            <h2>Invoice Preview</h2>
+                            <div style={{display: 'flex', gap: '10px'}}>
+                                <button className="btn btn-primary" onClick={handlePrintAction}>
+                                    <Printer size={18} style={{marginRight: '5px'}}/> Print / PDF
+                                </button>
+                                <button className="close-btn" onClick={closePreview}><X size={24}/></button>
+                            </div>
                         </div>
-                        <div className="invoice-meta">
-                            <h2 style={{margin: 0}}>INVOICE</h2>
-                            <p>ID: INV-{selectedInvoice.id}</p>
-                            <p>Date: {new Date(selectedInvoice.created_at).toLocaleDateString()}</p>
-                        </div>
-                    </div>
+                        
+                        <div id="printable-invoice" className="invoice-paper">
+                            <div className="invoice-header">
+                                <div className="invoice-biz-info">
+                                    <h1 style={{color: '#667eea', margin: 0}}>InkVistAR Studio</h1>
+                                    <p>123 Tattoo Street, Art District</p>
+                                    <p>Metropolis, NY 10001</p>
+                                    <p>Phone: (555) 001-2024</p>
+                                </div>
+                                <div className="invoice-meta">
+                                    <h2 style={{margin: 0}}>INVOICE</h2>
+                                    <p>ID: INV-{previewModal.invoice.id}</p>
+                                    <p>Date: {new Date(previewModal.invoice.created_at).toLocaleDateString()}</p>
+                                </div>
+                            </div>
 
-                    <div className="invoice-divider"></div>
+                            <div className="invoice-divider"></div>
 
-                    <div className="invoice-bill-to">
-                        <h3>BILL TO:</h3>
-                        <p><strong>{selectedInvoice.client_name}</strong></p>
-                        <p>Client ID: CU-{selectedInvoice.client_id || 'N/A'}</p>
-                    </div>
+                            <div className="invoice-bill-to">
+                                <h3>BILL TO:</h3>
+                                <p><strong>{previewModal.invoice.client_name}</strong></p>
+                                <p>Client ID: CU-{previewModal.invoice.client_id || 'N/A'}</p>
+                            </div>
 
-                    <table className="invoice-table">
-                        <thead>
-                            <tr>
-                                <th>Description</th>
-                                <th style={{textAlign: 'right'}}>Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>{selectedInvoice.service_type}</td>
-                                <td style={{textAlign: 'right'}}>₱{Number(selectedInvoice.amount).toLocaleString()}</td>
-                            </tr>
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <td><strong>Total</strong></td>
-                                <td style={{textAlign: 'right'}}><strong>₱{Number(selectedInvoice.amount).toLocaleString()}</strong></td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                            <table className="invoice-table">
+                                <thead>
+                                    <tr>
+                                        <th>Description</th>
+                                        <th style={{textAlign: 'right'}}>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>{previewModal.invoice.service_type}</td>
+                                        <td style={{textAlign: 'right'}}>₱{Number(previewModal.invoice.amount).toLocaleString()}</td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td><strong>Total</strong></td>
+                                        <td style={{textAlign: 'right'}}><strong>₱{Number(previewModal.invoice.amount).toLocaleString()}</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
 
-                    <div className="invoice-footer">
-                        <p>Thank you for choosing InkVistAR Studio!</p>
-                        <p>Status: {selectedInvoice.status.toUpperCase()}</p>
-                        <div className="signature-line">
-                            <p>Authorized Signature</p>
-                            <div style={{borderBottom: '1px solid #000', width: '200px', height: '40px'}}></div>
+                            <div className="invoice-footer">
+                                <p>Thank you for choosing InkVistAR Studio!</p>
+                                <p>Status: {previewModal.invoice.status.toUpperCase()}</p>
+                                <div className="signature-line">
+                                    <p>Authorized Signature</p>
+                                    <div style={{borderBottom: '1px solid #000', width: '200px', height: '40px'}}></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
