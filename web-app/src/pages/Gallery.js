@@ -13,6 +13,10 @@ const Gallery = () => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [isScrolled, setIsScrolled] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(12);
+
   useEffect(() => {
       const handleScroll = () => {
           if (window.scrollY > 50) {
@@ -59,6 +63,15 @@ const Gallery = () => {
       });
   }, [activeCategory]);
 
+  // Reset page when category changes
+  useEffect(() => {
+     setCurrentPage(1);
+  }, [activeCategory]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(works.length / itemsPerPage);
+  const paginatedWorks = works.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
     <>
       {/* Navigation Bar */}
@@ -101,7 +114,7 @@ const Gallery = () => {
         ) : works.length === 0 ? (
           <div className="gallery-empty">No artwork found in this category.</div>
         ) : (
-          works.map(item => (
+          paginatedWorks.map(item => (
             <div key={item.id} className="image-card" onClick={() => setSelectedImage(item)}>
               <img src={item.image_url} alt={item.title || item.category || 'Tattoo artwork'} />
               <div className="image-card-overlay">
@@ -115,6 +128,15 @@ const Gallery = () => {
           ))
         )}
       </section>
+
+      {/* Pagination Controls */}
+      {!loading && works.length > itemsPerPage && (
+          <div className="gallery-pagination" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', padding: '2rem 0' }}>
+              <button className="filter-btn" style={{ padding: '8px 20px' }} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Previous</button>
+              <span style={{ color: '#fff', fontSize: '1rem' }}>Page {currentPage} of {totalPages}</span>
+              <button className="filter-btn" style={{ padding: '8px 20px' }} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next</button>
+          </div>
+      )}
 
       {/* Centered Modal */}
       {selectedImage && (

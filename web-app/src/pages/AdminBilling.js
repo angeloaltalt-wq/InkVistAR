@@ -25,6 +25,10 @@ function AdminBilling() {
     const [newInvoice, setNewInvoice] = useState({ client: '', amount: '', type: 'Tattoo Session', status: 'Pending' });
     const [previewModal, setPreviewModal] = useState({ mounted: false, visible: false, invoice: null });
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+
     // Modal animation handlers
     const openModal = (mode = 'create', invoice = null) => {
         if (mode === 'edit' && invoice) {
@@ -98,7 +102,7 @@ function AdminBilling() {
             fetchData(); // Refresh list
         } catch (error) {
             console.error("Error saving invoice:", error);
-            alert("Failed to save invoice");
+            alert("Failed to save invoice: " + (error.response?.data?.message || error.message));
         }
     };
 
@@ -109,7 +113,7 @@ function AdminBilling() {
                 fetchData();
             } catch (error) {
                 console.error("Error deleting invoice:", error);
-                alert("Failed to delete invoice");
+                alert("Failed to delete invoice: " + (error.response?.data?.message || error.message));
             }
         }
     };
@@ -138,6 +142,10 @@ function AdminBilling() {
             setConfig({ ...config, [key]: parseFloat(value) });
         }
     };
+
+    // Pagination logic
+    const totalPages = Math.ceil(invoices.length / itemsPerPage);
+    const paginatedInvoices = invoices.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     return (
         <div className="admin-page-with-sidenav">
@@ -195,7 +203,7 @@ function AdminBilling() {
                                     <tbody>
                                         {loading ? (
                                             <tr><td colSpan="7" className="no-data" style={{textAlign: 'center', padding: '2rem'}}>Loading invoices...</td></tr>
-                                        ) : invoices.map(inv => (
+                                        ) : paginatedInvoices.map(inv => (
                                             <tr key={inv.id}>
                                                 <td>INV-{inv.id}</td>
                                                 <td>{inv.client_name}</td>
@@ -226,6 +234,26 @@ function AdminBilling() {
                                 </table>
                             </div>
                         </div>
+
+                        {/* Pagination Controls */}
+                        {invoices.length > 0 && (
+                            <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <label>Items per page:</label>
+                                    <select value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="select-input" style={{ width: '80px', padding: '4px', borderRadius: '4px', border: '1px solid #ddd' }}>
+                                        <option value={5}>5</option>
+                                        <option value={10}>10</option>
+                                        <option value={20}>20</option>
+                                        <option value={50}>50</option>
+                                    </select>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                    <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Page {currentPage} of {totalPages} ({invoices.length} items)</span>
+                                    <button className="btn btn-secondary" style={{ padding: '5px 15px' }} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Previous</button>
+                                    <button className="btn btn-secondary" style={{ padding: '5px 15px' }} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next</button>
+                                </div>
+                            </div>
+                        )}
                     </>
                 ) : !loading && (
                     <div className="settings-container" style={{display: 'block', margin: '2rem'}}>

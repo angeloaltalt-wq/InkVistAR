@@ -22,6 +22,10 @@ function AdminStaff() {
     const [roleFilter, setRoleFilter] = useState('all');
     const [loading, setLoading] = useState(true);
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+
     // Detailed View State
     const [selectedArtist, setSelectedArtist] = useState(null);
     const [activeTab, setActiveTab] = useState('profile');
@@ -77,7 +81,12 @@ function AdminStaff() {
             return matchesSearch && matchesRole;
         });
         setFilteredStaff(filtered);
+        setCurrentPage(1); // Reset page on filter change
     };
+
+    // Pagination logic
+    const totalPages = Math.ceil(filteredStaff.length / itemsPerPage);
+    const paginatedStaff = filteredStaff.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     // Modal animation handlers
     const openModal = () => {
@@ -92,6 +101,7 @@ function AdminStaff() {
             setSelectedArtist(null);
         }, 400); // Match CSS transition duration
     };
+
     // --- Artist Management Functions ---
 
     const openArtistManager = async (artist) => {
@@ -401,8 +411,8 @@ function AdminStaff() {
                         <tbody>
                             {loading ? (
                                 <tr><td colSpan="5" className="no-data" style={{textAlign: 'center', padding: '2rem'}}>Loading staff...</td></tr>
-                            ) : filteredStaff.length > 0 ? (
-                                filteredStaff.map((member) => (
+                            ) : paginatedStaff.length > 0 ? (
+                                paginatedStaff.map((member) => (
                                     <tr key={member.id}>
                                         <td><strong>{member.name}</strong></td>
                                         <td>{member.email}</td>
@@ -425,6 +435,27 @@ function AdminStaff() {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination Controls */}
+                {filteredStaff.length > itemsPerPage && (
+                    <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <label style={{fontSize: '0.85rem'}}>Per page:</label>
+                            <select value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="form-input" style={{ width: '70px', padding: '2px 5px', height: 'auto' }}>
+                                <option value={5}>5</option>
+                                <option value={10}>10</option>
+                                <option value={20}>20</option>
+                            </select>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>{currentPage} / {totalPages}</span>
+                            <div style={{display: 'flex', gap: '5px'}}>
+                                <button className="btn btn-secondary" style={{ padding: '2px 10px', fontSize: '0.8rem' }} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Prev</button>
+                                <button className="btn btn-secondary" style={{ padding: '2px 10px', fontSize: '0.8rem' }} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Detailed Artist Manager Overlay */}

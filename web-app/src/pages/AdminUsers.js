@@ -19,6 +19,10 @@ function AdminUsers() {
     const [loading, setLoading] = useState(true);
     const [selectedUser, setSelectedUser] = useState(null);
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+
     // Modal state for animations
     const [userModal, setUserModal] = useState({ mounted: false, visible: false });
 
@@ -93,7 +97,12 @@ function AdminUsers() {
         }
 
         setFilteredUsers(filtered);
+        setCurrentPage(1); // Reset to first page on filter change
     };
+
+    // Pagination logic
+    const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+    const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     const handleEdit = (user) => {
         setSelectedUser(user);
@@ -294,8 +303,8 @@ function AdminUsers() {
                             <tbody>
                                 {loading ? (
                                     <tr><td colSpan="7" className="no-data" style={{textAlign: 'center', padding: '2rem'}}>Loading users...</td></tr>
-                                ) : filteredUsers.length > 0 ? (
-                                    filteredUsers.map((user) => (
+                                ) : paginatedUsers.length > 0 ? (
+                                    paginatedUsers.map((user) => (
                                         <tr key={user.id}>
                                             <td>#{user.id}</td>
                                             <td>{user.name}</td>
@@ -337,6 +346,26 @@ function AdminUsers() {
                         </table>
                     </div>
                 </div>
+
+                {/* Pagination Controls */}
+                {filteredUsers.length > 10 && (
+                    <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <label>Items per page:</label>
+                            <select value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="select-input" style={{ width: '80px', padding: '4px' }}>
+                                <option value={5}>5</option>
+                                <option value={10}>10</option>
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                            </select>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Page {currentPage} of {totalPages} ({filteredUsers.length} users)</span>
+                            <button className="btn btn-secondary" style={{ padding: '5px 15px' }} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Previous</button>
+                            <button className="btn btn-secondary" style={{ padding: '5px 15px' }} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next</button>
+                        </div>
+                    </div>
+                )}
 
             {/* Modal */}
             {userModal.mounted && (

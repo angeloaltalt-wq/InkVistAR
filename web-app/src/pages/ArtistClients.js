@@ -12,6 +12,10 @@ function ArtistClients() {
     const [selectedClient, setSelectedClient] = useState(null);
     const [clientHistory, setClientHistory] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
+
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(9);
     
     const [user] = useState(() => {
         const saved = localStorage.getItem('user');
@@ -65,6 +69,15 @@ function ArtistClients() {
         client.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    // Reset page on search
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
+
+    // Pagination logic
+    const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
+    const paginatedClients = filteredClients.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
     return (
         <div className="portal-layout">
             <ArtistSideNav />
@@ -87,7 +100,7 @@ function ArtistClients() {
                     {loading ? <div className="no-data">Loading clients...</div> : (
                         filteredClients.length > 0 ? (
                             <div className="artists-grid">
-                                {filteredClients.map(client => (
+                                {paginatedClients.map(client => (
                                     <div key={client.id} className="artist-card" onClick={() => handleClientClick(client)} style={{ cursor: 'pointer' }}>
                                         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}>
                                             <div style={{ background: '#e0e7ff', padding: '15px', borderRadius: '50%' }}>
@@ -109,6 +122,15 @@ function ArtistClients() {
                                 {searchTerm ? 'No clients found matching your search.' : 'No clients assigned yet.'}
                             </div>
                         )
+                    )}
+
+                    {/* Pagination Controls */}
+                    {filteredClients.length > itemsPerPage && (
+                        <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px' }}>
+                            <button className="btn btn-secondary" style={{padding: '5px 15px'}} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Previous</button>
+                            <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Page {currentPage} of {totalPages}</span>
+                            <button className="btn btn-secondary" style={{padding: '5px 15px'}} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next</button>
+                        </div>
                     )}
                 </div>
 

@@ -2596,9 +2596,13 @@ app.post('/api/admin/invoices', (req, res) => {
 app.put('/api/admin/invoices/:id', (req, res) => {
   const { id } = req.params;
   const { client, type, amount, status } = req.body;
+  console.log(`[DEBUG] Updating invoice ${id}:`, req.body);
   const query = 'UPDATE invoices SET client_name = ?, service_type = ?, amount = ?, status = ? WHERE id = ?';
   db.query(query, [client, type, amount, status, id], (err) => {
-    if (err) return res.status(500).json({ success: false, message: err.message });
+    if (err) {
+      console.error(`[DEBUG] Update error:`, err);
+      return res.status(500).json({ success: false, message: err.message });
+    }
     res.json({ success: true, message: 'Invoice updated' });
   });
 });
@@ -2606,8 +2610,12 @@ app.put('/api/admin/invoices/:id', (req, res) => {
 // Admin: Delete Invoice
 app.delete('/api/admin/invoices/:id', (req, res) => {
   const { id } = req.params;
+  console.log(`[DEBUG] Deleting invoice ${id}`);
   db.query('DELETE FROM invoices WHERE id = ?', [id], (err) => {
-    if (err) return res.status(500).json({ success: false, message: err.message });
+    if (err) {
+      console.error(`[DEBUG] Delete error:`, err);
+      return res.status(500).json({ success: false, message: err.message });
+    }
     res.json({ success: true, message: 'Invoice deleted' });
   });
 });
