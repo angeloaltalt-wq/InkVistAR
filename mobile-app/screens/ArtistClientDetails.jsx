@@ -9,22 +9,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { fetchAPI } from '../src/utils/api';
 
 export function ArtistClientDetails({ route, onBack }) {
-  const { client } = route.params || {};
+  const { client, session } = route.params || {};
   const [loading, setLoading] = useState(true);
   const [details, setDetails] = useState(null);
   const [appointments, setAppointments] = useState([]);
 
-  useEffect(() => {
-    if (client?.id) {
-      fetchClientFullDetails();
-    }
-  }, [client]);
+  // Determine IDs and display info based on whether we came from Client List or Session List
+  const targetId = client?.id || session?.customer_id;
+  const displayClientName = client?.name || session?.client_name || 'Client Name';
+  const displayClientEmail = client?.email || session?.client_email || 'email@example.com';
 
-  const fetchClientFullDetails = async () => {
+  useEffect(() => {
+    if (targetId) {
+      fetchClientFullDetails(targetId);
+    }
+  }, [targetId]);
+
+  const fetchClientFullDetails = async (id) => {
     try {
       setLoading(true);
       // Fetch customer profile
-      const profileResult = await fetchAPI(`/customer/profile/${client.id}`);
+      const profileResult = await fetchAPI(`/customer/profile/${id}`);
       if (profileResult.success) {
         setDetails(profileResult.profile);
       }
@@ -73,8 +78,8 @@ export function ArtistClientDetails({ route, onBack }) {
               </View>
               <View style={styles.statusDot} />
             </View>
-            <Text style={styles.clientName}>{client?.name || 'Client Name'}</Text>
-            <Text style={styles.clientEmail}>{client?.email || 'email@example.com'}</Text>
+            <Text style={styles.clientName}>{displayClientName}</Text>
+            <Text style={styles.clientEmail}>{displayClientEmail}</Text>
             
             <View style={styles.quickActions}>
               <TouchableOpacity style={styles.quickActionButton} onPress={handleCall}>
@@ -91,13 +96,51 @@ export function ArtistClientDetails({ route, onBack }) {
         </LinearGradient>
 
         <View style={styles.content}>
+          {/* Session Details Section (Visible if navigated from Schedule/Today's Sessions) */}
+          {session && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Session Details</Text>
+              <View style={styles.infoCard}>
+                <View style={styles.infoRow}>
+                  <View style={styles.infoIcon}>
+                    <Ionicons name="pricetag" size={20} color="#daa520" />
+                  </View>
+                  <View>
+                    <Text style={styles.infoLabel}>Session Price</Text>
+                    <Text style={styles.infoText}>₱{session.price ? Number(session.price).toLocaleString() : '0'}</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.infoRow}>
+                  <View style={styles.infoIcon}>
+                    <Ionicons name="time" size={20} color="#daa520" />
+                  </View>
+                  <View>
+                    <Text style={styles.infoLabel}>Time</Text>
+                    <Text style={styles.infoText}>{session.start_time} - {session.appointment_date}</Text>
+                  </View>
+                </View>
+
+                <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+                  <View style={styles.infoIcon}>
+                    <Ionicons name="document-text" size={20} color="#daa520" />
+                  </View>
+                  <View>
+                    <Text style={styles.infoLabel}>Design</Text>
+                    <Text style={styles.infoText}>{session.design_title}</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          )}
+
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{client?.appointment_count || 0}</Text>
+              <Text style={styles.statNumber}>{details?.appointment_count || client?.appointment_count || 0}</Text>
               <Text style={styles.statLabel}>Total Sessions</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statNumber}>₱{(client?.total_spent || 0).toLocaleString()}</Text>
+              <Text style={styles.statNumber}>₱{(details?.total_spent || client?.total_spent || 0).toLocaleString()}</Text>
               <Text style={styles.statLabel}>Total Paid</Text>
             </View>
           </View>

@@ -3,68 +3,70 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Mod
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { getCustomerProfile, updateCustomerProfile } from '../src/utils/api';
-
+import { getCustomer
 export function CustomerProfilePage({ userId, userName, userEmail, onBack, onLogout }) {
   const navigation = useNavigation();
   const [profile, setProfile] = useState({
-    name: userName,
-    email: userEmail,
-    phone: '',
-    location: ''
+    name: userName || '',
+    email: userEmp 
   });
-  const [loading, setLoading] = useState(false);
+  const [statsData, setStatsData] = useState({
+    tattoos: 0,
+   
+  });
+  const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', phone: '', location: '' });
 
   useEffect(() => {
-    if (userId) fetchProfile();
+    if (userId) fetchProfileData();
   }, [userId]);
 
-  const fetchProfile = async () => {
-    try {
-      const data = await getCustomerProfile(userId);
-      if (data && data.success) {
-        setProfile({
-          name: data.profile.name,
-          email: data.profile.email,
-          phone: data.profile.phone || '',
-          location: data.profile.location || ''
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
+  const fetchProfileData = async () => {
+    setLoading(true);
+      const data = await getCustomerDashboard(userId);
+      if (data && data.success && data.customer) {
+        setProfile({.customer.name,
+          email: data.customer.email,
+       
+        setStatsData({
+          tattoos: data.stats?.total_tattoos || 0,
+          designs: data.stats?.saved_designs || 0,
+          ?.a;Error fetching profile data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSaveProfile = async () => {
+    setLoading(true);
     try {
       const data = await updateCustomerProfile(userId, editForm);
       if (data.success) {
-        setProfile(prev => ({ ...prev, ...editForm }));
-        setModalVisible(false);
+        setProfile(pr
         Alert.alert('Success', 'Profile updated successfully');
       } else {
-        Alert.alert('Error', 'Failed to update profile');
+        Alert.alert('Error', data.message || 'Failed to update profile');
       }
     } catch (error) {
       Alert.alert('Error', 'Network error');
+    } finally {
+      setLoading(false);
     }
   };
 
   const openEditModal = () => {
     setEditForm({
       name: profile.name,
-      phone: profile.phone,
-      location: profile.location
+      phone: p
     });
     setModalVisible(true);
   };
 
   const stats = [
-    { label: 'Tattoos', value: '0', icon: 'color-palette' },
-    { label: 'Designs', value: '0', icon: 'heart' },
-    { label: 'Artists', value: '0', icon: 'people' },
+    { label: 'Tattoos', value: statsData.tattoos.toString(), icon: 'color-palette' },
+    { label: 'Designs', value: statsData.designs.toString(), icon: 'heart' },
+    { label: 'Artists', value: statsData.artists.toString(), icon: 'people' },
   ];
 
   const personalInfo = [
@@ -75,13 +77,17 @@ export function CustomerProfilePage({ userId, userName, userEmail, onBack, onLog
   ];
 
   const preferences = [
-    { label: 'Notifications', icon: 'notifications', hasArrow: true, onPress: () => navigation.navigate('customer-notifications') },
-    { label: 'Privacy & Security', icon: 'lock-closed', hasArrow: true, onPress: () => Alert.alert('Coming Soon', 'Privacy & Security settings will be available in a future update.') },
-    { label: 'Payment Methods', icon: 'card', hasArrow: true, onPress: () => Alert.alert('Coming Soon', 'Payment methods will be available in a future update.') },
-    { label: 'Appointment History', icon: 'time', hasArrow: true, onPress: () => navigation.navigate('Appointments') },
+    { label: 'NotArrow: true, onPress: () => navigation.navigate('Appointments') },
     { label: 'Help & Support', icon: 'help-circle', hasArrow: true, onPress: () => Alert.alert('Coming Soon', 'Help & Support will be available in a future update.') },
   ];
 
+  if (loading && !modalVisible) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#daa520" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -217,6 +223,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f9fafb',
   },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scrollView: {
     flex: 1,
   },

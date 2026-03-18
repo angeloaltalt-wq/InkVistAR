@@ -1,320 +1,219 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+// c:\Users\Ella\Desktop\InkVistAR\mobile-app\screens\ArtistProfile.jsx
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { getArtistDashboard, updateArtistProfile } from '../src/utils/api';
 
-export function ArtistProfile({ userName, userEmail, onBack, onLogout }) {
-  const stats = [
-    { label: 'Works', value: '0', icon: 'images' },
-    { label: 'Clients', value: '0', icon: 'people' },
-    { label: 'Reviews', value: '0', icon: 'star' },
-  ];
+export const ArtistProfile = ({ userId, userName, userEmail, onLogout }) => {
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState({
+    name: userName || '',
+    email: userEmail || '',
+    phone: '',
+    experience_years: 0,
+    specialization: 'General',
+    hourly_rate: 0,
+    commission_rate: 0.60
+  });
 
-  const personalInfo = [
-    { label: 'Full Name', value: userName, icon: 'person' },
-    { label: 'Email', value: userEmail, icon: 'mail' },
-    { label: 'Phone', value: 'Placeholder Phone', icon: 'call' },
-    { label: 'Studio', value: 'Placeholder Studio', icon: 'business' },
-  ];
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editForm, setEditForm] = useState({});
 
-  const professionalInfo = [
-    { label: 'Specialization', value: 'Placeholder Specialization', icon: 'color-palette' },
-    { label: 'Experience', value: '0 Years', icon: 'time' },
-    { label: 'Certifications', value: 'Placeholder Certification', icon: 'ribbon' },
-    { label: 'Hourly Rate', value: '₱0/hr', icon: 'cash' },
-  ];
+  useEffect(() => {
+    fetchProfileData();
+  }, [userId]);
 
-  const settings = [
-    { label: 'Availability Settings', icon: 'calendar', hasArrow: true },
-    { label: 'Notification Preferences', icon: 'notifications', hasArrow: true },
-    { label: 'Privacy & Security', icon: 'lock-closed', hasArrow: true },
-    { label: 'Payment Settings', icon: 'card', hasArrow: true },
-    { label: 'Help & Support', icon: 'help-circle', hasArrow: true },
-  ];
+  const fetchProfileData = async () => {
+    if (!userId) return;
+    setLoading(true);
+    try {
+      const response = await getArtistDashboard(userId);
+      if (response.success && response.artist) {
+        setProfile({
+          name: response.artist.name,
+          email: response.artist.email,
+          phone: response.artist.phone || '', 
+          experience_years: response.artist.experience_years,
+          specialization: response.artist.specialization,
+          hourly_rate: response.artist.hourly_rate,
+          commission_rate: response.artist.commission_rate
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = () => {
+    setEditForm({ ...profile });
+    setEditModalVisible(true);
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const result = await updateArtistProfile(userId, editForm);
+      if (result.success) {
+        Alert.alert('Success', 'Profile updated successfully');
+        setProfile(editForm);
+        setEditModalVisible(false);
+      } else {
+        Alert.alert('Error', result.message || 'Failed to update profile');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'An error occurred while saving.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading && !editModalVisible) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#daa520" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <LinearGradient
-          colors={['#000000', '#b8860b']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.header}
-        >
-          <View style={styles.headerContent}>
-            <TouchableOpacity onPress={onBack} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={20} color="#ffffff" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>My Profile</Text>
-            <TouchableOpacity style={styles.editButton}>
-              <Ionicons name="create-outline" size={22} color="#ffffff" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.profileCard}>
-            <View style={styles.avatar}>
-              <Ionicons name="person" size={48} color="#daa520" />
-            </View>
-            <Text style={styles.profileName}>{userName}</Text>
-            <Text style={styles.profileEmail}>{userEmail}</Text>
-            <View style={styles.ratingBadge}>
-              <Ionicons name="star" size={16} color="#daa520" />
-              <Text style={styles.ratingText}>0.0 Rating</Text>
-            </View>
-          </View>
-
-          <View style={styles.statsContainer}>
-            {stats.map((stat, index) => (
-              <View key={index} style={styles.statCard}>
-                <Ionicons name={stat.icon} size={24} color="#ffffff" />
-                <Text style={styles.statValue}>{stat.value}</Text>
-                <Text style={styles.statLabel}>{stat.label}</Text>
-              </View>
-            ))}
-          </View>
-        </LinearGradient>
-
-        <View style={styles.content}>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Personal Information</Text>
-            {personalInfo.map((item, index) => (
-              <View key={index} style={styles.infoCard}>
-                <View style={styles.infoIcon}>
-                  <Ionicons name={item.icon} size={20} color="#6b7280" />
-                </View>
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>{item.label}</Text>
-                  <Text style={styles.infoValue}>{item.value}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Professional Details</Text>
-            {professionalInfo.map((item, index) => (
-              <View key={index} style={styles.infoCard}>
-                <View style={styles.infoIcon}>
-                  <Ionicons name={item.icon} size={20} color="#6b7280" />
-                </View>
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>{item.label}</Text>
-                  <Text style={styles.infoValue}>{item.value}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Settings</Text>
-            {settings.map((item, index) => (
-              <TouchableOpacity key={index} style={styles.settingCard}>
-                <Ionicons name={item.icon} size={24} color="#111827" />
-                <Text style={styles.settingLabel}>{item.label}</Text>
-                {item.hasArrow && <Ionicons name="chevron-forward" size={20} color="#9ca3af" />}
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <TouchableOpacity onPress={onLogout}>
-            <LinearGradient
-              colors={['#dc2626', '#b91c1c']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.logoutButton}
-            >
-              <Ionicons name="log-out" size={20} color="#ffffff" />
-              <Text style={styles.logoutText}>Logout</Text>
-            </LinearGradient>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>My Profile</Text>
+          <TouchableOpacity onPress={onLogout} style={styles.logoutBtn}>
+            <Ionicons name="log-out-outline" size={24} color="#ef4444" />
           </TouchableOpacity>
         </View>
+
+        <View style={styles.profileHeader}>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatarText}>{profile.name ? profile.name.charAt(0).toUpperCase() : 'A'}</Text>
+          </View>
+          <Text style={styles.name}>{profile.name}</Text>
+          <Text style={styles.email}>{profile.email}</Text>
+          <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
+            <Text style={styles.editButtonText}>Edit Profile</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Professional Details</Text>
+          
+          <View style={styles.row}>
+            <Text style={styles.label}>Specialization</Text>
+            <Text style={styles.value}>{profile.specialization}</Text>
+          </View>
+          
+          <View style={styles.row}>
+            <Text style={styles.label}>Experience</Text>
+            <Text style={styles.value}>{profile.experience_years} Years</Text>
+          </View>
+
+          <View style={styles.row}>
+            <Text style={styles.label}>Hourly Rate</Text>
+            <Text style={styles.value}>${profile.hourly_rate}/hr</Text>
+          </View>
+
+          <View style={styles.row}>
+            <Text style={styles.label}>Commission</Text>
+            <Text style={styles.value}>{(profile.commission_rate * 100).toFixed(0)}%</Text>
+          </View>
+
+          <View style={styles.row}>
+            <Text style={styles.label}>Phone</Text>
+            <Text style={styles.value}>{profile.phone || 'Not set'}</Text>
+          </View>
+        </View>
       </ScrollView>
+
+      {/* Edit Modal */}
+      <Modal visible={editModalVisible} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Profile</Text>
+              <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView>
+              <Text style={styles.inputLabel}>Full Name</Text>
+              <TextInput 
+                style={styles.input} 
+                value={editForm.name} 
+                onChangeText={(text) => setEditForm({...editForm, name: text})} 
+              />
+
+              <Text style={styles.inputLabel}>Phone Number</Text>
+              <TextInput 
+                style={styles.input} 
+                value={editForm.phone} 
+                onChangeText={(text) => setEditForm({...editForm, phone: text})} 
+                keyboardType="phone-pad"
+              />
+
+              <Text style={styles.inputLabel}>Specialization</Text>
+              <TextInput 
+                style={styles.input} 
+                value={editForm.specialization} 
+                onChangeText={(text) => setEditForm({...editForm, specialization: text})} 
+              />
+
+              <Text style={styles.inputLabel}>Experience (Years)</Text>
+              <TextInput 
+                style={styles.input} 
+                value={String(editForm.experience_years)} 
+                onChangeText={(text) => setEditForm({...editForm, experience_years: text})} 
+                keyboardType="numeric"
+              />
+
+              <Text style={styles.inputLabel}>Hourly Rate ($)</Text>
+              <TextInput 
+                style={styles.input} 
+                value={String(editForm.hourly_rate)} 
+                onChangeText={(text) => setEditForm({...editForm, hourly_rate: text})} 
+                keyboardType="numeric"
+              />
+
+              <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+                <Text style={styles.saveButtonText}>Save Changes</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
-    padding: 24,
-    paddingTop: 60,
-    paddingBottom: 32,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  editButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileCard: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  profileName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#ffffff',
-    marginBottom: 4,
-  },
-  profileEmail: {
-    fontSize: 14,
-    color: '#ffffff',
-    opacity: 0.9,
-    marginBottom: 12,
-  },
-  ratingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  ratingText: {
-    fontSize: 14,
-    color: '#ffffff',
-    fontWeight: '600',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#ffffff',
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#ffffff',
-    opacity: 0.9,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 12,
-  },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  infoIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f3f4f6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  infoContent: {
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginBottom: 4,
-  },
-  infoValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  settingCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  settingLabel: {
-    flex: 1,
-    fontSize: 16,
-    color: '#111827',
-    marginLeft: 12,
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 8,
-  },
-  logoutText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  container: { flex: 1, backgroundColor: '#f9fafb' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  scrollContent: { paddingBottom: 40 },
+  header: { padding: 20, paddingTop: 50, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#111' },
+  logoutBtn: { padding: 5 },
+  profileHeader: { alignItems: 'center', padding: 20, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#eee' },
+  avatarContainer: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#daa520', justifyContent: 'center', alignItems: 'center', marginBottom: 15 },
+  avatarText: { fontSize: 40, color: 'white', fontWeight: 'bold' },
+  name: { fontSize: 22, fontWeight: 'bold', color: '#111' },
+  email: { fontSize: 16, color: '#6b7280', marginBottom: 15 },
+  editButton: { paddingHorizontal: 20, paddingVertical: 8, backgroundColor: '#f3f4f6', borderRadius: 20 },
+  editButtonText: { color: '#374151', fontWeight: '600' },
+  section: { marginTop: 20, backgroundColor: 'white', padding: 20 },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: '#111' },
+  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  label: { color: '#6b7280', fontSize: 16 },
+  value: { color: '#111', fontSize: 16, fontWeight: '500' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+  modalContent: { backgroundColor: 'white', borderRadius: 12, padding: 20, maxHeight: '80%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold' },
+  inputLabel: { fontSize: 14, color: '#6b7280', marginBottom: 5, marginTop: 10 },
+  input: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, padding: 10, fontSize: 16 },
+  saveButton: { marginTop: 25, backgroundColor: '#daa520', padding: 15, borderRadius: 8, alignItems: 'center' },
+  saveButtonText: { color: 'white', fontWeight: 'bold', fontSize: 16 }
 });
