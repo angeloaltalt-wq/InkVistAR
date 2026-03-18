@@ -120,14 +120,22 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
 
             if (response.data.success) {
                 const { appointmentId } = response.data;
-                navigate('/payment', { state: { appointmentId } });
+                const price = formData.artist.hourly_rate || 50; // Pass the price to the payment page
+                navigate('/payment', { state: { appointmentId, price } });
             } else {
                 alert('Booking Failed: ' + (response.data.message || 'An unknown error occurred.'));
             }
         } catch (error) {
-            console.error('Booking error:', error.response || error);
-            const errorMessage = error.response?.data?.message || 'Failed to connect to the server. Please check your connection and try again.';
-            alert(`Booking Failed: ${errorMessage}`);
+            console.error('Booking error:', error);
+            let errorMessage = 'An unexpected error occurred.';
+            if (error.response) {
+                errorMessage = error.response.data.message || `Server responded with status ${error.response.status}.`;
+            } else if (error.request) {
+                errorMessage = 'Failed to connect to the server. Please check your network connection or try again later.';
+            } else {
+                errorMessage = error.message;
+            }
+            alert(`Booking Failed: ${errorMessage}\n\nIf the problem persists, please ensure the backend server is running and accessible.`);
         } finally {
             setLoading(false);
         }
