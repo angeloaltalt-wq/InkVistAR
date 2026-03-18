@@ -24,6 +24,13 @@ const PaymentSimulation = () => {
     const price = Number(statePrice || paramPrice || stored.price || 50);
 
     useEffect(() => {
+        // Fast fail if API_URL is not configured in production builds
+        if (!API_URL) {
+            setError('API URL is not configured. Please set REACT_APP_API_URL to your backend URL and redeploy.');
+            setStatus('failed');
+            return;
+        }
+
         if (!appointmentId) {
             setError('Missing appointment. Please return to your bookings and try again.');
             setStatus('failed');
@@ -46,8 +53,10 @@ const PaymentSimulation = () => {
                     throw new Error('No checkout URL returned');
                 }
             } catch (err) {
-                console.error('Failed to start payment:', err);
-                setError('Failed to start payment. Please try again or contact support.');
+                // Bubble up server-provided message when available to aid debugging
+                const serverMessage = err?.response?.data?.message || err?.message;
+                console.error('Failed to start payment:', serverMessage, err?.response?.data);
+                setError(serverMessage || 'Failed to start payment. Please try again or contact support.');
                 setStatus('failed');
             }
         };

@@ -4,6 +4,8 @@ const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const Groq = require('groq-sdk');
 const crypto = require('crypto');
+// Provide fetch for Node runtimes that lack the global (e.g., Node 16 on some hosts)
+const fetch = global.fetch || require('node-fetch');
 require('dotenv').config();
 
 const app = express();
@@ -2054,7 +2056,11 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
     });
   } catch (error) {
     console.error('🔥 Unexpected error creating checkout session:', error);
-    res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+    res.status(500).json({
+      success: false,
+      message: error?.message || 'Internal server error',
+      error: error?.stack || error
+    });
   }
 });
 
