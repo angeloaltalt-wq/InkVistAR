@@ -1995,10 +1995,17 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
       }
 
       const appointment = results[0];
-      const amount = Math.max(1, Math.round(Number(appointment.price || 0) * 100)); // centavos
+      const amount = Math.round(Number(appointment.price || 0) * 100); // centavos
+      if (!amount || amount <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Appointment has no price set. Please set a price before taking payment.'
+        });
+      }
       const description = `Appointment #${appointmentId} payment`;
       const redirectBaseSuccess = `${FRONTEND_URL}/booking-confirmation`;
       const redirectBaseFailed = `${FRONTEND_URL}/customer/bookings`;
+      console.log(`[PAYMONGO] Create checkout | appt ${appointmentId} | amount ${amount} | mode ${PAYMONGO_MODE}`);
 
       const payload = {
         data: {
@@ -2034,8 +2041,16 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
       const data = await response.json();
 
       if (!response.ok) {
-        console.error('❌ PayMongo error:', data);
-        return res.status(502).json({ success: false, message: 'Failed to create checkout session', error: data });
+        // PayMongo usually returns array of errors with detail/title
+        const detail = Array.isArray(data?.errors) && data.errors.length
+          ? (data.errors[0].detail || data.errors[0].title)
+          : null;
+        console.error('❌ PayMongo error creating checkout session:', detail || data);
+        return res.status(response.status || 502).json({
+          success: false,
+          message: detail || 'Failed to create checkout session',
+          error: data
+        });
       }
 
       const sessionId = data?.data?.id;
