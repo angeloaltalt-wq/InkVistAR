@@ -1984,7 +1984,7 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
 
   try {
     // 1) Pull appointment to get authoritative price
-    db.query('SELECT id, price, customer_id, artist_id, status FROM appointments WHERE id = ? AND is_deleted = 0', [appointmentId], async (err, results) => {
+    db.query('SELECT id, price, customer_id, artist_id, status, design_title FROM appointments WHERE id = ? AND is_deleted = 0', [appointmentId], async (err, results) => {
       if (err) {
         console.error('❌ DB error loading appointment for checkout:', err.message);
         return res.status(500).json({ success: false, message: 'Database error' });
@@ -2015,8 +2015,15 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
       const payload = {
         data: {
           attributes: {
-            amount,
-            currency: 'PHP',
+            line_items: [
+              {
+                amount,
+                currency: 'PHP',
+                name: appointment.design_title || 'Tattoo Service',
+                description: description,
+                quantity: 1
+              }
+            ],
             description,
             payment_method_types: ['card', 'gcash', 'paymaya', 'grab_pay'],
             statement_descriptor: 'InkVistAR',
@@ -2026,10 +2033,8 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
               artistId: String(appointment.artist_id),
               mode: PAYMONGO_MODE,
             },
-            redirect: {
-              success: `${redirectBaseSuccess}?appointmentId=${appointmentId}`,
-              failed: `${redirectBaseFailed}?payment=failed&appointmentId=${appointmentId}`
-            }
+            success_url: `${redirectBaseSuccess}?appointmentId=${appointmentId}`,
+            cancel_url: `${redirectBaseFailed}?payment=failed&appointmentId=${appointmentId}`
           }
         }
       };
