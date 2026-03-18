@@ -235,8 +235,15 @@ export const updateArtistWorkVisibility = async (workId, isPublic) => {
 };
 
 // Artist: Get Appointments
-export const getArtistAppointments = async (artistId, status = '') => {
-  const endpoint = status ? `/artist/${artistId}/appointments?status=${status}` : `/artist/${artistId}/appointments`;
+export const getArtistAppointments = async (artistId, status = '', date = '') => {
+  let endpoint = `/artist/${artistId}/appointments`;
+  const params = [];
+  if (status) params.push(`status=${status}`);
+  if (date) params.push(`date=${date}`);
+  
+  if (params.length > 0) {
+    endpoint += `?${params.join('&')}`;
+  }
   return fetchAPI(endpoint);
 };
 
@@ -281,6 +288,14 @@ export const deleteArtistClient = async (clientId) => {
 // Artist: Get Dashboard
 export const getArtistDashboard = async (artistId) => {
   return fetchAPI(`/artist/dashboard/${artistId}`);
+};
+
+// Artist: Update Profile
+export const updateArtistProfile = async (artistId, profileData) => {
+  return fetchAPI(`/artist/profile/${artistId}`, {
+    method: 'PUT',
+    body: JSON.stringify(profileData)
+  });
 };
 
 // Customer: Get Appointments

@@ -123,6 +123,14 @@ db.connect(err => {
           console.log('✅ Added commission_rate column');
         }
       });
+
+      // MIGRATION: Check if 'phone' column exists, if not add it
+      db.query("SHOW COLUMNS FROM artists LIKE 'phone'", (err, results) => {
+        if (!err && results.length === 0) {
+          console.log('🔄 Migrating artists table: Adding phone column...');
+          db.query("ALTER TABLE artists ADD COLUMN phone VARCHAR(20)");
+        }
+      });
     });
 
     // Create Notifications Table if not exists
@@ -1370,7 +1378,7 @@ app.get('/api/artist/:artistId/clients', (req, res) => {
 // Update Artist Profile
 app.put('/api/artist/profile/:id', (req, res) => {
   const { id } = req.params;
-  const { name, specialization, hourly_rate, experience_years, commission_rate } = req.body;
+  const { name, specialization, hourly_rate, experience_years, commission_rate, phone } = req.body;
   
   // Update users table (name)
   db.query('UPDATE users SET name = ? WHERE id = ?', [name, id], (err) => {
@@ -1391,6 +1399,10 @@ app.put('/api/artist/profile/:id', (req, res) => {
     if (commission_rate !== undefined) {
         artistQuery += ', commission_rate = ?';
         params.push(commission_rate);
+    }
+    if (phone !== undefined) {
+        artistQuery += ', phone = ?';
+        params.push(phone);
     }
     
     artistQuery += ' WHERE user_id = ?';

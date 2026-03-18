@@ -61,38 +61,69 @@ const Tab = createBottomTabNavigator();
 
 // Simple Artist Client Details Screen
 const ArtistClientDetailsScreen = ({ navigation, route }) => {
-  const { client } = route.params || {};
+  const { client, session } = route.params || {};
+  const targetId = client?.id || session?.customer_id;
   const [details, setDetails] = useState(null);
   
   useEffect(() => {
-    if (client?.id) {
+    if (targetId) {
       // Always use the production Render backend URL
       const baseUrl = 'https://inkvistar-api.onrender.com';
-      fetch(`${baseUrl}/api/customer/profile/${client.id}`)
+      fetch(`${baseUrl}/api/customer/profile/${targetId}`)
         .then(res => res.json())
         .then(data => {
           if (data.success) setDetails(data.profile);
         })
         .catch(err => console.error('Error fetching client details:', err));
     }
-  }, [client]);
+  }, [targetId]);
+  
+  // Use display name from session or client
+  const displayName = session?.client_name || client?.name || details?.name || 'Unknown Client';
+  const displayEmail = session?.client_email || client?.email || details?.email || 'No email';
 
   return (
     <View style={{ flex: 1, backgroundColor: 'white', padding: 20, paddingTop: 50 }}>
       <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginBottom: 20, flexDirection: 'row', alignItems: 'center' }}>
         <Ionicons name="arrow-back" size={24} color="#333" />
-        <Text style={{ marginLeft: 10, fontSize: 16, color: '#333' }}>Back to Clients</Text>
+        <Text style={{ marginLeft: 10, fontSize: 16, color: '#333' }}>Back</Text>
       </TouchableOpacity>
       
       <View style={{ alignItems: 'center', marginBottom: 30 }}>
         <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: '#daa520', justifyContent: 'center', alignItems: 'center', marginBottom: 15 }}>
           <Text style={{ fontSize: 32, color: 'white', fontWeight: 'bold' }}>
-            {client?.name ? client.name.charAt(0).toUpperCase() : '?'}
+            {displayName.charAt(0).toUpperCase()}
           </Text>
         </View>
-        <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#1f2937' }}>{client?.name || 'Unknown Client'}</Text>
-        <Text style={{ fontSize: 16, color: '#6b7280' }}>{client?.email || 'No email'}</Text>
+        <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#1f2937' }}>{displayName}</Text>
+        <Text style={{ fontSize: 16, color: '#6b7280' }}>{displayEmail}</Text>
       </View>
+      
+      {session && (
+        <View style={{ backgroundColor: '#fff7ed', borderRadius: 12, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: '#fbbf24' }}>
+          <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 15, color: '#b45309' }}>Session Details</Text>
+          
+          <View style={{ marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text style={{ fontSize: 14, color: '#b45309' }}>Date</Text>
+            <Text style={{ fontSize: 16, color: '#78350f', fontWeight: 'bold' }}>{session.appointment_date}</Text>
+          </View>
+
+          <View style={{ marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text style={{ fontSize: 14, color: '#b45309' }}>Time</Text>
+            <Text style={{ fontSize: 16, color: '#78350f', fontWeight: 'bold' }}>{session.start_time}</Text>
+          </View>
+
+          <View style={{ marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text style={{ fontSize: 14, color: '#b45309' }}>Design</Text>
+            <Text style={{ fontSize: 16, color: '#78350f', fontWeight: 'bold' }}>{session.design_title}</Text>
+          </View>
+
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text style={{ fontSize: 14, color: '#b45309' }}>Status</Text>
+            <Text style={{ fontSize: 16, color: '#78350f', fontWeight: 'bold', textTransform: 'uppercase' }}>{session.status}</Text>
+          </View>
+        </View>
+      )}
 
       <View style={{ backgroundColor: '#f3f4f6', borderRadius: 12, padding: 20, marginBottom: 20 }}>
         <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 15, color: '#111' }}>Contact Information</Text>
@@ -222,7 +253,6 @@ export default function App() {
     try {
       // Always use the production Render backend URL
       const baseUrl = 'https://inkvistar-api.onrender.com';
-      
       const response = await fetch(`${baseUrl}/api/resend-verification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -445,7 +475,7 @@ export default function App() {
         {(props) => <ArtistWorks {...props} artistId={user.id} onBack={() => props.navigation.navigate('Home')} />}
       </Tab.Screen>
       <Tab.Screen name="Profile">
-        {(props) => <ArtistProfile {...props} userName={user.name} userEmail={user.email} onBack={() => props.navigation.navigate('Home')} onLogout={() => setUser(null)} />}
+        {(props) => <ArtistProfile {...props} userId={user.id} userName={user.name} userEmail={user.email} onBack={() => props.navigation.navigate('Home')} onLogout={() => setUser(null)} />}
       </Tab.Screen>
     </Tab.Navigator>
   );
