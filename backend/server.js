@@ -1972,7 +1972,7 @@ app.put('/api/appointments/:id/details', (req, res) => {
 
 // Create a PayMongo Checkout Session
 app.post('/api/payments/create-checkout-session', async (req, res) => {
-  const { appointmentId } = req.body;
+  const { appointmentId, price: providedPrice } = req.body;
 
   if (!appointmentId) {
     return res.status(400).json({ success: false, message: 'appointmentId is required' });
@@ -1995,7 +1995,13 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
       }
 
       const appointment = results[0];
-      const amount = Math.round(Number(appointment.price || 0) * 100); // centavos
+      // Prefer authoritative DB price; fall back to provided price if DB missing
+      let priceNumber = Number(appointment.price);
+      if ((!priceNumber || priceNumber <= 0) && providedPrice) {
+        priceNumber = Number(providedPrice);
+      }
+
+      const amount = Math.round((priceNumber || 0) * 100); // centavos
       if (!amount || amount <= 0) {
         return res.status(400).json({
           success: false,
