@@ -5,7 +5,7 @@ import { API_URL } from '../config';
 
 const PayMongoPayment = () => {
     const [status, setStatus] = useState('pending');
-    const [paymentIntent, setPaymentIntent] = useState(null);
+    const [checkoutUrl, setCheckoutUrl] = useState(null);
     const navigate = useNavigate();
     const location = useLocation();
     const { appointmentId, price } = location.state || { appointmentId: null, price: 50 };
@@ -17,50 +17,39 @@ const PayMongoPayment = () => {
             return;
         }
 
-        const createPaymentIntent = async () => {
+        const initializeSession = async () => {
             try {
-                const response = await axios.post(`${API_URL}/api/payments/create-payment-intent`, {
-                    amount: price * 100, // PayMongo requires amount in centavos
-                    currency: 'PHP',
-                    description: `Payment for appointment ${appointmentId}`,
+                // Updated to match server.js endpoint
+                const response = await axios.post(`${API_URL}/api/payments/create-checkout-session`, {
+                    appointmentId: appointmentId,
+                    price: price
                 });
-                setPaymentIntent(response.data);
+
+                if (response.data.success && response.data.checkoutUrl) {
+                    setCheckoutUrl(response.data.checkoutUrl);
+                } else {
+                    throw new Error(response.data.message || 'Failed to get checkout URL');
+                }
             } catch (error) {
-                console.error('Failed to create payment intent:', error);
+                console.error('Failed to create checkout session:', error);
                 setStatus('failed');
                 alert('Failed to initialize payment. Please try again.');
             }
         };
 
-        createPaymentIntent();
+        initializeSession();
     }, [appointmentId, price, navigate]);
 
     const handlePayment = async () => {
-        if (!paymentIntent) {
+        if (!checkoutUrl) {
             alert('Payment is not yet initialized. Please wait.');
             return;
         }
 
         setStatus('processing');
-        // This is a simplified simulation of redirecting to PayMongo's hosted checkout page
-        // In a real-world scenario, you would redirect the user to the checkout URL provided by PayMongo
-        // and handle the callback or webhook for payment status updates.
-        setTimeout(async () => {
-            try {
-                // Simulate a successful payment
-                await axios.post(`${API_URL}/api/payments/verify`, {
-                    appointmentId,
-                    paymentId: paymentIntent.data.id,
-                });
-
-                setStatus('success');
-                navigate('/booking-confirmation', { state: { appointmentId } });
-            } catch (error) {
-                console.error('Payment verification failed:', error);
-                setStatus('failed');
-                alert('Payment Failed. Please try again or contact support.');
-            }
-        }, 2000);
+        
+        // Redirect to PayMongo Hosted Checkout
+        window.location.href = checkoutUrl;
     };
 
     const pageStyles = {
@@ -99,7 +88,7 @@ const PayMongoPayment = () => {
         cursor: status === 'processing' ? 'not-allowed' : 'pointer',
     };
 
-    if (!paymentIntent) {
+    if (!checkoutUrl && status !== 'failed') {
         return (
             <div style={pageStyles}>
                 <div style={cardStyles}>
@@ -125,7 +114,7 @@ const PayMongoPayment = () => {
                     <p>You will be redirected to a secure payment page to complete your payment.</p>
                 </div>
 
-                <button onClick={() => window.location.href = paymentIntent.data.attributes.checkout_url} disabled={status === 'processing'} style={buttonStyles}>
+                <button onClick={handlePayment} disabled={status === 'processing'} style={buttonStyles}>
                     {status === 'processing' ? 'Processing...' : `Pay PHP ${price.toFixed(2)}`}
                 </button>
             </div>
