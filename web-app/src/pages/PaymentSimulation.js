@@ -42,6 +42,7 @@ const PaymentSimulation = () => {
             try {
                 const response = await axios.post(`${API_URL}/api/payments/create-checkout-session`, {
                     appointmentId,
+                    price // send as fallback if backend appointment price is missing
                 });
 
                 if (response.data?.checkoutUrl) {
