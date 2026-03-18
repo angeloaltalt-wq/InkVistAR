@@ -119,7 +119,8 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
             });
 
             if (response.data.success) {
-                setStep(4);
+                const { appointmentId } = response.data;
+                navigate('/payment', { state: { appointmentId } });
             } else {
                 alert('Booking Failed: ' + (response.data.message || 'An unknown error occurred.'));
             }

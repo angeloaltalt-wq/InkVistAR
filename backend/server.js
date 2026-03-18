@@ -1892,6 +1892,51 @@ app.put('/api/appointments/:id/details', (req, res) => {
   });
 });
 
+// ========== PAYMENT ENDPOINTS ==========
+
+app.post('/api/payments/verify', (req, res) => {
+  const { appointmentId, paymentToken } = req.body;
+
+  console.log(`💳 Verifying payment for appointment: ${appointmentId}`);
+
+  if (!appointmentId || !paymentToken) {
+    return res.status(400).json({ success: false, message: 'Appointment ID and payment token are required.' });
+  }
+
+  // In a real application, you would verify the paymentToken with the payment provider (PayMongo)
+  // For this simulation, we'll just assume the token is valid.
+
+  const query = "UPDATE appointments SET status = 'confirmed' WHERE id = ?";
+  db.query(query, [appointmentId], (err, result) => {
+    if (err) {
+      console.error('❌ Error updating appointment status after payment:', err);
+      return res.status(500).json({ success: false, message: 'Database error' });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Appointment not found.' });
+    }
+
+    // Fetch appointment details to notify the correct users
+    db.query('SELECT * FROM appointments WHERE id = ?', [appointmentId], (fetchErr, results) => {
+      if (fetchErr || results.length === 0) {
+        console.error('❌ Error fetching appointment details for notification');
+        // Still return success, as the payment was "processed"
+        return res.json({ success: true, message: 'Payment verified, but failed to send notifications.' });
+      }
+      
+      const appointment = results[0];
+      
+      // Notify both customer and artist
+      createNotification(appointment.customer_id, 'Payment Received', `Your payment for appointment #${appointmentId} was successful.`, 'payment_success', appointmentId);
+      createNotification(appointment.artist_id, 'Payment Received', `Payment for appointment #${appointmentId} has been confirmed.`, 'payment_success', appointmentId);
+      
+      console.log(`✅ Payment verified and appointment ${appointmentId} confirmed.`);
+      res.json({ success: true, message: 'Payment verified successfully.' });
+    });
+  });
+});
+
 // ========== CUSTOMER DASHBOARD (SIMPLIFIED) ==========
 app.get('/api/customer/dashboard/:customerId', (req, res) => {
   const { customerId } = req.params;
