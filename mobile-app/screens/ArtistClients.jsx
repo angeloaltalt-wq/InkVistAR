@@ -1,4 +1,3 @@
-// c:\Users\Ella\Desktop\InkVistAR\mobile-app\screens\ArtistClients.jsx
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, SafeAreaView, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { 
   View, Text, StyleSheet, TouchableOpacity, ScrollView, 
-  SafeAreaView, ActivityIndicator, Modal, Platform, Alert 
+  SafeAreaView, ActivityIndicator, Modal, Platform, Alert, FlatList, RefreshControl
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { API_URL } from '../src/config';
+import { getCustomerAppointments, updateAppointmentStatus } from '../src/utils/api';
+
+const ITEMS_PER_PAGE = 5;
 
 export function CustomerAppointments({ customerId, onBack, onBookNew }) {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
@@ -21,17 +26,22 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
 
   const fetchAppointments = async () => {
     try {
-      setLoading(true);
-      const response = await fetch(`${API_URL}/api/customer/${customerId}/appointments`);
-      const data = await response.json();
-      if (data.success) {
-        setAppointments(data.appointments);
+      if (!refreshing) setLoading(true);
+      const response = await getCustomerAppointments(customerId);
+      if (response.success) {
+        setAppointments(response.appointments || []);
       }
     } catch (error) {
       console.log('Error fetching appointments:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchAppointments();
   };
 
   const changeMonth = (increment) => {
@@ -51,18 +61,13 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
           style: 'destructive',
           onPress: async () => {
             try {
-              const response = await fetch(`${API_URL}/api/appointments/${appointmentId}/status`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'cancelled' })
-              });
-              const data = await response.json();
-              if (data.success) {
+              const response = await updateAppointmentStatus(appointmentId, 'cancelled');
+              if (response.success) {
                 Alert.alert('Cancelled', 'Your appointment has been cancelled.');
                 setSelectedAppointment(null);
                 fetchAppointments();
               } else {
-                Alert.alert('Error', data.message || 'Failed to cancel appointment.');
+                Alert.alert('Error', response.message || 'Failed to cancel appointment.');
               }
             } catch (error) {
               Alert.alert('Error', 'Could not connect to server.');
@@ -115,13 +120,37 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
     return days;
   };
 
-  const filteredAppointments = appointments.filter(apt => {
-    if (viewMode === 'calendar' && selectedDate) {
-      const apptDate = typeof apt.appointment_date === 'string' ? apt.appointment_date.substring(0, 10) : new Date(apt.appointment_date).toISOString().split('T')[0];
-      return apptDate === selectedDate;
+  // --- Filter & Pagination Logic ---
+  const getFilteredAppointments = () => {
+    let filtered = appointments;
+
+    // 1. Status Filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(apt => apt.status && apt.status.toLowerCase() === statusFilter);
     }
-    return true;
-  });
+
+    // 2. Date Filter (only for Calendar mode)
+    if (viewMode === 'calendar' && selectedDate) {
+      filtered = filtered.filter(apt => {
+        const apptDate = typeof apt.appointment_date === 'string' ? apt.appointment_date.substring(0, 10) : new Date(apt.appointment_date).toISOString().split('T')[0];
+        return apptDate === selectedDate;
+      });
+    }
+
+    return filtered;
+  };
+
+  const allFiltered = getFilteredAppointments();
+  const totalPages = Math.ceil(allFiltered.length / ITEMS_PER_PAGE) || 1;
+  
+  // Paginate only if in List mode
+  const displayedAppointments = viewMode === 'list' 
+    ? allFiltered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+    : allFiltered;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, viewMode]);
 
   const getStatusColor = (status) => {
     switch(status?.toLowerCase()) {
@@ -133,26 +162,66 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
     }
   };
 
+  const renderAppointmentItem = ({ item }) => (
+    <TouchableOpacity 
+      style={styles.appointmentCard}
+      onPress={() => setSelectedAppointment(item)}
+    >
+      <View style={styles.cardLeft}>
+        <View style={styles.dateBox}>
+          <Text style={styles.dateDay}>{new Date(item.appointment_date).getDate()}</Text>
+          <Text style={styles.dateMonth}>
+            {new Date(item.appointment_date).toLocaleString('default', { month: 'short' })}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.cardCenter}>
+        <Text style={styles.serviceText}>{item.design_title || 'Appointment'}</Text>
+        <Text style={styles.artistName}>with {item.artist_name}</Text>
+        <Text style={styles.timeText}>{item.start_time ? item.start_time.substring(0, 5) : 'TBD'}</Text>
+      </View>
+      <View style={styles.cardRight}>
+        <View style={[styles.statusPill, { backgroundColor: getStatusColor(item.status) + '20' }]}>
+          <Text style={[styles.statusPillText, { color: getStatusColor(item.status) }]}>
+            {item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'Pending'}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color="#9ca3af" style={{ marginTop: 8 }} />
+      </View>
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={['#000000', '#b8860b']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.header}
-      >
+      <View style={styles.header}>
         <View style={styles.headerContent}>
-          <TouchableOpacity onPress={onBack} style={styles.iconButton}>
-            <Ionicons name="arrow-back" size={24} color="#ffffff" />
-          </TouchableOpacity>
           <Text style={styles.headerTitle}>My Appointments</Text>
-          <TouchableOpacity onPress={() => setViewMode(viewMode === 'list' ? 'calendar' : 'list')} style={styles.iconButton}>
-            <Ionicons name={viewMode === 'list' ? 'calendar' : 'list'} size={24} color="#ffffff" />
+          <TouchableOpacity onPress={() => setViewMode(viewMode === 'list' ? 'calendar' : 'list')} style={styles.headerButton}>
+            <Ionicons name={viewMode === 'list' ? 'calendar' : 'list'} size={24} color="#111" />
           </TouchableOpacity>
         </View>
-      </LinearGradient>
+      </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 100 }}>
+      {/* Filter Tabs */}
+      <View style={styles.tabsContainer}>
+        {['all', 'pending', 'confirmed'].map(filter => (
+          <TouchableOpacity 
+            key={filter}
+            style={[styles.tab, statusFilter === filter && styles.activeTab]} 
+            onPress={() => setStatusFilter(filter)}
+          >
+            <Text style={[styles.tabText, statusFilter === filter && styles.activeTabText]}>
+              {filter.charAt(0).toUpperCase() + filter.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <ScrollView 
+        style={styles.content} 
+        contentContainerStyle={{ paddingBottom: 100, paddingTop: 16 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         {viewMode === 'calendar' && (
           <View style={styles.calendarContainer}>
             <View style={styles.calendarHeader}>
@@ -186,31 +255,8 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
           <ActivityIndicator size="large" color="#daa520" style={{ marginTop: 20 }} />
         ) : (
           <View style={styles.listContainer}>
-            {filteredAppointments.length > 0 ? (
-              filteredAppointments.map((apt) => (
-                <TouchableOpacity 
-                  key={apt.id} 
-                  style={styles.appointmentCard}
-                  onPress={() => setSelectedAppointment(apt)}
-                >
-                  <View style={styles.cardHeader}>
-                    <Text style={styles.dateText}>
-                      {new Date(apt.appointment_date).toLocaleDateString()} • {apt.start_time}
-                    </Text>
-                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(apt.status) + '20' }]}>
-                      <Text style={[styles.statusText, { color: getStatusColor(apt.status) }]}>
-                        {apt.status}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={styles.artistName}>{apt.artist_name}</Text>
-                  <Text style={styles.serviceText}>{apt.design_title}</Text>
-                  <View style={styles.cardFooter}>
-                    <Text style={styles.studioText}>{apt.studio_name}</Text>
-                    <Ionicons name="chevron-forward" size={16} color="#9ca3af" />
-                  </View>
-                </TouchableOpacity>
-              ))
+            {displayedAppointments.length > 0 ? (
+              displayedAppointments.map((item) => renderAppointmentItem({ item }))
             ) : (
               <View style={styles.emptyState}>
                 <Ionicons name="calendar-outline" size={48} color="#d1d5db" />
@@ -220,6 +266,29 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
                 </TouchableOpacity>
               </View>
             )}
+          </View>
+        )}
+
+        {/* Pagination Controls (Only in List Mode) */}
+        {viewMode === 'list' && allFiltered.length > 0 && (
+          <View style={styles.paginationContainer}>
+            <TouchableOpacity 
+              style={[styles.pageButton, currentPage === 1 && styles.disabledButton]}
+              onPress={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+            >
+              <Ionicons name="chevron-back" size={20} color={currentPage === 1 ? "#9ca3af" : "#1f2937"} />
+            </TouchableOpacity>
+            
+            <Text style={styles.pageInfo}>Page {currentPage} of {totalPages}</Text>
+            
+            <TouchableOpacity 
+              style={[styles.pageButton, currentPage === totalPages && styles.disabledButton]}
+              onPress={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+            >
+              <Ionicons name="chevron-forward" size={20} color={currentPage === totalPages ? "#9ca3af" : "#1f2937"} />
+            </TouchableOpacity>
           </View>
         )}
       </ScrollView>
@@ -308,13 +377,23 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafb' },
   header: {
-    padding: 24, paddingTop: Platform.OS === 'android' ? 50 : 24,
-    borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
+    padding: 20, paddingTop: Platform.OS === 'android' ? 50 : 20,
+    backgroundColor: 'white',
+    borderBottomWidth: 1, 
+    borderBottomColor: '#f3f4f6',
   },
   headerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
-  iconButton: { padding: 8 },
-  content: { flex: 1, padding: 16 },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#111' },
+  headerButton: { padding: 8 },
+  
+  // Tabs
+  tabsContainer: { flexDirection: 'row', padding: 16, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  tab: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 20, marginHorizontal: 4, backgroundColor: '#f3f4f6' },
+  activeTab: { backgroundColor: '#111' },
+  tabText: { color: '#6b7280', fontWeight: '600' },
+  activeTabText: { color: 'white' },
+
+  content: { flex: 1, paddingHorizontal: 16 },
   
   // Calendar Styles
   calendarContainer: { backgroundColor: 'white', borderRadius: 12, padding: 16, marginBottom: 16, elevation: 2 },
@@ -332,17 +411,26 @@ const styles = StyleSheet.create({
   clearDateButton: { marginTop: 12, alignItems: 'center', padding: 8 },
   clearDateText: { color: '#daa520', fontSize: 14, fontWeight: '600' },
 
-  // List Styles
-  listContainer: { paddingBottom: 20 },
-  appointmentCard: { backgroundColor: 'white', borderRadius: 12, padding: 16, marginBottom: 12, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  dateText: { fontSize: 12, color: '#6b7280', fontWeight: '600' },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
-  statusText: { fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' },
-  artistName: { fontSize: 16, fontWeight: 'bold', color: '#111', marginBottom: 4 },
-  serviceText: { fontSize: 14, color: '#4b5563', marginBottom: 8 },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#f3f4f6', paddingTop: 8 },
-  studioText: { fontSize: 12, color: '#9ca3af' },
+  // New List Card Styles
+  listContainer: { paddingBottom: 10 },
+  appointmentCard: { flexDirection: 'row', backgroundColor: 'white', borderRadius: 12, padding: 12, marginBottom: 12, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4 },
+  cardLeft: { marginRight: 12, justifyContent: 'center' },
+  dateBox: { alignItems: 'center', backgroundColor: '#fef3c7', padding: 8, borderRadius: 8, width: 50 },
+  dateDay: { fontSize: 18, fontWeight: 'bold', color: '#b45309' },
+  dateMonth: { fontSize: 12, color: '#b45309', textTransform: 'uppercase' },
+  cardCenter: { flex: 1, justifyContent: 'center' },
+  serviceText: { fontSize: 16, fontWeight: 'bold', color: '#1f2937' },
+  artistName: { fontSize: 14, color: '#6b7280', marginTop: 2 },
+  timeText: { fontSize: 12, color: '#9ca3af', marginTop: 4 },
+  cardRight: { alignItems: 'flex-end', justifyContent: 'space-between' },
+  statusPill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
+  statusPillText: { fontSize: 10, fontWeight: 'bold', textTransform: 'capitalize' },
+
+  // Pagination
+  paginationContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderTopWidth: 1, borderTopColor: '#f3f4f6', marginBottom: 40 },
+  pageButton: { padding: 8, borderRadius: 8, backgroundColor: '#f3f4f6' },
+  disabledButton: { opacity: 0.5 },
+  pageInfo: { fontSize: 14, color: '#6b7280' },
 
   emptyState: { alignItems: 'center', marginTop: 40 },
   emptyText: { color: '#9ca3af', fontSize: 16, marginTop: 10, marginBottom: 20 },

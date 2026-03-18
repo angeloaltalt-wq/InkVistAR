@@ -4,7 +4,7 @@ import {
   SafeAreaView, Image, ActivityIndicator, TouchableOpacity,
   Modal, Dimensions, Pressable
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from 'expo-linear-gradient'; // Fixed: Added missing import
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { getGalleryWorks } from '../src/utils/api';
@@ -15,10 +15,11 @@ export function CustomerGallery({ onBack }) {
   const navigation = useNavigation();
   const route = useRoute();
   
-  // Accept initial search query from route params (e.g., from trending styles)
+  // Accept initial search query from route params
   const initialQuery = route.params?.searchQuery || '';
   
   const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortOrder, setSortOrder] = useState('desc'); // desc = newest first
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +30,6 @@ export function CustomerGallery({ onBack }) {
     loadWorks();
   }, []);
 
-  // Update search when navigated with a new query param
   useEffect(() => {
     if (route.params?.searchQuery) {
       setSearchQuery(route.params.searchQuery);
@@ -38,11 +38,16 @@ export function CustomerGallery({ onBack }) {
 
   const loadWorks = async () => {
     setLoading(true);
-    const result = await getGalleryWorks();
-    if (result.success) {
-      setWorks(result.works || []);
+    try {
+      const result = await getGalleryWorks();
+      if (result.success) {
+        setWorks(result.works || []);
+      }
+    } catch (error) {
+      console.error("Failed to load gallery:", error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const filteredWorks = works.filter(work => {
@@ -51,7 +56,11 @@ export function CustomerGallery({ onBack }) {
     const artistMatch = (work.artist_name || '').toLowerCase().includes(searchLower);
     const descriptionMatch = (work.description || '').toLowerCase().includes(searchLower);
     const categoryMatch = (work.category || '').toLowerCase().includes(searchLower);
-    return titleMatch || artistMatch || descriptionMatch || categoryMatch;
+    
+    const matchesSearch = titleMatch || artistMatch || descriptionMatch || categoryMatch;
+    const matchesCategory = selectedCategory === 'All' || (work.category || '').toLowerCase() === selectedCategory.toLowerCase();
+
+    return matchesSearch && matchesCategory;
   }).sort((a, b) => {
     const dateA = new Date(a.created_at);
     const dateB = new Date(b.created_at);
@@ -70,27 +79,26 @@ export function CustomerGallery({ onBack }) {
 
   const handleBookSimilar = () => {
     closeDetail();
-    navigation.navigate('booking-create');
+    // Pass the style/category as context to the booking screen if needed
+    navigation.navigate('booking-create', { 
+      prefillNote: `I'm interested in a design similar to "${selectedWork?.title}" by ${selectedWork?.artist_name}.` 
+    });
   };
+
+  const categories = ['All', 'Realism', 'Traditional', 'Japanese', 'Tribal', 'Fine Line', 'Watercolor', 'Minimalist', 'Blackwork'];
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={['#000000', '#b8860b']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.header}
-      >
+      <View style={styles.header}>
         <View style={styles.headerContent}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={20} color="#ffffff" />
-          </TouchableOpacity>
           <Text style={styles.headerTitle}>Inspiration Gallery</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={onBack} style={styles.headerButton}>
+            <Text style={styles.headerButtonText}>Back</Text>
+          </TouchableOpacity>
         </View>
-      </LinearGradient>
+      </View>
 
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <View style={styles.searchContainer}>
             <Ionicons name="search" size={20} color="#9ca3af" />
@@ -114,6 +122,24 @@ export function CustomerGallery({ onBack }) {
               <Text style={styles.sortButtonText}>{sortOrder === 'asc' ? 'Oldest First' : 'Newest First'}</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Style Filters (Checkboxes/Chips) */}
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={styles.categoriesContainer}
+          >
+            {categories.map((cat) => (
+              <TouchableOpacity 
+                key={cat}
+                style={[styles.categoryChip, selectedCategory === cat && styles.categoryChipSelected]}
+                onPress={() => setSelectedCategory(cat)}
+              >
+                {selectedCategory === cat && <Ionicons name="checkmark" size={14} color="white" style={{ marginRight: 4 }} />}
+                <Text style={[styles.categoryText, selectedCategory === cat && styles.categoryTextSelected]}>{cat}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
           {loading ? (
             <ActivityIndicator size="large" color="#daa520" style={{ marginTop: 40 }} />
@@ -231,38 +257,31 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafb' },
   scrollView: { flex: 1 },
   header: {
-    padding: 24,
-    paddingTop: 60,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    padding: 20,
+    paddingTop: 50,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
   },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#ffffff' },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#111' },
+  headerButton: { padding: 8 },
+  headerButtonText: { color: '#6b7280', fontSize: 16 },
   content: { padding: 16 },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
     borderRadius: 12,
     paddingHorizontal: 16,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    marginBottom: 16,
+    height: 50,
   },
   searchInput: {
     flex: 1,
@@ -286,6 +305,30 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontWeight: '600',
   },
+  // Checkbox/Chip Styles
+  categoriesContainer: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    paddingRight: 16,
+  },
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginRight: 8,
+  },
+  categoryChipSelected: {
+    backgroundColor: '#111',
+    borderColor: '#111',
+  },
+  categoryText: { fontSize: 14, color: '#374151', fontWeight: '500' },
+  categoryTextSelected: { color: 'white' },
+  
   worksGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -293,13 +336,13 @@ const styles = StyleSheet.create({
   },
   workCard: {
     width: '48%',
-    backgroundColor: '#ffffff',
+    backgroundColor: 'white',
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
     position: 'relative',

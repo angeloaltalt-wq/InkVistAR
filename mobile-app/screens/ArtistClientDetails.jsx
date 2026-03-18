@@ -1,4 +1,3 @@
-// screens/ArtistClientDetails.jsx
 import { useState, useEffect } from 'react';
 import { 
   View, Text, TouchableOpacity, StyleSheet, 
