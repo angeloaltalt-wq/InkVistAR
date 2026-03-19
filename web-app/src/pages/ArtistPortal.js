@@ -13,7 +13,7 @@ function ArtistPortal() {
         rating: 0,
         earnings: 0,
         appointments: 0,
-        hourlyRate: 0
+        hourly_rate: 0
     });
     const [appointments, setAppointments] = useState([]);
     const [todaysAppointments, setTodaysAppointments] = useState([]);
@@ -101,18 +101,10 @@ function ArtistPortal() {
                             </div>
 
                             <div className="stat-card">
-                                <BarChart3 className="stat-icon" size={32} />
-                                <div className="stat-info">
-                                    <p className="stat-label">Rating</p>
-                                    <p className="stat-value">⭐ {artist?.rating || 0}</p>
-                                </div>
-                            </div>
-
-                            <div className="stat-card">
                                 <Clock className="stat-icon" size={32} />
                                 <div className="stat-info">
                                     <p className="stat-label">Hourly Rate</p>
-                                    <p className="stat-value">₱{artist?.hourlyRate || 0}/hr</p>
+                                    <p className="stat-value">₱{artist?.hourly_rate || 0}/hr</p>
                                 </div>
                             </div>
                         </div>

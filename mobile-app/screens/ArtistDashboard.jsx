@@ -167,10 +167,10 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
       change: totalEarnings > 0 ? '+12%' : '+0%' 
     },
     { 
-      label: 'Rating', 
-      value: artistRating, 
-      icon: 'star', 
-      change: parseFloat(artistRating) > 4.5 ? '↑ 0.1' : '→' 
+      label: 'Hourly Rate', 
+      value: `₱${Number(artistHourlyRate || 0).toLocaleString()}`, 
+      icon: 'time', 
+      change: '→' 
     },
   ];
 
@@ -252,12 +252,6 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
               <Text style={styles.userRole}>
                 {artistSpecialization} • {artistExperience} Years Exp.
               </Text>
-              <View style={styles.ratingRow}>
-                <Ionicons name="star" size={14} color="#fbbf24" />
-                <Text style={styles.ratingText}>
-                  {artistRating} ({artistTotalReviews} reviews)
-                </Text>
-              </View>
             </View>
             <View style={styles.headerActions}>
               <TouchableOpacity 
