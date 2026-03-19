@@ -2405,6 +2405,7 @@ app.get('/api/customer/dashboard/:customerId', (req, res) => {
         ap.start_time, 
         ap.design_title, 
         ap.status,
+        ap.price,
         u.name as artist_name
       FROM appointments ap
       JOIN users u ON ap.artist_id = u.id
