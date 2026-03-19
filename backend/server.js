@@ -2144,12 +2144,60 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
 
 // Webhook receiver for PayMongo
 // GET payment status polling for specific appointment
-app.get('/api/appointments/:id/payment-status', (req, res) => {
-  const { id } = req.params;
-  db.query('SELECT payment_status FROM appointments WHERE id = ?', [id], (err, results) => {
-    if (err || results.length === 0) return res.status(404).json({ success: false, message: 'Not found' });
-    res.json({ success: true, payment_status: results[0].payment_status });
-  });
+app.get('/api/appointments/:id/payment-status', async (req, res) => {
+  const { id: appointmentId } = req.params;
+
+  try {
+    // 1. Check DB first
+    db.query('SELECT payment_status FROM appointments WHERE id = ?', [appointmentId], async (err, results) => {
+      if (err || results.length === 0) return res.status(404).json({ success: false, message: 'Not found' });
+      
+      let currentStatus = results[0].payment_status;
+      
+      if (currentStatus === 'paid') {
+        return res.json({ success: true, payment_status: 'paid' });
+      }
+      
+      // 2. If not paid, check if we have an active checkout session
+      db.query('SELECT session_id FROM payments WHERE appointment_id = ? ORDER BY created_at DESC LIMIT 1', [appointmentId], async (pErr, pResults) => {
+        if (pErr || pResults.length === 0 || !pResults[0].session_id) {
+          return res.json({ success: true, payment_status: currentStatus });
+        }
+        
+        const sessionId = pResults[0].session_id;
+        
+        try {
+          // Poll PayMongo directly
+          console.log(`🔍 Polling PayMongo for session ${sessionId} (Appointment ${appointmentId})...`);
+          const pmRes = await fetch(`${PAYMONGO_API_BASE}/checkout_sessions/${sessionId}`, {
+            headers: { 'Authorization': paymongoAuthHeader() }
+          });
+          const pmData = await pmRes.json();
+          
+          const pmStatus = pmData?.data?.attributes?.status;
+          const paymentList = pmData?.data?.attributes?.payments || [];
+          
+          // PayMongo status 'completed' or having any successful payments means it's paid
+          if (pmStatus === 'completed' || paymentList.length > 0) {
+            console.log(`✅ Polling confirmed PAID for Appointment ${appointmentId}`);
+            // Update DB so future polls are faster
+            db.query("UPDATE appointments SET payment_status = 'paid' WHERE id = ?", [appointmentId]);
+            db.query("UPDATE payments SET status = 'paid' WHERE session_id = ?", [sessionId]);
+            return res.json({ success: true, payment_status: 'paid' });
+          } else {
+            console.log(`ℹ️ Polling result: PayMongo status is ${pmStatus}`);
+          }
+        } catch (pollErr) {
+          console.error('❌ Polling PayMongo API error:', pollErr.message);
+        }
+        
+        res.json({ success: true, payment_status: currentStatus });
+      });
+    });
+  } catch (error) {
+    console.error('🔥 Unexpected error in payment-status endpoint:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
 });
 
 app.post('/api/payments/webhook', (req, res) => {

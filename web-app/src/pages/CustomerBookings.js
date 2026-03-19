@@ -25,7 +25,11 @@ function CustomerBookings(){
             try{
                 const res = await Axios.get(`${API_URL}/api/customer/${customerId}/appointments`);
                 if (res.data.success) {
-                    setAppointments(res.data.appointments || []);
+                    const fetchedAppointments = res.data.appointments || [];
+                    setAppointments(fetchedAppointments);
+                    
+                    // After fetching, check status of pending/unpaid ones
+                    checkPaymentStatuses(fetchedAppointments);
                 } else {
                     alert('Could not fetch your bookings: ' + res.data.message);
                 }
@@ -36,6 +40,24 @@ function CustomerBookings(){
                 setLoading(false);
             }
         };
+
+        const checkPaymentStatuses = async (list) => {
+            // Only check if they are pending or unpaid but have a price
+            const toCheck = list.filter(a => a.payment_status !== 'paid' && parseFloat(a.price || 0) > 0);
+            
+            for (const apt of toCheck) {
+                try {
+                    const statusRes = await Axios.get(`${API_URL}/api/appointments/${apt.id}/payment-status`);
+                    if (statusRes.data.success && statusRes.data.payment_status === 'paid') {
+                        // Update local state if it changed to paid
+                        setAppointments(prev => prev.map(p => p.id === apt.id ? { ...p, payment_status: 'paid' } : p));
+                    }
+                } catch (err) {
+                    console.warn(`Could not poll status for appointment ${apt.id}:`, err);
+                }
+            }
+        };
+
         fetchAppointments();
     }, [customerId]);
 

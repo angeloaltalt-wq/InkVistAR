@@ -4,7 +4,7 @@ import {
   SafeAreaView, ActivityIndicator, Modal, Platform, Alert, FlatList, RefreshControl, Linking
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getCustomerAppointments, updateAppointmentStatus, createCheckoutSession } from '../src/utils/api';
+import { getCustomerAppointments, updateAppointmentStatus, createCheckoutSession, getPaymentStatus } from '../src/utils/api';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -30,13 +30,34 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
       if (!refreshing) setLoading(true);
       const response = await getCustomerAppointments(customerId);
       if (response.success) {
-        setAppointments(response.appointments || []);
+        const list = response.appointments || [];
+        setAppointments(list);
+        
+        // Auto-poll status for pending/unpaid ones
+        checkPaymentStatuses(list);
       }
     } catch (error) {
       console.log('Error fetching appointments:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const checkPaymentStatuses = async (list) => {
+    // Only check if they have a price and are not marked paid yet
+    const toCheck = list.filter(a => a.payment_status !== 'paid' && parseFloat(a.price || 0) > 0);
+    
+    for (const apt of toCheck) {
+      try {
+        const statusRes = await getPaymentStatus(apt.id);
+        if (statusRes.success && statusRes.payment_status === 'paid') {
+          // Update local state if it changed to paid
+          setAppointments(prev => prev.map(p => p.id === apt.id ? { ...p, payment_status: 'paid' } : p));
+        }
+      } catch (err) {
+        console.log(`Polling error for appt ${apt.id}:`, err);
+      }
     }
   };
 

@@ -351,6 +351,11 @@ export const createCheckoutSession = async (appointmentId, amount) => {
   });
 };
 
+// Customer: Check Payment Status (polls PayMongo if needed)
+export const getPaymentStatus = async (appointmentId) => {
+  return fetchAPI(`/appointments/${appointmentId}/payment-status`);
+};
+
 // Gallery: Get Works
 // Supports search/filter params
 export const getGalleryWorks = async (filters = {}) => {
