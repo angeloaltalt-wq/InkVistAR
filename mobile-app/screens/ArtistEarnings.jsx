@@ -76,8 +76,9 @@ export function ArtistEarnings({ onBack, artistId }) {
       filteredData = data.filter(a => new Date(a.appointment_date).getFullYear() === now.getFullYear());
     }
 
-    const total = filteredData.reduce((sum, a) => sum + a.artistShare, 0);
-    const count = filteredData.length;
+    const filteredPaidData = filteredData.filter(a => a.payment_status === 'paid');
+    const total = filteredPaidData.reduce((sum, a) => sum + a.artistShare, 0);
+    const count = filteredPaidData.length;
     const avg = count > 0 ? total / count : 0;
 
     // Just some mock change for visual flair, like the web app
@@ -169,9 +170,11 @@ export function ArtistEarnings({ onBack, artistId }) {
                   <Text style={styles.transactionDate}>{tx.displayDate}</Text>
                 </View>
                 <View style={styles.transactionAmount}>
-                  <Text style={styles.amountText}>₱{tx.artistShare.toLocaleString()}</Text>
-                  <View style={[styles.statusBadge, styles.statusCompleted]}>
-                    <Text style={styles.statusText}>Earned</Text>
+                  <Text style={[styles.amountText, tx.payment_status !== 'paid' && { color: '#f59e0b' }]}>₱{tx.artistShare.toLocaleString()}</Text>
+                  <View style={[styles.statusBadge, tx.payment_status === 'paid' ? styles.statusCompleted : { backgroundColor: '#fef3c7' }]}>
+                    <Text style={[styles.statusText, tx.payment_status !== 'paid' && { color: '#b45309' }]}>
+                        {tx.payment_status === 'paid' ? 'Earned' : 'Unpaid'}
+                    </Text>
                   </View>
                 </View>
               </View>

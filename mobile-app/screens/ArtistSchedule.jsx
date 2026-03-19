@@ -482,8 +482,20 @@ export function ArtistSchedule({ onBack, artistId, navigation }) {
                 <Text style={styles.label}>Service</Text>
                 <Text style={styles.value}>{selectedAppointment.design_title}</Text>
 
+                <Text style={styles.label}>Price</Text>
+                <Text style={[styles.value, { fontWeight: 'bold' }]}>₱{parseFloat(selectedAppointment.price || 0).toLocaleString()}</Text>
+
                 <Text style={styles.label}>Status</Text>
                 <Text style={[styles.value, {color: '#daa520', fontWeight: 'bold'}]}>{selectedAppointment.status.toUpperCase()}</Text>
+
+                <Text style={styles.label}>Payment Status</Text>
+                <Text style={[styles.value, { 
+                    color: selectedAppointment.payment_status === 'paid' ? '#16a34a' : 
+                           selectedAppointment.payment_status === 'pending' ? '#b45309' : '#6b7280', 
+                    fontWeight: 'bold' 
+                }]}>
+                    {(selectedAppointment.payment_status || 'unpaid').toUpperCase()}
+                </Text>
 
                 {selectedAppointment.notes && (
                   <>

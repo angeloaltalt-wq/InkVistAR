@@ -133,7 +133,8 @@ export function CustomerBooking({ customerId, onBack }) {
           endTime: showTimePicker ? selectedTime : null,
           designTitle,
           notes,
-          referenceImage: image
+          referenceImage: image,
+          price: selectedArtist.hourly_rate || 0
         })
       });
 
@@ -392,6 +393,18 @@ export function CustomerBooking({ customerId, onBack }) {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* 4. Summary & Price */}
+        {selectedArtist && selectedDate && designTitle && (
+            <View style={{ backgroundColor: '#fffdf5', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#daa520', marginBottom: 20 }}>
+                <Text style={{ fontWeight: 'bold', color: '#daa520', marginBottom: 5 }}>Estimated Cost</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ color: '#4b5563' }}>Service: {designTitle}</Text>
+                    <Text style={{ fontWeight: 'bold', color: '#111' }}>₱{parseFloat(selectedArtist.hourly_rate || 0).toLocaleString()}</Text>
+                </View>
+                <Text style={{ fontSize: 11, color: '#9ca3af', marginTop: 5 }}>* Final price may vary based on session duration.</Text>
+            </View>
+        )}
 
         {/* Submit Button */}
         <TouchableOpacity 

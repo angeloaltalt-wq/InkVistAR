@@ -45,9 +45,9 @@ app.use((req, res, next) => {
   if (req.body) {
     Object.keys(req.body).forEach(key => {
       // Skip passwords and image data (base64)
-      if (typeof req.body[key] === 'string' && 
-          !key.toLowerCase().includes('password') && 
-          !key.toLowerCase().includes('image')) {
+      if (typeof req.body[key] === 'string' &&
+        !key.toLowerCase().includes('password') &&
+        !key.toLowerCase().includes('image')) {
         // Strip HTML tags to prevent XSS
         req.body[key] = req.body[key].replace(/<[^>]*>?/gm, '');
       }
@@ -76,7 +76,7 @@ db.connect(err => {
   } else {
     console.log('✅ MySQL Connected Successfully!');
     console.log('📊 Database:', db.config.database);
-    
+
     // Create Users Table if not exists (REQUIRED for all other tables)
     const usersTableQuery = `
       CREATE TABLE IF NOT EXISTS users (
@@ -168,7 +168,7 @@ db.connect(err => {
       if (err) console.error('⚠️ Error checking customers table:', err.message);
       else console.log('👤 Customers table ready');
       createDefaultUsers();
-      
+
       // Add is_deleted column if it doesn't exist (Soft Delete support)
       db.query("SHOW COLUMNS FROM users LIKE 'is_deleted'", (err, results) => {
         if (!err && results.length === 0) {
@@ -203,7 +203,7 @@ db.connect(err => {
       if (err) console.error('⚠️ Error checking portfolio table:', err.message);
       else {
         console.log('🎨 Portfolio table ready');
-        
+
         // MIGRATION: Check if 'category' column exists, if not add it
         db.query("SHOW COLUMNS FROM portfolio_works LIKE 'category'", (err, results) => {
           if (!err && results.length === 0) {
@@ -231,13 +231,13 @@ db.connect(err => {
 
         // FIX: Drop broken foreign key constraint if it exists
         db.query("ALTER TABLE portfolio_works DROP FOREIGN KEY fk_portfolio_artists", (err) => {
-            if (!err) {
-                console.log('🔧 Fixed: Dropped broken foreign key constraint fk_portfolio_artists');
-                // Re-add correct constraint referencing users(id)
-                db.query("ALTER TABLE portfolio_works ADD CONSTRAINT fk_portfolio_users FOREIGN KEY (artist_id) REFERENCES users(id) ON DELETE CASCADE", (err) => {
-                    if (!err) console.log('✅ Added correct foreign key constraint for portfolio_works');
-                });
-            }
+          if (!err) {
+            console.log('🔧 Fixed: Dropped broken foreign key constraint fk_portfolio_artists');
+            // Re-add correct constraint referencing users(id)
+            db.query("ALTER TABLE portfolio_works ADD CONSTRAINT fk_portfolio_users FOREIGN KEY (artist_id) REFERENCES users(id) ON DELETE CASCADE", (err) => {
+              if (!err) console.log('✅ Added correct foreign key constraint for portfolio_works');
+            });
+          }
         });
       }
     });
@@ -259,7 +259,7 @@ db.connect(err => {
     db.query(branchesTableQuery, (err) => {
       if (err) console.error('⚠️ Error checking branches table:', err.message);
       else console.log('🏢 Branches table ready');
-      
+
       // Add is_deleted column if it doesn't exist
       db.query("SHOW COLUMNS FROM branches LIKE 'is_deleted'", (err, results) => {
         if (!err && results.length === 0) {
@@ -289,7 +289,7 @@ db.connect(err => {
       if (err) console.error('⚠️ Error checking inventory table:', err.message);
       else {
         console.log('📦 Inventory table ready');
-        
+
         // MIGRATION: Check for current_stock column
         db.query("SHOW COLUMNS FROM inventory LIKE 'current_stock'", (err, results) => {
           if (!err && results.length === 0) {
@@ -397,7 +397,7 @@ db.connect(err => {
       if (err) console.error('⚠️ Error checking appointments table:', err.message);
       else {
         console.log('📅 Appointments table ready');
-        
+
         // MIGRATION: Add 'price' column if it doesn't exist to prevent errors.
         db.query("SHOW COLUMNS FROM appointments LIKE 'price'", (err, results) => {
           if (!err && results.length === 0) {
@@ -405,21 +405,21 @@ db.connect(err => {
             db.query("ALTER TABLE appointments ADD COLUMN price DECIMAL(10, 2) DEFAULT 0.00");
           }
         });
-        
+
         // MIGRATION: Ensure status is VARCHAR(50) to avoid truncation if it was ENUM
         db.query("ALTER TABLE appointments MODIFY COLUMN status VARCHAR(50) DEFAULT 'pending'", (err) => {
-             if (!err) console.log('✅ Ensured appointments status is VARCHAR(50)');
+          if (!err) console.log('✅ Ensured appointments status is VARCHAR(50)');
         });
 
         // FIX: Try to drop the specific problematic constraint if it exists
         db.query("ALTER TABLE appointments DROP FOREIGN KEY fk_appointments_artist", (err) => {
-            if (!err) {
-                console.log('🔧 Fixed: Dropped broken foreign key constraint fk_appointments_artist');
-                // Re-add correct constraint referencing users(id)
-                db.query("ALTER TABLE appointments ADD CONSTRAINT fk_appointments_artist_fixed FOREIGN KEY (artist_id) REFERENCES users(id) ON DELETE CASCADE", (err) => {
-                    if (!err) console.log('✅ Added correct foreign key constraint for artist_id');
-                });
-            }
+          if (!err) {
+            console.log('🔧 Fixed: Dropped broken foreign key constraint fk_appointments_artist');
+            // Re-add correct constraint referencing users(id)
+            db.query("ALTER TABLE appointments ADD CONSTRAINT fk_appointments_artist_fixed FOREIGN KEY (artist_id) REFERENCES users(id) ON DELETE CASCADE", (err) => {
+              if (!err) console.log('✅ Added correct foreign key constraint for artist_id');
+            });
+          }
         });
       }
     });
@@ -462,18 +462,18 @@ db.connect(err => {
 
     // Check appointments table for is_deleted
     db.query("SHOW COLUMNS FROM appointments LIKE 'is_deleted'", (err, results) => {
-        if (!err && results.length === 0) {
-          db.query("ALTER TABLE appointments ADD COLUMN is_deleted BOOLEAN DEFAULT 0");
-          console.log('✅ Added is_deleted column to appointments');
-        }
+      if (!err && results.length === 0) {
+        db.query("ALTER TABLE appointments ADD COLUMN is_deleted BOOLEAN DEFAULT 0");
+        console.log('✅ Added is_deleted column to appointments');
+      }
     });
 
     // Check portfolio_works table for is_deleted
     db.query("SHOW COLUMNS FROM portfolio_works LIKE 'is_deleted'", (err, results) => {
-        if (!err && results.length === 0) {
-          db.query("ALTER TABLE portfolio_works ADD COLUMN is_deleted BOOLEAN DEFAULT 0");
-          console.log('✅ Added is_deleted column to portfolio_works');
-        }
+      if (!err && results.length === 0) {
+        db.query("ALTER TABLE portfolio_works ADD COLUMN is_deleted BOOLEAN DEFAULT 0");
+        console.log('✅ Added is_deleted column to portfolio_works');
+      }
     });
 
     // Create App Settings Table (Key-Value store for configs)
@@ -691,8 +691,8 @@ app.use((req, res, next) => {
 // Test endpoint
 app.get('/api/test', (req, res) => {
   console.log('✅ Test endpoint called');
-  res.json({ 
-    success: true, 
+  res.json({
+    success: true,
     message: 'Backend is working!',
     timestamp: new Date().toISOString(),
     database: 'MySQL connected',
@@ -728,21 +728,21 @@ app.get('/api/debug/routes', (req, res) => {
 // Test database connection
 app.get('/api/debug/db', (req, res) => {
   console.log('🔍 Testing database...');
-  
+
   db.query('SELECT 1 + 1 AS result', (err, results) => {
     if (err) {
       console.error('❌ Database test failed:', err);
-      return res.status(500).json({ 
-        success: false, 
+      return res.status(500).json({
+        success: false,
         message: 'Database error',
-        error: err.message 
+        error: err.message
       });
     }
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       message: 'Database connected',
-      result: results[0].result 
+      result: results[0].result
     });
   });
 });
@@ -750,21 +750,21 @@ app.get('/api/debug/db', (req, res) => {
 // List all users
 app.get('/api/debug/users', (req, res) => {
   console.log('🔍 Listing all users...');
-  
+
   db.query('SELECT id, name, email, user_type, is_deleted FROM users', (err, results) => {
     if (err) {
       console.error('❌ Error:', err);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Database error' 
+      return res.status(500).json({
+        success: false,
+        message: 'Database error'
       });
     }
-    
+
     console.log(`📊 Found ${results.length} users`);
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       users: results,
-      count: results.length 
+      count: results.length
     });
   });
 });
@@ -773,25 +773,25 @@ app.get('/api/debug/users', (req, res) => {
 app.get('/api/debug/user/:id', (req, res) => {
   const { id } = req.params;
   console.log(`🔍 Checking user ${id}...`);
-  
+
   db.query('SELECT id, name, email, user_type FROM users WHERE id = ?', [id], (err, results) => {
     if (err) {
       console.error('❌ Error:', err);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Database error' 
+      return res.status(500).json({
+        success: false,
+        message: 'Database error'
       });
     }
-    
+
     if (results.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
       });
     }
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       user: results[0]
     });
   });
@@ -801,20 +801,20 @@ app.get('/api/debug/user/:id', (req, res) => {
 app.post('/api/login', async (req, res) => {
   console.log('\n========== LOGIN REQUEST ==========');
   console.log('📤 Body:', req.body);
-  
+
   try {
     const { email, password, type } = req.body;
-    
+
     if (!email || !password) {
       console.log('❌ Missing fields');
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email and password are required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password are required'
       });
     }
-    
+
     console.log(`🔍 Searching for user: ${email}`);
-    
+
     // Query database
     let query = 'SELECT * FROM users WHERE email = ?';
     let params = [email];
@@ -825,66 +825,66 @@ app.post('/api/login', async (req, res) => {
     }
 
     console.log('💾 Executing query:', query);
-    
+
     db.query(query, params, async (err, results) => {
       if (err) {
         console.error('❌ Database error:', err.message);
-        return res.status(500).json({ 
-          success: false, 
-          message: 'Database error' 
+        return res.status(500).json({
+          success: false,
+          message: 'Database error'
         });
       }
-      
+
       console.log(`📊 Found ${results.length} users`);
-      
+
       if (results.length === 0) {
         console.log('❌ No user found');
-        return res.status(401).json({ 
-          success: false, 
-          message: 'Invalid email or password' 
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid email or password'
         });
       }
-      
+
       const user = results[0];
       console.log('User object before 403 checks:', user);
 
       // Check if soft deleted
       if (user.is_deleted) {
-        return res.status(403).json({ 
-          success: false, 
-          message: 'This account has been deactivated.' 
+        return res.status(403).json({
+          success: false,
+          message: 'This account has been deactivated.'
         });
       }
 
       // Skip verification check for artists and admins (admin managed)
       if (user.user_type !== 'artist' && user.user_type !== 'admin' && user.is_verified === 0) {
-        return res.status(403).json({ 
-          success: false, 
+        return res.status(403).json({
+          success: false,
           message: 'Please verify your email first. Check your inbox!',
           requireVerification: true
         });
       }
 
       console.log('✅ User found:', user.name);
-      
+
       // Verify password
       const valid = await bcrypt.compare(password, user.password_hash);
       if (!valid) {
-        return res.status(401).json({ 
-          success: false, 
-          message: 'Invalid email or password' 
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid email or password'
         });
       }
-      
+
       console.log('🎉 LOGIN SUCCESSFUL!');
-      
+
       const ua = req.headers['user-agent'] || 'Unknown';
       const device = ua.length > 40 ? ua.substring(0, 40) + '...' : ua;
       logAction(user.id, 'LOGIN', `Logged in as ${user.user_type} on ${device}`, req.ip || '::1');
 
       // Successful login
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         user: {
           id: user.id,
           name: user.name,
@@ -894,13 +894,13 @@ app.post('/api/login', async (req, res) => {
         message: 'Login successful!'
       });
     });
-    
+
   } catch (error) {
     console.error('🔥 Unhandled error in login:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Internal server error',
-      error: error.message 
+      error: error.message
     });
   }
 });
@@ -941,7 +941,7 @@ app.post('/api/reset-password', async (req, res) => {
 
     // 3. Hash and update
     const password_hash = await bcrypt.hash(newPassword, 10);
-    
+
     db.query('UPDATE users SET password_hash = ?, otp_code = NULL, otp_expires = NULL WHERE email = ?', [password_hash, email], (updateErr, result) => {
       if (updateErr) return res.status(500).json({ success: false, message: 'Database error during password update.' });
       logAction(user.id, 'PASSWORD_RESET', `User reset their password.`, req.ip || '::1');
@@ -955,29 +955,29 @@ app.post('/api/reset-password', async (req, res) => {
 app.post('/api/send-otp', (req, res) => {
   const { email, user_type } = req.body;
   console.log('📧 SEND OTP:', email);
-  
+
   // Verify email/password first (reuse login logic check)
   db.query('SELECT * FROM users WHERE email = ?', [email], async (err, results) => {
     if (err || !results.length) {
       return res.json({ success: false, message: 'Invalid credentials' });
     }
-    
+
     // Skip verification check for artists and admins
     if (results[0].user_type !== 'artist' && results[0].user_type !== 'admin' && results[0].is_verified === 0) {
       return res.json({ success: false, message: 'Please verify email first' });
     }
-    
+
     // Generate 6-digit OTP + 5min expiry
     const otp_code = Math.floor(100000 + Math.random() * 900000).toString();
     const otp_expires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-    
+
     // Save to DB
     db.query(
       'UPDATE users SET otp_code = ?, otp_expires = ? WHERE email = ?',
       [otp_code, otp_expires, email],
       (updateErr) => {
         if (updateErr) return res.json({ success: false, message: 'DB error' });
-        
+
         // LOG OTP FOR DEBUGGING (Essential if email fails)
         console.log('🔑 [DEBUG] OTP for', email, ':', otp_code);
 
@@ -1000,9 +1000,9 @@ app.post('/api/verify-otp', (req, res) => {
   const { email, otp, user_type } = req.body;
   // Handle both 'otp' and 'otp_code' from frontend
   const code = otp || req.body.otp_code;
-  
+
   console.log('🔢 VERIFY OTP:', email, code);
-  
+
   let query = 'SELECT * FROM users WHERE email = ? AND otp_code = ? AND otp_expires > NOW()';
   let params = [email, code];
 
@@ -1013,24 +1013,24 @@ app.post('/api/verify-otp', (req, res) => {
   }
 
   db.query(query, params, (err, results) => {
-      if (err || !results.length) {
-        return res.json({ success: false, message: 'Invalid or expired OTP' });
-      }
-      
-      // Clear OTP after success
-      db.query('UPDATE users SET otp_code = NULL, otp_expires = NULL WHERE email = ?', [email]);
-      
-      console.log('✅ OTP VERIFIED:', email);
-      res.json({ 
-        success: true, 
-        user: { 
-          id: results[0].id,
-          name: results[0].name, 
-          email: results[0].email, 
-          type: results[0].user_type 
-        } 
-      });
+    if (err || !results.length) {
+      return res.json({ success: false, message: 'Invalid or expired OTP' });
     }
+
+    // Clear OTP after success
+    db.query('UPDATE users SET otp_code = NULL, otp_expires = NULL WHERE email = ?', [email]);
+
+    console.log('✅ OTP VERIFIED:', email);
+    res.json({
+      success: true,
+      user: {
+        id: results[0].id,
+        name: results[0].name,
+        email: results[0].email,
+        type: results[0].user_type
+      }
+    });
+  }
   );
 });
 
@@ -1038,7 +1038,7 @@ app.post('/api/verify-otp', (req, res) => {
 app.get('/api/verify', (req, res) => {
   const { token, email } = req.query;
   console.log('VERIFY:', email, token ? 'OK' : 'NO TOKEN');
-  
+
   db.query('UPDATE users SET is_verified = 1, verification_token = NULL WHERE email = ? AND verification_token = ?', [email, token], (err, result) => {
     if (err || result.affectedRows === 0) {
       return res.send('<h2 style="color: red">Invalid or expired verification link.</h2>');
@@ -1076,68 +1076,68 @@ app.post('/api/register', async (req, res) => {
   try {
     console.log('\n📝 ========== REGISTER REQUEST ==========');
     console.log('📤 Request body:', req.body);
-    
+
     const { firstName, lastName, name, email, password, type, phone, preferences } = req.body;
-    
+
     // Handle combined name if firstName/lastName not provided (backward compatibility)
     const fullName = (firstName && lastName) ? `${firstName} ${lastName}` : (name || 'Unknown User');
-    
+
     // Validation
     if (!fullName || !email || !password || !type) {
       console.log('❌ Missing fields');
-      return res.status(400).json({ 
-        success: false, 
-        message: 'All fields are required' 
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required'
       });
     }
-    
+
     // Check if user already exists
     db.query('SELECT * FROM users WHERE email = ?', [email], async (err, results) => {
       if (err) {
         console.error('❌ Database error checking user:', err.message);
-        return res.status(500).json({ 
-          success: false, 
-          message: 'Database error' 
+        return res.status(500).json({
+          success: false,
+          message: 'Database error'
         });
       }
-      
+
       if (results.length > 0) {
         console.log('❌ User already exists:', email);
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Email already registered' 
+        return res.status(400).json({
+          success: false,
+          message: 'Email already registered'
         });
       }
-      
+
       // Hash password
       console.log('🔑 Hashing password...');
       const password_hash = await bcrypt.hash(password, 10);
       console.log('🔑 Password hashed successfully');
-      
+
       // Insert user
       const verification_token = crypto.randomBytes(32).toString('hex');
-      
+
       const insertQuery = 'INSERT INTO users (name, email, password_hash, user_type, is_verified, verification_token) VALUES (?, ?, ?, ?, 0, ?)';
       console.log('💾 Executing query:', insertQuery);
-      
+
       db.query(insertQuery, [fullName, email, password_hash, type, verification_token], (insertErr, result) => {
         if (insertErr) {
           console.error('❌ Error inserting user:', insertErr.message);
-          return res.status(500).json({ 
-            success: false, 
-            message: `Database error: ${insertErr.message}` 
+          return res.status(500).json({
+            success: false,
+            message: `Database error: ${insertErr.message}`
           });
         }
-        
+
         console.log('✅ User inserted successfully!');
         console.log('✅ Insert ID:', result.insertId);
-        
+
         logAction(result.insertId, 'REGISTER', `New ${type} account registered: ${email}`, req.ip || '::1');
 
         const newUserId = result.insertId;
         // Send Verification Email
         const verifyUrl = `${BACKEND_URL}/api/verify?token=${verification_token}&email=${email}`;
-        
+
         // LOG VERIFICATION LINK (Fix for development/Gmail issues)
         console.log('🔑 [DEBUG] Verification Link:', verifyUrl);
 
@@ -1165,23 +1165,23 @@ app.post('/api/register', async (req, res) => {
             sendSuccessResponse(newUserId);
           });
         } else if (type === 'customer') {
-            // Create customer profile with phone and preferences (stored in notes)
-            const customerQuery = 'INSERT INTO customers (user_id, phone, notes) VALUES (?, ?, ?)';
-            db.query(customerQuery, [newUserId, phone || '', preferences || ''], (custErr) => {
-                if (custErr) {
-                    console.error('❌ Error creating customer profile:', custErr.message);
-                } else {
-                    console.log('✅ Customer profile created for user ID:', newUserId);
-                }
-                sendSuccessResponse(newUserId);
-            });
+          // Create customer profile with phone and preferences (stored in notes)
+          const customerQuery = 'INSERT INTO customers (user_id, phone, notes) VALUES (?, ?, ?)';
+          db.query(customerQuery, [newUserId, phone || '', preferences || ''], (custErr) => {
+            if (custErr) {
+              console.error('❌ Error creating customer profile:', custErr.message);
+            } else {
+              console.log('✅ Customer profile created for user ID:', newUserId);
+            }
+            sendSuccessResponse(newUserId);
+          });
         } else {
           sendSuccessResponse(newUserId);
         }
 
         function sendSuccessResponse(userId) {
-          res.json({ 
-            success: true, 
+          res.json({
+            success: true,
             message: 'Account created! Please check your email to verify.',
             user: {
               id: userId,
@@ -1193,12 +1193,12 @@ app.post('/api/register', async (req, res) => {
         }
       });
     });
-    
+
   } catch (error) {
     console.error('❌ Unexpected error in register:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Internal server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
     });
   }
 });
@@ -1207,16 +1207,16 @@ app.post('/api/register', async (req, res) => {
 app.get('/api/artist/dashboard/:artistId', (req, res) => {
   const { artistId } = req.params;
   console.log(`📊 Artist dashboard requested: ${artistId}`);
-  
+
   // Add timeout
   const timeout = setTimeout(() => {
     console.log('❌ Dashboard query timeout');
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Request timeout' 
+    return res.status(500).json({
+      success: false,
+      message: 'Request timeout'
     });
   }, 5000);
-  
+
   // SIMPLE query that works with current DB structure
   const query = `
     SELECT 
@@ -1235,12 +1235,12 @@ app.get('/api/artist/dashboard/:artistId', (req, res) => {
     LEFT JOIN artists a ON u.id = a.user_id
     WHERE u.id = ? AND u.user_type = 'artist'
   `;
-  
+
   console.log('🔍 Executing query:', query, [artistId]);
-  
+
   db.query(query, [artistId], (err, results) => {
     clearTimeout(timeout);
-    
+
     if (err) {
       console.error('❌ Database error:', err.message);
       console.error('❌ Full error:', err);
@@ -1251,20 +1251,20 @@ app.get('/api/artist/dashboard/:artistId', (req, res) => {
         message: `Database error fetching artist dashboard: ${err.message}`
       });
     }
-    
+
     console.log(`📊 Query results: ${results.length} rows`);
-    
+
     if (results.length === 0) {
       console.log('❌ No artist found');
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Artist not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Artist not found'
       });
     }
-    
+
     const artist = results[0];
     console.log('✅ Artist found:', artist.name);
-    
+
     // Fetch appointments
     const appointmentsQuery = `
       SELECT 
@@ -1283,7 +1283,7 @@ app.get('/api/artist/dashboard/:artistId', (req, res) => {
 
     db.query(appointmentsQuery, [artistId], (apptErr, apptResults) => {
       const appointments = apptResults || [];
-      
+
       // Fetch notifications for dashboard
       db.query('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 20', [artistId], (notifErr, notifResults) => {
         const notifications = notifResults || [];
@@ -1325,7 +1325,7 @@ app.get('/api/artist/dashboard/:artistId', (req, res) => {
 app.get('/api/artist/:artistId/appointments', (req, res) => {
   const { artistId } = req.params;
   const { status, date } = req.query;
-  
+
   let query = `
     SELECT ap.*, u.name as client_name, u.email as client_email, ar.commission_rate
     FROM appointments ap
@@ -1333,27 +1333,27 @@ app.get('/api/artist/:artistId/appointments', (req, res) => {
     LEFT JOIN artists ar ON ap.artist_id = ar.user_id
     WHERE ap.artist_id = ? AND ap.is_deleted = 0
   `;
-  
+
   const params = [artistId];
-  
+
   if (status) {
     query += ' AND ap.status = ?';
     params.push(status);
   }
-  
+
   if (date) {
     query += ' AND ap.appointment_date = ?';
     params.push(date);
   }
-  
+
   query += ' ORDER BY ap.appointment_date, ap.start_time';
-  
+
   db.query(query, params, (err, results) => {
     if (err) {
       console.error('❌ Error fetching appointments:', err);
       return res.status(500).json({ success: false, message: 'DB Error (Get Appts): ' + err.message });
     }
-    
+
     res.json({ success: true, appointments: results });
   });
 });
@@ -1361,7 +1361,7 @@ app.get('/api/artist/:artistId/appointments', (req, res) => {
 // Get artist's clients
 app.get('/api/artist/:artistId/clients', (req, res) => {
   const { artistId } = req.params;
-  
+
   const query = `
     SELECT DISTINCT 
       u.id, 
@@ -1375,13 +1375,13 @@ app.get('/api/artist/:artistId/clients', (req, res) => {
     GROUP BY u.id, u.name, u.email
     ORDER BY last_appointment DESC
   `;
-  
+
   db.query(query, [artistId], (err, results) => {
     if (err) {
       console.error('❌ Error fetching clients:', err);
       return res.status(500).json({ success: false, message: 'DB Error (Get Clients): ' + err.message });
     }
-    
+
     res.json({ success: true, clients: results });
   });
 });
@@ -1390,32 +1390,32 @@ app.get('/api/artist/:artistId/clients', (req, res) => {
 app.put('/api/artist/profile/:id', (req, res) => {
   const { id } = req.params;
   const { name, specialization, hourly_rate, experience_years, commission_rate, phone } = req.body;
-  
+
   // Update users table (name)
   db.query('UPDATE users SET name = ? WHERE id = ?', [name, id], (err) => {
     if (err) return res.status(500).json({ success: false, message: 'DB Error (User)' });
-    
+
     // Update artists table
     let artistQuery = 'UPDATE artists SET specialization = ?';
     const params = [specialization];
-    
+
     if (hourly_rate !== undefined) {
-        artistQuery += ', hourly_rate = ?';
-        params.push(hourly_rate);
+      artistQuery += ', hourly_rate = ?';
+      params.push(hourly_rate);
     }
     if (experience_years !== undefined) {
-        artistQuery += ', experience_years = ?';
-        params.push(experience_years);
+      artistQuery += ', experience_years = ?';
+      params.push(experience_years);
     }
     if (commission_rate !== undefined) {
-        artistQuery += ', commission_rate = ?';
-        params.push(commission_rate);
+      artistQuery += ', commission_rate = ?';
+      params.push(commission_rate);
     }
     if (phone !== undefined) {
-        artistQuery += ', phone = ?';
-        params.push(phone);
+      artistQuery += ', phone = ?';
+      params.push(phone);
     }
-    
+
     artistQuery += ' WHERE user_id = ?';
     params.push(id);
 
@@ -1429,7 +1429,7 @@ app.put('/api/artist/profile/:id', (req, res) => {
 // Get artist's portfolio
 app.get('/api/artist/:artistId/portfolio', (req, res) => {
   const { artistId } = req.params;
-  
+
   db.query(
     'SELECT * FROM portfolio_works WHERE artist_id = ? AND is_deleted = 0 ORDER BY created_at DESC',
     [artistId],
@@ -1438,7 +1438,7 @@ app.get('/api/artist/:artistId/portfolio', (req, res) => {
         console.error('❌ Error fetching portfolio:', err);
         return res.status(500).json({ success: false, message: 'DB Error (Get Portfolio): ' + err.message });
       }
-      
+
       res.json({ success: true, works: results });
     }
   );
@@ -1447,7 +1447,7 @@ app.get('/api/artist/:artistId/portfolio', (req, res) => {
 // Add portfolio work
 app.post('/api/artist/portfolio', (req, res) => {
   const { artistId, imageUrl, title, description, category, isPublic, priceEstimate } = req.body;
-  
+
   if (!imageUrl) {
     return res.status(400).json({ success: false, message: 'Image data or URL is required.' });
   }
@@ -1457,20 +1457,20 @@ app.post('/api/artist/portfolio', (req, res) => {
   if (!imageUrl.startsWith('data:image/') && !urlRegex.test(imageUrl)) {
     return res.status(400).json({ success: false, message: 'Invalid image format. Must be a valid URL or a data URI.' });
   }
-  
+
   if (imageUrl) {
     console.log(`📸 Uploading work: "${title}", Category: ${category}, Public: ${isPublic}, Price: ${priceEstimate || 'N/A'}`);
   }
-  
+
   const parsedPrice = priceEstimate ? parseFloat(priceEstimate) : null;
   const query = 'INSERT INTO portfolio_works (artist_id, image_url, title, description, category, is_public, price_estimate, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())';
-  
+
   db.query(query, [artistId, imageUrl, title, description, category, isPublic, parsedPrice], (err, result) => {
     if (err) {
       console.error('Error adding work:', err);
       return res.status(500).json({ success: false, message: 'DB Error: ' + err.message });
     }
-    
+
     res.json({ success: true, message: 'Work added successfully', id: result.insertId });
   });
 });
@@ -1479,18 +1479,18 @@ app.post('/api/artist/portfolio', (req, res) => {
 app.put('/api/artist/portfolio/:id', (req, res) => {
   const { id } = req.params;
   const { title, description, category, priceEstimate, imageUrl, isPublic } = req.body;
-  
+
   let query = 'UPDATE portfolio_works SET title=?, description=?, category=?, price_estimate=?';
   const params = [title, description, category, priceEstimate || null];
 
   if (imageUrl) {
-      query += ', image_url=?';
-      params.push(imageUrl);
+    query += ', image_url=?';
+    params.push(imageUrl);
   }
-  
+
   if (isPublic !== undefined) {
-      query += ', is_public=?';
-      params.push(isPublic ? 1 : 0);
+    query += ', is_public=?';
+    params.push(isPublic ? 1 : 0);
   }
 
   query += ' WHERE id=?';
@@ -1505,14 +1505,14 @@ app.put('/api/artist/portfolio/:id', (req, res) => {
 // Delete portfolio work
 app.delete('/api/artist/portfolio/:id', (req, res) => {
   const { id } = req.params;
-  
+
   db.query('UPDATE portfolio_works SET is_deleted = 1 WHERE id = ?', [id], (err, result) => {
     if (err) {
       console.error('Error deleting work:', err);
       return res.status(500).json({ success: false, message: 'Database error' });
     }
     // Note: We don't have the artist ID here easily without another query, so we might log 'Unknown' or fetch it first.
-    
+
     res.json({ success: true, message: 'Work deleted successfully' });
   });
 });
@@ -1538,36 +1538,36 @@ app.put('/api/artist/portfolio/:id/visibility', (req, res) => {
 // Artist: Create Appointment
 app.post('/api/artist/appointments', (req, res) => {
   const { artistId, clientEmail, date, startTime, designTitle } = req.body;
-  
+
   console.log('📅 Request to schedule:', { artistId, clientEmail, date, startTime });
-  
+
   // Find client by email
   db.query('SELECT id FROM users WHERE email = ?', [clientEmail], (err, results) => {
     if (err) {
       console.error('❌ Error finding client:', err);
       return res.status(500).json({ success: false, message: 'DB Error (Find Client): ' + err.message });
     }
-    
+
     if (results.length === 0) {
       return res.status(404).json({ success: false, message: 'Client email not found. Please add client first.' });
     }
-    
+
     const customerId = results[0].id;
-    
+
     // Insert appointment
     const query = `
       INSERT INTO appointments 
       (customer_id, artist_id, appointment_date, start_time, end_time, design_title, status, price)
       VALUES (?, ?, ?, ?, ?, ?, 'confirmed', 0)
     `;
-    
+
     // Simple end time (same as start for now)
     db.query(query, [customerId, artistId, date, startTime, startTime, designTitle], (err, result) => {
       if (err) {
         console.error('❌ Error creating appointment:', err);
         return res.status(500).json({ success: false, message: 'DB Error (Insert Appt): ' + err.message });
       }
-      
+
       // Notify Client
       createNotification(customerId, 'New Appointment', `Artist scheduled: ${designTitle} on ${date}`, 'appointment_new', result.insertId);
 
@@ -1580,33 +1580,33 @@ app.post('/api/artist/appointments', (req, res) => {
 app.post('/api/artist/clients', async (req, res) => {
   const { name, email, password } = req.body;
   console.log('👤 Request to add client:', { name, email });
-  
+
   try {
     // Create user with provided password or default '123123123A!'
     const plainPassword = password || '123123123A!';
     const password_hash = await bcrypt.hash(plainPassword, 10);
     const query = 'INSERT INTO users (name, email, password_hash, user_type) VALUES (?, ?, ?, "customer")';
-    
+
     db.query(query, [name, email, password_hash], (err, result) => {
       if (err) {
         console.error('❌ Error adding client:', err);
         if (err.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ success: false, message: 'Email already exists' });
+          return res.status(400).json({ success: false, message: 'Email already exists' });
         }
         return res.status(500).json({ success: false, message: 'DB Error (Add Client): ' + err.message });
       }
       res.json({ success: true, message: 'Client profile created successfully' });
     });
   } catch (e) {
-      console.error('❌ Server error:', e);
-      res.status(500).json({ success: false, message: 'Server error: ' + e.message });
+    console.error('❌ Server error:', e);
+    res.status(500).json({ success: false, message: 'Server error: ' + e.message });
   }
 });
 
 // Artist: Delete Client
 app.delete('/api/artist/clients/:id', (req, res) => {
   const { id } = req.params;
-  
+
   db.query('UPDATE users SET is_deleted = 1 WHERE id = ? AND user_type = "customer"', [id], (err, result) => {
     if (err) {
       console.error('Error deleting client:', err);
@@ -1638,7 +1638,7 @@ app.get('/api/customer/profile/:id', (req, res) => {
 app.put('/api/customer/profile/:id', (req, res) => {
   const { id } = req.params;
   const { name, phone, location, notes } = req.body;
-  
+
   // This logic is improved to handle partial updates correctly and prevent data loss.
   // It also fixes the bug where updating only the name would incorrectly show an error.
   const updateUserPromise = new Promise((resolve, reject) => {
@@ -1654,11 +1654,11 @@ app.put('/api/customer/profile/:id', (req, res) => {
     if (!hasCustomerFields) return resolve();
 
     const customerQuery = 'INSERT INTO customers (user_id, phone, location, notes) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE phone = VALUES(phone), location = VALUES(location), notes = VALUES(notes)';
-    
+
     // Fetch existing data to avoid overwriting fields with null if they aren't provided.
     db.query('SELECT phone, location, notes FROM customers WHERE user_id = ?', [id], (selectErr, results) => {
       if (selectErr) return reject({ message: 'DB Error (Customer Select)' });
-      
+
       const existing = results[0] || {};
       const finalPhone = phone !== undefined ? phone : existing.phone;
       const finalLocation = location !== undefined ? location : existing.location;
@@ -1682,15 +1682,15 @@ app.put('/api/customer/profile/:id', (req, res) => {
 
 // Get all available portfolio categories
 app.get('/api/gallery/categories', (req, res) => {
-    const query = 'SELECT DISTINCT category FROM portfolio_works WHERE category IS NOT NULL AND category != "" AND is_deleted = 0 AND is_public = 1 ORDER BY category ASC';
-    db.query(query, (err, results) => {
-        if (err) {
-            console.error('❌ Error fetching categories:', err);
-            return res.status(500).json({ success: false, message: 'Database error' });
-        }
-        const categories = results.map(r => r.category);
-        res.json({ success: true, categories: ['All', ...categories] });
-    });
+  const query = 'SELECT DISTINCT category FROM portfolio_works WHERE category IS NOT NULL AND category != "" AND is_deleted = 0 AND is_public = 1 ORDER BY category ASC';
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('❌ Error fetching categories:', err);
+      return res.status(500).json({ success: false, message: 'Database error' });
+    }
+    const categories = results.map(r => r.category);
+    res.json({ success: true, categories: ['All', ...categories] });
+  });
 });
 
 // Get all works for a public gallery
@@ -1753,13 +1753,13 @@ app.get('/api/customer/artists', (req, res) => {
              a.rating, a.total_reviews
     ORDER BY a.rating DESC
   `;
-  
+
   db.query(query, (err, results) => {
     if (err) {
       console.error('Error:', err);
       return res.status(500).json({ success: false, message: 'Database error' });
     }
-    
+
     res.json({ success: true, artists: results });
   });
 });
@@ -1767,7 +1767,7 @@ app.get('/api/customer/artists', (req, res) => {
 // Get artist availability (booked dates)
 app.get('/api/artist/:artistId/availability', (req, res) => {
   const { artistId } = req.params;
-  
+
   const query = `
     SELECT appointment_date, start_time, status
     FROM appointments
@@ -1776,7 +1776,7 @@ app.get('/api/artist/:artistId/availability', (req, res) => {
     AND is_deleted = 0
     AND appointment_date >= CURDATE()
   `;
-  
+
   db.query(query, [artistId], (err, results) => {
     if (err) return res.status(500).json({ success: false, message: 'DB Error: ' + err.message });
     res.json({ success: true, bookings: results });
@@ -1787,7 +1787,7 @@ app.get('/api/artist/:artistId/availability', (req, res) => {
 app.post('/api/customer/appointments', (req, res) => {
   console.log('📅 Customer booking request:', req.body);
   const { customerId, artistId, date, startTime, endTime, designTitle, notes, referenceImage, price } = req.body;
-  
+
   // Validation for time and date
   // If startTime is provided (not a Tattoo Session), validate it
   if (startTime) {
@@ -1809,7 +1809,7 @@ app.post('/api/customer/appointments', (req, res) => {
     return res.status(400).json({ success: false, message: 'Appointments cannot be booked for the same day or past dates.' });
   }
   // --- End Validation ---
-  
+
   // Ensure endTime has a value (default to startTime if missing)
   const finalStartTime = startTime || null;
   const finalEndTime = endTime || startTime || null;
@@ -1821,21 +1821,21 @@ app.post('/api/customer/appointments', (req, res) => {
     (customer_id, artist_id, appointment_date, start_time, end_time, design_title, notes, reference_image, status, price)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
-  
+
   db.query(query, [customerId, artistId, date, finalStartTime, finalEndTime, designTitle, notes, referenceImage, bookingStatus, price || 0], (err, result) => {
     if (err) {
       console.error('❌ Error booking appointment:', err);
       return res.status(500).json({ success: false, message: 'Database error: ' + err.message });
     }
-    
+
     // Notify Artist
     const notifDate = date || 'an upcoming date';
     createNotification(artistId, 'New Booking Request', `New request from client for ${notifDate}`, 'appointment_request', result.insertId);
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: 'Appointment booked successfully',
-      appointmentId: result.insertId 
+      appointmentId: result.insertId
     });
   });
 });
@@ -1861,7 +1861,7 @@ app.get('/api/customer/:customerId/appointments', (req, res) => {
 // Get public gallery works (for customer gallery screen)
 app.get('/api/gallery/works', (req, res) => {
   const { search, category } = req.query;
-  
+
   let query = `
     SELECT pw.id, pw.title, pw.description, pw.image_url, pw.category, pw.price_estimate, pw.created_at,
            u.name as artist_name
@@ -1946,26 +1946,26 @@ app.get('/api/gallery/art-of-the-day', (req, res) => {
 app.put('/api/appointments/:id/status', (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
-  
+
   // Fetch appointment first to get user IDs for notification
   db.query('SELECT * FROM appointments WHERE id = ?', [id], (err, results) => {
     if (err) {
       console.error('❌ Error fetching appointment for status update:', err);
       return res.status(500).json({ success: false, message: 'Database error' });
     }
-    
+
     if (results.length === 0) {
       return res.status(404).json({ success: false, message: 'Appointment not found' });
     }
-    
+
     const appointment = results[0];
-    
+
     db.query('UPDATE appointments SET status = ? WHERE id = ?', [status, id], (updateErr, result) => {
       if (updateErr) {
         console.error('Error updating appointment:', updateErr);
         return res.status(500).json({ success: false, message: 'Database error' });
       }
-      
+
       // Send Notifications
       if (status === 'confirmed') {
         createNotification(appointment.customer_id, 'Appointment Confirmed', 'Your appointment has been confirmed!', 'appointment_confirmed', id);
@@ -1976,7 +1976,7 @@ app.put('/api/appointments/:id/status', (req, res) => {
       } else if (status === 'completed') {
         createNotification(appointment.customer_id, 'Appointment Completed', 'Thanks for visiting! Please leave a review.', 'appointment_completed', id);
       }
-      
+
       res.json({ success: true, message: 'Appointment status updated' });
     });
   });
@@ -1986,22 +1986,22 @@ app.put('/api/appointments/:id/status', (req, res) => {
 app.put('/api/appointments/:id/details', (req, res) => {
   const { id } = req.params;
   const { notes, beforePhoto, afterPhoto } = req.body;
-  
+
   // In a real app, we would save photos to disk/S3 and store URLs in DB
   // For this prototype, we'll just update the notes field which now includes supply logs
-  
+
   const query = 'UPDATE appointments SET notes = ? WHERE id = ?';
-  
+
   db.query(query, [notes, id], (err, result) => {
     if (err) {
       console.error('Error updating appointment details:', err);
       return res.status(500).json({ success: false, message: 'Database error' });
     }
-    
+
     if (beforePhoto || afterPhoto) {
-        console.log(`📸 Photos received for appointment ${id} (Storage not implemented in prototype)`);
+      console.log(`📸 Photos received for appointment ${id} (Storage not implemented in prototype)`);
     }
-    
+
     res.json({ success: true, message: 'Details updated successfully' });
   });
 });
@@ -2097,6 +2097,7 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
       const checkoutUrl = data?.data?.attributes?.checkout_url;
 
       // Save pending record for tracking
+      // Save pending record for tracking
       db.query(
         `INSERT INTO payments (appointment_id, session_id, amount, currency, status, raw_event)
          VALUES (?, ?, ?, ?, 'pending', ?)
@@ -2106,6 +2107,9 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
           if (payErr) console.error('⚠️ Could not log pending payment:', payErr.message);
         }
       );
+
+      // Also update the appointment's payment_status to 'pending'
+      db.query("UPDATE appointments SET payment_status = 'pending' WHERE id = ?", [appointmentId]);
 
       return res.json({ success: true, checkoutUrl, sessionId });
     });
@@ -2120,6 +2124,15 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
 });
 
 // Webhook receiver for PayMongo
+// GET payment status polling for specific appointment
+app.get('/api/appointments/:id/payment-status', (req, res) => {
+  const { id } = req.params;
+  db.query('SELECT payment_status FROM appointments WHERE id = ?', [id], (err, results) => {
+    if (err || results.length === 0) return res.status(404).json({ success: false, message: 'Not found' });
+    res.json({ success: true, payment_status: results[0].payment_status });
+  });
+});
+
 app.post('/api/payments/webhook', (req, res) => {
   if (!PAYMONGO_WEBHOOK_SECRET) {
     console.warn('⚠️ PAYMONGO_WEBHOOK_SECRET is not set. Webhook signature will not be verified.');
@@ -2315,19 +2328,19 @@ app.get('/api/customer/dashboard/:customerId', (req, res) => {
 // Get notifications
 app.get('/api/notifications/:userId', (req, res) => {
   const { userId } = req.params;
-  
+
   const query = 'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50';
-  
+
   db.query(query, [userId], (err, results) => {
     if (err) {
       console.error('❌ Error fetching notifications:', err);
       return res.status(500).json({ success: false, message: 'Database error' });
     }
-    
+
     const unreadCount = results.filter(n => !n.is_read).length;
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       notifications: results,
       unreadCount
     });
@@ -2337,13 +2350,13 @@ app.get('/api/notifications/:userId', (req, res) => {
 // Mark notification as read
 app.put('/api/notifications/:id/read', (req, res) => {
   const { id } = req.params;
-  
+
   db.query('UPDATE notifications SET is_read = 1 WHERE id = ?', [id], (err, result) => {
     if (err) {
       console.error('❌ Error updating notification:', err);
       return res.status(500).json({ success: false, message: 'Database error' });
     }
-    
+
     res.json({ success: true, message: 'Marked as read' });
   });
 });
@@ -2392,7 +2405,7 @@ app.get('/api/admin/users', (req, res) => {
     query += ' AND (name LIKE ? OR email LIKE ?)';
     params = [`%${search}%`, `%${search}%`];
   }
-  
+
   query += ' ORDER BY id DESC';
 
   db.query(query, params, (err, results) => {
@@ -2407,15 +2420,15 @@ app.post('/api/admin/users', async (req, res) => {
   try {
     const password_hash = await bcrypt.hash(password, 10);
     const query = 'INSERT INTO users (name, email, password_hash, user_type, is_verified) VALUES (?, ?, ?, ?, 1)';
-    
+
     db.query(query, [name, email, password_hash, type], (err, result) => {
       if (err) return res.status(500).json({ success: false, message: err.message });
-      
+
       // If artist, create profile
       if (type === 'artist') {
         db.query('INSERT INTO artists (user_id, studio_name) VALUES (?, ?)', [result.insertId, 'New Studio']);
       }
-      
+
       logAction(null, 'CREATE_USER', `Created user ${email} (${type})`, req.ip);
       res.json({ success: true, message: 'User created successfully' });
     });
@@ -2428,7 +2441,7 @@ app.post('/api/admin/users', async (req, res) => {
 app.put('/api/admin/users/:id', (req, res) => {
   const { id } = req.params;
   const { name, email, type } = req.body;
-  
+
   const query = 'UPDATE users SET name = ?, email = ?, user_type = ? WHERE id = ?';
   db.query(query, [name, email, type, id], (err) => {
     if (err) return res.status(500).json({ success: false, message: err.message });
@@ -2441,11 +2454,11 @@ app.put('/api/admin/users/:id', (req, res) => {
 app.delete('/api/admin/users/:id', (req, res) => {
   const { id } = req.params;
   console.log(`🗑️ SOFT DELETE request for user ID: ${id}`);
-  
+
   // Safety: Don't delete the main admin
   db.query('SELECT email FROM users WHERE id = ?', [id], (err, results) => {
     if (err) return res.status(500).json({ success: false, message: 'Database error checking user' });
-    
+
     if (results.length > 0 && results[0].email === 'admin@inkvistar.com') {
       return res.status(403).json({ success: false, message: 'Cannot delete the main system admin.' });
     }
@@ -2499,13 +2512,13 @@ app.get('/api/admin/audit-logs', (req, res) => {
 app.get('/api/admin/branches', (req, res) => {
   const { status } = req.query;
   let query = 'SELECT * FROM branches WHERE 1=1';
-  
+
   if (status === 'deleted') {
     query += ' AND is_deleted = 1';
   } else {
     query += ' AND is_deleted = 0';
   }
-  
+
   query += ' ORDER BY id DESC';
 
   db.query(query, (err, results) => {
@@ -2529,7 +2542,7 @@ app.post('/api/admin/branches', (req, res) => {
 app.put('/api/admin/branches/:id', (req, res) => {
   const { id } = req.params;
   const { status, current_occupancy, name, address, phone, operating_hours, capacity } = req.body;
-  
+
   let query = 'UPDATE branches SET ';
   const params = [];
   const updates = [];
@@ -2556,35 +2569,35 @@ app.put('/api/admin/branches/:id', (req, res) => {
 
 // Admin: Delete Branch
 app.delete('/api/admin/branches/:id', (req, res) => {
-    const { id } = req.params;
-    db.query('UPDATE branches SET is_deleted = 1 WHERE id = ?', [id], (err) => {
-        if (err) return res.status(500).json({ success: false, message: err.message });
-        logAction(null, 'DELETE_BRANCH', `Deleted branch ID ${id}`, req.ip);
-        res.json({ success: true, message: 'Branch deleted' });
-    });
+  const { id } = req.params;
+  db.query('UPDATE branches SET is_deleted = 1 WHERE id = ?', [id], (err) => {
+    if (err) return res.status(500).json({ success: false, message: err.message });
+    logAction(null, 'DELETE_BRANCH', `Deleted branch ID ${id}`, req.ip);
+    res.json({ success: true, message: 'Branch deleted' });
+  });
 });
 
 // Admin: Restore Branch
 app.put('/api/admin/branches/:id/restore', (req, res) => {
-    const { id } = req.params;
-    db.query('UPDATE branches SET is_deleted = 0 WHERE id = ?', [id], (err) => {
-        if (err) return res.status(500).json({ success: false, message: err.message });
-        logAction(null, 'RESTORE_BRANCH', `Restored branch ID ${id}`, req.ip);
-        res.json({ success: true, message: 'Branch restored' });
-    });
+  const { id } = req.params;
+  db.query('UPDATE branches SET is_deleted = 0 WHERE id = ?', [id], (err) => {
+    if (err) return res.status(500).json({ success: false, message: err.message });
+    logAction(null, 'RESTORE_BRANCH', `Restored branch ID ${id}`, req.ip);
+    res.json({ success: true, message: 'Branch restored' });
+  });
 });
 
 // Admin: Get Inventory
 app.get('/api/admin/inventory', (req, res) => {
   const { status } = req.query;
   let query = 'SELECT * FROM inventory WHERE 1=1';
-  
+
   if (status === 'deleted') {
     query += ' AND is_deleted = 1';
   } else {
     query += ' AND is_deleted = 0';
   }
-  
+
   query += ' ORDER BY name ASC';
 
   db.query(query, (err, results) => {
@@ -2650,20 +2663,20 @@ app.delete('/api/admin/inventory/:id/permanent', (req, res) => {
 app.post('/api/admin/inventory/:id/transaction', (req, res) => {
   const { id } = req.params;
   const { type, quantity, reason } = req.body; // type: 'in' or 'out'
-  
+
   if (!['in', 'out'].includes(type)) return res.status(400).json({ success: false, message: 'Invalid type' });
-  
+
   // Update stock
-  const updateQuery = type === 'in' 
+  const updateQuery = type === 'in'
     ? 'UPDATE inventory SET current_stock = current_stock + ?, last_restocked = NOW() WHERE id = ?'
     : 'UPDATE inventory SET current_stock = GREATEST(0, current_stock - ?) WHERE id = ?';
-    
+
   db.query(updateQuery, [quantity, id], (err, result) => {
     if (err) return res.status(500).json({ success: false, message: err.message });
-    
+
     // Log transaction
-    db.query('INSERT INTO inventory_transactions (inventory_id, type, quantity, reason) VALUES (?, ?, ?, ?)', 
-      [id, type, quantity, reason], 
+    db.query('INSERT INTO inventory_transactions (inventory_id, type, quantity, reason) VALUES (?, ?, ?, ?)',
+      [id, type, quantity, reason],
       (logErr) => {
         if (logErr) console.error('Failed to log transaction:', logErr);
         logAction(null, 'STOCK_TRANSACTION', `${type.toUpperCase()} ${quantity} for item ${id}: ${reason}`, req.ip);
@@ -2692,7 +2705,7 @@ app.get('/api/admin/inventory/transactions', (req, res) => {
 
   db.query(dataQuery, [limit, offset], (err, results) => {
     if (err) return res.status(500).json({ success: false, message: err.message });
-    
+
     db.query(countQuery, (countErr, countResults) => {
       if (countErr) return res.status(500).json({ success: false, message: countErr.message });
 
@@ -2730,7 +2743,7 @@ app.get('/api/admin/appointments', (req, res) => {
     WHERE ap.is_deleted = 0
     ORDER BY ap.appointment_date DESC
   `;
-  
+
   db.query(query, (err, results) => {
     if (err) return res.status(500).json({ success: false, message: err.message });
     res.json({ success: true, data: results });
@@ -2740,13 +2753,13 @@ app.get('/api/admin/appointments', (req, res) => {
 // Admin: Create Appointment (Walk-in / Manual Booking)
 app.post('/api/admin/appointments', (req, res) => {
   const { customerId, artistId, date, startTime, endTime, designTitle, notes, status, price } = req.body;
-  
+
   const query = `
     INSERT INTO appointments 
     (customer_id, artist_id, appointment_date, start_time, end_time, design_title, notes, status, price)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
-  
+
   db.query(query, [customerId, artistId, date, startTime, endTime || startTime, designTitle, notes, status || 'scheduled', price || 0], (err, result) => {
     if (err) {
       console.error('❌ Error creating appointment:', err);
@@ -2761,7 +2774,7 @@ app.post('/api/admin/appointments', (req, res) => {
 app.put('/api/admin/appointments/:id', (req, res) => {
   const { id } = req.params;
   const { status, date, startTime, endTime, artistId, designTitle, notes, price } = req.body;
-  
+
   let query = 'UPDATE appointments SET ';
   const params = [];
   const updates = [];
@@ -2803,10 +2816,10 @@ app.put('/api/admin/appointments/:id', (req, res) => {
 
   query += updates.join(', ') + ' WHERE id = ?';
   params.push(id);
-  
+
   db.query(query, params, (err) => {
     if (err) return res.status(500).json({ success: false, message: err.message });
-    
+
     // Notify users (Simplified)
     if (status) {
       db.query('SELECT customer_id, artist_id FROM appointments WHERE id = ?', [id], (e, r) => {
@@ -2852,7 +2865,7 @@ app.get('/api/admin/analytics', (req, res) => {
     FROM appointments
     WHERE is_deleted = 0
   `;
-  
+
   // 2. Revenue (Estimated based on completed appointments * artist hourly rate)
   const revenueQuery = `
     SELECT SUM(ar.hourly_rate) as total
@@ -2883,7 +2896,7 @@ app.get('/api/admin/analytics', (req, res) => {
     ORDER BY used DESC
     LIMIT 5
   `;
-  
+
   // 5. Popular Styles (from Portfolio)
   const styleQuery = `
     SELECT category as name, COUNT(*) as count 
@@ -2917,7 +2930,7 @@ app.get('/api/admin/analytics', (req, res) => {
     db.query(revenueQuery, (err, revRes) => {
       if (err) return res.status(500).json({ success: false, message: err.message });
       response.revenue.total = revRes[0].total || 0;
-      
+
       db.query(artistQuery, (err, artRes) => {
         if (err) return res.status(500).json({ success: false, message: err.message });
         response.artists = artRes;
@@ -2931,11 +2944,11 @@ app.get('/api/admin/analytics', (req, res) => {
             response.styles = styleRes;
 
             db.query(trendQuery, (err, trendRes) => {
-                if (err) return res.status(500).json({ success: false, message: err.message });
-                // Mock value for chart based on count * avg price (150)
-                response.revenue.chart = trendRes.map(t => ({ month: t.month, appointments: t.count, value: t.count * 150 })); 
-                
-                res.json({ success: true, data: response });
+              if (err) return res.status(500).json({ success: false, message: err.message });
+              // Mock value for chart based on count * avg price (150)
+              response.revenue.chart = trendRes.map(t => ({ month: t.month, appointments: t.count, value: t.count * 150 }));
+
+              res.json({ success: true, data: response });
             });
           });
         });
@@ -2994,7 +3007,7 @@ app.delete('/api/admin/invoices/:id', (req, res) => {
 app.get('/api/admin/settings', (req, res) => {
   db.query('SELECT * FROM app_settings', (err, results) => {
     if (err) return res.status(500).json({ success: false, message: err.message });
-    
+
     // Convert array of rows to object { section: data }
     const settings = {};
     results.forEach(row => {
@@ -3012,7 +3025,7 @@ app.get('/api/admin/settings', (req, res) => {
 app.post('/api/admin/settings', (req, res) => {
   const { section, data } = req.body;
   const jsonData = JSON.stringify(data);
-  
+
   const query = 'INSERT INTO app_settings (section, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = ?';
   db.query(query, [section, jsonData, jsonData], (err) => {
     if (err) return res.status(500).json({ success: false, message: err.message });
@@ -3078,7 +3091,7 @@ app.get('/api/ar/config', (req, res) => {
 app.post('/api/resend-verification', (req, res) => {
   const { email } = req.body;
   console.log('📧 Resend verification requested for:', email);
-  
+
   if (!email) return res.status(400).json({ success: false, message: 'Email required' });
 
   db.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
@@ -3099,12 +3112,12 @@ app.post('/api/resend-verification', (req, res) => {
 
       // Send Email
       const verifyUrl = `${BACKEND_URL}/api/verify?token=${verification_token}&email=${email}`;
-      
+
       console.log('🔑 [DEBUG] NEW Verification Link:', verifyUrl);
 
       const html = `<h2>Verify your email</h2><p>Click here: <a href="${verifyUrl}">Verify Account</a></p>`;
       sendEmail(email, 'Resend: Verify Your InkVistAR Account', html);
-      
+
       res.json({ success: true, message: 'Verification link resent! Check your email. (Debug: Check console for link if email fails)' });
     });
   });
@@ -3114,7 +3127,7 @@ app.post('/api/resend-verification', (req, res) => {
 app.post('/api/chat', async (req, res) => {
   const { message } = req.body;
   console.log('💬 Chat message received:', message);
-  
+
   if (!message) {
     return res.status(400).json({ success: false, message: 'Message required' });
   }
@@ -3182,7 +3195,7 @@ app.post('/api/chat', async (req, res) => {
       res.json({ success: true, response: fallback });
     }
   }
-  
+
   // Fallback if Gemini fails or no key
   const fallback = getFallbackResponse(message);
   res.json({ success: true, response: fallback });
@@ -3193,9 +3206,9 @@ console.log('⚡️ Chatbot endpoint (/api/chat) is registered.');
 // ========== EMERGENCY LOGIN (ALWAYS WORKS) ==========
 app.post('/api/emergency-login', (req, res) => {
   console.log('🚨 Emergency login called:', req.body);
-  
+
   const { email, type } = req.body;
-  
+
   res.json({
     success: true,
     user: {
@@ -3211,19 +3224,19 @@ app.post('/api/emergency-login', (req, res) => {
 // ========== 404 HANDLER ==========
 app.use((req, res) => {
   console.log(`❌ 404: ${req.method} ${req.url} not found`);
-  res.status(404).json({ 
-    success: false, 
-    message: 'Endpoint not found' 
+  res.status(404).json({
+    success: false,
+    message: 'Endpoint not found'
   });
 });
 
 // ========== ERROR HANDLER ==========
 app.use((err, req, res, next) => {
   console.error('🔥 Unhandled error:', err);
-  res.status(500).json({ 
-    success: false, 
+  res.status(500).json({
+    success: false,
     message: 'Internal server error',
-    error: err.message 
+    error: err.message
   });
 });
 

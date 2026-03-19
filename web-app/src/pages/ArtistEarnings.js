@@ -46,13 +46,15 @@ function ArtistEarnings(){
                     setSessionEarnings(completedAppts);
 
                     // Calculate Stats
-                    const totalEarnings = completedAppts.reduce((sum, a) => sum + a.artistShare, 0);
+                    const totalEarnings = completedAppts
+                        .filter(a => a.payment_status === 'paid')
+                        .reduce((sum, a) => sum + a.artistShare, 0);
                     
-                    // Calculate current month's earnings
+                    // Calculate current month's earnings (only paid)
                     const currentMonth = new Date().getMonth();
                     const currentYear = new Date().getFullYear();
                     const monthlyPayout = completedAppts
-                        .filter(a => new Date(a.appointment_date).getMonth() === currentMonth && new Date(a.appointment_date).getFullYear() === currentYear)
+                        .filter(a => a.payment_status === 'paid' && new Date(a.appointment_date).getMonth() === currentMonth && new Date(a.appointment_date).getFullYear() === currentYear)
                         .reduce((sum, a) => sum + a.artistShare, 0);
 
                     setStats({
@@ -144,7 +146,12 @@ function ArtistEarnings(){
                                                             <td>{session.client_name}</td>
                                                             <td>{session.design_title}</td>
                                                             <td>₱{session.basePrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                                                            <td style={{color: '#10b981', fontWeight: 'bold'}}>₱{session.artistShare.toFixed(2)}</td>
+                                                            <td style={{color: session.payment_status === 'paid' ? '#10b981' : '#f59e0b', fontWeight: 'bold'}}>
+                                                                ₱{session.artistShare.toFixed(2)}
+                                                                <span style={{ fontSize: '0.7rem', display: 'block', color: session.payment_status === 'paid' ? '#10b981' : '#f59e0b' }}>
+                                                                    {session.payment_status === 'paid' ? 'Paid' : 'Unpaid'}
+                                                                </span>
+                                                            </td>
                                                         </tr>
                                                     ))}
                                                 </tbody>

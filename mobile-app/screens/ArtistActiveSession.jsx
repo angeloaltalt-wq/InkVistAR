@@ -117,6 +117,16 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
           <View style={styles.clientOverview}>
             <Text style={styles.clientName}>{appointment?.client_name}</Text>
             <Text style={styles.designTitle}>{appointment?.design_title}</Text>
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                <Text style={{ color: 'white', opacity: 0.8, fontSize: 13 }}>₱{parseFloat(appointment?.price || 0).toLocaleString()}</Text>
+                <Text style={{ 
+                    color: appointment?.payment_status === 'paid' ? '#4ade80' : '#fbbf24', 
+                    fontSize: 13, 
+                    fontWeight: 'bold' 
+                }}>
+                    {(appointment?.payment_status || 'unpaid').toUpperCase()}
+                </Text>
+            </View>
             <View style={[styles.statusBadge, styles[status]]}>
               <Text style={styles.statusText}>{status.toUpperCase()}</Text>
             </View>
