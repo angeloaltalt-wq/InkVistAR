@@ -1307,8 +1307,10 @@ app.get('/api/artist/dashboard/:artistId', (req, res) => {
       const commissionRate = artist.commission_rate || 0.60;
 
       // Calculate earnings correctly (Completed & Paid only, net of commission)
+      // Robust case-insensitive comparison
       const paidCompletedAppts = appointments.filter(apt => 
-        apt.status === 'completed' && apt.payment_status === 'paid'
+        (apt.status || '').toLowerCase() === 'completed' && 
+        (apt.payment_status || '').toLowerCase() === 'paid'
       );
       
       const totalEarnings = paidCompletedAppts.reduce((sum, apt) => 
