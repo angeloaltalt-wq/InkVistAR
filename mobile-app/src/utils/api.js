@@ -343,6 +343,14 @@ export const createCustomerAppointment = async (appointmentData) => {
   });
 };
 
+// Customer: Create Checkout Session
+export const createCheckoutSession = async (appointmentId, amount) => {
+  return fetchAPI('/payments/create-checkout-session', {
+    method: 'POST',
+    body: JSON.stringify({ appointmentId, amount })
+  });
+};
+
 // Gallery: Get Works
 // Supports search/filter params
 export const getGalleryWorks = async (filters = {}) => {

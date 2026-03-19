@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { 
   View, Text, StyleSheet, TouchableOpacity, ScrollView, 
-  SafeAreaView, ActivityIndicator, Modal, Platform, Alert, FlatList, RefreshControl
+  SafeAreaView, ActivityIndicator, Modal, Platform, Alert, FlatList, RefreshControl, Linking
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getCustomerAppointments, updateAppointmentStatus } from '../src/utils/api';
+import { getCustomerAppointments, updateAppointmentStatus, createCheckoutSession } from '../src/utils/api';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -19,6 +19,7 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   useEffect(() => {
     if (customerId) fetchAppointments();
@@ -36,6 +37,25 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const handlePayment = async () => {
+    if (!selectedAppointment) return;
+    
+    try {
+      setPaymentLoading(true);
+      const res = await createCheckoutSession(selectedAppointment.id, selectedAppointment.price);
+      if (res.success && res.checkoutUrl) {
+        await Linking.openURL(res.checkoutUrl);
+        setSelectedAppointment(null);
+      } else {
+        Alert.alert('Payment Error', res.message || 'Could not initiate payment.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to connect to payment gateway.');
+    } finally {
+      setPaymentLoading(false);
     }
   };
 
@@ -178,7 +198,10 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
       <View style={styles.cardCenter}>
         <Text style={styles.serviceText}>{item.design_title || 'Appointment'}</Text>
         <Text style={styles.artistName}>with {item.artist_name}</Text>
-        <Text style={styles.timeText}>{item.start_time ? item.start_time.substring(0, 5) : 'TBD'}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+          <Text style={styles.timeText}>{item.start_time ? item.start_time.substring(0, 5) : 'TBD'}</Text>
+          <Text style={[styles.timeText, { marginLeft: 8, fontWeight: 'bold', color: '#111' }]}>₱{parseFloat(item.price || 0).toLocaleString()}</Text>
+        </View>
       </View>
       <View style={styles.cardRight}>
         <View style={[styles.statusPill, { backgroundColor: getStatusColor(item.status) + '20' }]}>
@@ -186,7 +209,7 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
             {item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'Pending'}
           </Text>
         </View>
-        <Ionicons name="chevron-forward" size={16} color="#9ca3af" style={{ marginTop: 8 }} />
+        <Ionicons name="chevron-forward" size={16} color="#daa520" style={{ marginTop: 8 }} />
       </View>
     </TouchableOpacity>
   );
@@ -326,6 +349,15 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
                 </View>
 
                 <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Payment Status</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: selectedAppointment.payment_status === 'paid' ? '#dcfce7' : '#fef3c7', alignSelf: 'flex-start' }]}>
+                    <Text style={[styles.statusText, { color: selectedAppointment.payment_status === 'paid' ? '#059669' : '#b45309' }]}>
+                      {(selectedAppointment.payment_status || 'unpaid').toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Date & Time</Text>
                   <Text style={styles.detailValue}>
                     {new Date(selectedAppointment.appointment_date).toLocaleDateString()} at {selectedAppointment.start_time}
@@ -336,6 +368,11 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
                   <Text style={styles.detailLabel}>Artist</Text>
                   <Text style={styles.detailValue}>{selectedAppointment.artist_name}</Text>
                   <Text style={styles.detailSubValue}>{selectedAppointment.studio_name}</Text>
+                </View>
+
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Price</Text>
+                  <Text style={[styles.detailValue, { color: '#b45309', fontWeight: 'bold' }]}>₱{parseFloat(selectedAppointment.price || 0).toLocaleString()}</Text>
                 </View>
 
                 <View style={styles.detailRow}>
@@ -352,7 +389,21 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
               </ScrollView>
             )}
 
-            {(selectedAppointment?.status === 'pending' || selectedAppointment?.status === 'confirmed') && (
+            {(selectedAppointment?.status === 'pending' || selectedAppointment?.status === 'confirmed' || selectedAppointment?.status === 'pending_schedule' || selectedAppointment?.status === 'completed') && selectedAppointment?.payment_status !== 'paid' && (
+              <TouchableOpacity 
+                style={[styles.closeButton, { backgroundColor: '#daa520', marginBottom: 10 }]} 
+                onPress={handlePayment}
+                disabled={paymentLoading}
+              >
+                {paymentLoading ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Text style={[styles.closeButtonText, { color: 'white' }]}>Pay Now (₱{parseFloat(selectedAppointment?.price || 0).toLocaleString()})</Text>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {(selectedAppointment?.status === 'pending' || selectedAppointment?.status === 'confirmed' || selectedAppointment?.status === 'pending_schedule') && (
               <TouchableOpacity 
                 style={[styles.closeButton, { backgroundColor: '#fee2e2', marginBottom: 10 }]} 
                 onPress={() => handleCancel(selectedAppointment.id)}
