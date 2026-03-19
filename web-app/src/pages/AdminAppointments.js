@@ -150,9 +150,24 @@ function AdminAppointments() {
     };
 
     const handleStatusUpdate = async (id, status) => {
-        if (!window.confirm(`Are you sure you want to ${status} this appointment?`)) return;
+        let price = null;
+        if (status === 'confirmed') {
+            const currentApt = appointments.find(a => a.id === id);
+            const input = window.prompt(`Enter final price for this appointment (current: ₱${currentApt?.price || 0}):`, currentApt?.price || '');
+            
+            if (input === null) return; // User cancelled
+            
+            price = parseFloat(input);
+            if (isNaN(price) || price < 0) {
+                alert("Please enter a valid positive number for the price.");
+                return;
+            }
+        } else {
+            if (!window.confirm(`Are you sure you want to ${status} this appointment?`)) return;
+        }
+
         try {
-            await Axios.put(`${API_URL}/api/appointments/${id}/status`, { status });
+            await Axios.put(`${API_URL}/api/appointments/${id}/status`, { status, price });
             fetchAppointments();
         } catch (error) {
             console.error("Error updating status:", error);

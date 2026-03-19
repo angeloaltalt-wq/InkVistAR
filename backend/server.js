@@ -2000,8 +2000,20 @@ app.put('/api/appointments/:id/status', (req, res) => {
     }
 
     const appointment = results[0];
+    const { price } = req.body;
 
-    db.query('UPDATE appointments SET status = ? WHERE id = ?', [status, id], (updateErr, result) => {
+    let updateQuery = 'UPDATE appointments SET status = ?';
+    let queryParams = [status];
+
+    if (price !== undefined && price !== null) {
+      updateQuery += ', price = ?';
+      queryParams.push(price);
+    }
+
+    updateQuery += ' WHERE id = ?';
+    queryParams.push(id);
+
+    db.query(updateQuery, queryParams, (updateErr, result) => {
       if (updateErr) {
         console.error('Error updating appointment:', updateErr);
         return res.status(500).json({ success: false, message: 'Database error' });

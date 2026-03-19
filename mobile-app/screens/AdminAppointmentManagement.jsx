@@ -15,6 +15,7 @@ export const AdminAppointmentManagement = () => {
   const [editDate, setEditDate] = useState('');
   const [editTime, setEditTime] = useState('');
   const [editStatus, setEditStatus] = useState('');
+  const [editPrice, setEditPrice] = useState('');
 
   const loadData = async () => {
     setLoading(true);
@@ -34,6 +35,7 @@ export const AdminAppointmentManagement = () => {
     setEditDate(new Date(appt.appointment_date).toISOString().split('T')[0]);
     setEditTime(appt.start_time);
     setEditStatus(appt.status);
+    setEditPrice(appt.price?.toString() || '0');
     setModalVisible(true);
   };
 
@@ -43,7 +45,8 @@ export const AdminAppointmentManagement = () => {
     const result = await updateAppointmentByAdmin(selectedAppt.id, {
       status: editStatus,
       date: editDate,
-      startTime: editTime
+      startTime: editTime,
+      price: parseFloat(editPrice) || 0
     });
 
     if (result.success) {
@@ -189,6 +192,15 @@ export const AdminAppointmentManagement = () => {
 
                 <Text style={styles.inputLabel}>Time (HH:MM:SS)</Text>
                 <TextInput style={styles.input} value={editTime} onChangeText={setEditTime} />
+
+                <Text style={styles.inputLabel}>Price (₱)</Text>
+                <TextInput 
+                  style={styles.input} 
+                  value={editPrice} 
+                  onChangeText={setEditPrice} 
+                  keyboardType="numeric"
+                  placeholder="0"
+                />
 
                 <Text style={styles.inputLabel}>Status</Text>
                 <View style={styles.statusRow}>
