@@ -165,6 +165,9 @@ export function CustomerGallery({ onBack }) {
                     <View style={styles.workDetails}>
                       <Text style={styles.workTitle} numberOfLines={1}>{work.title}</Text>
                       <Text style={styles.workArtist} numberOfLines={1}>by {work.artist_name}</Text>
+                      {work.price_estimate && (
+                        <Text style={{fontSize: 12, color: '#daa520', fontWeight: '600', marginTop: 2}}>₱{Number(work.price_estimate).toLocaleString()} est.</Text>
+                      )}
                     </View>
                     <View style={styles.tapHint}>
                       <Ionicons name="expand-outline" size={14} color="#9ca3af" />
@@ -228,6 +231,14 @@ export function CustomerGallery({ onBack }) {
                     <View style={styles.descriptionContainer}>
                       <Text style={styles.descriptionLabel}>About this piece</Text>
                       <Text style={styles.descriptionText}>{selectedWork.description}</Text>
+                    </View>
+                  ) : null}
+
+                  {/* Price Estimate */}
+                  {selectedWork.price_estimate ? (
+                    <View style={{flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, backgroundColor: '#fef9ee', borderRadius: 10, marginBottom: 16, borderWidth: 1, borderColor: '#f5deb3'}}>
+                      <Text style={{fontSize: 16}}>💰</Text>
+                      <Text style={{fontWeight: '700', color: '#92400e', fontSize: 15}}>Estimated Price: ₱{Number(selectedWork.price_estimate).toLocaleString()}</Text>
                     </View>
                   ) : null}
 

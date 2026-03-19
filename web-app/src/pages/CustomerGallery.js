@@ -51,6 +51,7 @@ function CustomerGallery(){
                                 <div className="gallery-info">
                                     <h3>{work.title}</h3>
                                     <p className="artist-tag">by {work.artist_name}</p>
+                                    {work.price_estimate && <p style={{color: '#daa520', fontWeight: '600', fontSize: '0.85rem', margin: '4px 0 0'}}>₱{Number(work.price_estimate).toLocaleString()} est.</p>}
                                 </div>
                             </div>
                         )) : <p className="no-data">No works found</p>}

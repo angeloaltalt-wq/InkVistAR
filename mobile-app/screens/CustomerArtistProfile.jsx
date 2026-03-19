@@ -108,6 +108,11 @@ export function CustomerArtistProfile({ route, onBack, onNavigate }) {
               {portfolio.length > 0 ? portfolio.map((work) => (
                 <TouchableOpacity key={work.id} style={styles.portfolioItem}>
                   <Image source={{ uri: work.image_url }} style={styles.portfolioImage} />
+                  {work.price_estimate && (
+                    <View style={{position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.6)', paddingVertical: 4, paddingHorizontal: 6, borderBottomLeftRadius: 12, borderBottomRightRadius: 12}}>
+                      <Text style={{color: '#daa520', fontSize: 11, fontWeight: '700', textAlign: 'center'}}>₱{Number(work.price_estimate).toLocaleString()}</Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               )) : (
                 <Text style={styles.emptyText}>No portfolio items available.</Text>

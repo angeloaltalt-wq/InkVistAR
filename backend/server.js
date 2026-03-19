@@ -220,6 +220,15 @@ db.connect(err => {
           }
         });
 
+        // MIGRATION: Check if 'price_estimate' column exists, if not add it
+        db.query("SHOW COLUMNS FROM portfolio_works LIKE 'price_estimate'", (err, results) => {
+          if (!err && results.length === 0) {
+            console.log('🔄 Migrating portfolio table: Adding price_estimate column...');
+            db.query("ALTER TABLE portfolio_works ADD COLUMN price_estimate DECIMAL(10, 2) DEFAULT NULL");
+            console.log('✅ Added price_estimate column to portfolio_works');
+          }
+        });
+
         // FIX: Drop broken foreign key constraint if it exists
         db.query("ALTER TABLE portfolio_works DROP FOREIGN KEY fk_portfolio_artists", (err) => {
             if (!err) {
@@ -1437,7 +1446,7 @@ app.get('/api/artist/:artistId/portfolio', (req, res) => {
 
 // Add portfolio work
 app.post('/api/artist/portfolio', (req, res) => {
-  const { artistId, imageUrl, title, description, category, isPublic } = req.body;
+  const { artistId, imageUrl, title, description, category, isPublic, priceEstimate } = req.body;
   
   if (!imageUrl) {
     return res.status(400).json({ success: false, message: 'Image data or URL is required.' });
@@ -1450,12 +1459,13 @@ app.post('/api/artist/portfolio', (req, res) => {
   }
   
   if (imageUrl) {
-    console.log(`📸 Uploading work: "${title}", Category: ${category}, Public: ${isPublic}`);
+    console.log(`📸 Uploading work: "${title}", Category: ${category}, Public: ${isPublic}, Price: ${priceEstimate || 'N/A'}`);
   }
   
-  const query = 'INSERT INTO portfolio_works (artist_id, image_url, title, description, category, is_public, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())';
+  const parsedPrice = priceEstimate ? parseFloat(priceEstimate) : null;
+  const query = 'INSERT INTO portfolio_works (artist_id, image_url, title, description, category, is_public, price_estimate, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())';
   
-  db.query(query, [artistId, imageUrl, title, description, category, isPublic], (err, result) => {
+  db.query(query, [artistId, imageUrl, title, description, category, isPublic, parsedPrice], (err, result) => {
     if (err) {
       console.error('Error adding work:', err);
       return res.status(500).json({ success: false, message: 'DB Error: ' + err.message });
@@ -1667,6 +1677,7 @@ app.get('/api/gallery/works', (req, res) => {
       pw.description,
       pw.image_url,
       pw.category,
+      pw.price_estimate,
       pw.created_at,
       u.name as artist_name,
       a.studio_name
@@ -1825,7 +1836,7 @@ app.get('/api/gallery/works', (req, res) => {
   const { search, category } = req.query;
   
   let query = `
-    SELECT pw.id, pw.title, pw.description, pw.image_url, pw.category, pw.created_at,
+    SELECT pw.id, pw.title, pw.description, pw.image_url, pw.category, pw.price_estimate, pw.created_at,
            u.name as artist_name
     FROM portfolio_works pw
     JOIN users u ON pw.artist_id = u.id

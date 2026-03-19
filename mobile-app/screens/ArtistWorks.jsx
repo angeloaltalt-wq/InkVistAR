@@ -20,6 +20,7 @@ export function ArtistWorks({ onBack, artistId }) {
   const [newWorkCategory, setNewWorkCategory] = useState('Realism');
   const [isPublic, setIsPublic] = useState(true);
   const [newWorkImage, setNewWorkImage] = useState(''); 
+  const [newWorkPriceEstimate, setNewWorkPriceEstimate] = useState('');
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploadType, setUploadType] = useState('url'); // 'url' or 'upload'
@@ -96,7 +97,8 @@ export function ArtistWorks({ onBack, artistId }) {
       description: newWorkDescription,
       category: newWorkCategory,
       imageUrl: newWorkImage,
-      isPublic: isPublic
+      isPublic: isPublic,
+      priceEstimate: newWorkPriceEstimate || null
     });
 
     if (result.success) {
@@ -104,6 +106,7 @@ export function ArtistWorks({ onBack, artistId }) {
       setNewWorkTitle('');
       setNewWorkImage('');
       setNewWorkDescription('');
+      setNewWorkPriceEstimate('');
       setTitleError('');
       setIsPublic(true);
       setShowUploadModal(false);
@@ -269,6 +272,9 @@ export function ArtistWorks({ onBack, artistId }) {
                   )}
                   <View style={styles.workDetails}>
                     <Text style={styles.workTitle} numberOfLines={1}>{work.title}</Text>
+                    {work.price_estimate && (
+                      <Text style={{fontSize: 12, color: '#daa520', fontWeight: '600', marginBottom: 4}}>₱{Number(work.price_estimate).toLocaleString()}</Text>
+                    )}
                     <View style={styles.workMeta}>
                       <View style={styles.categoryBadge}>
                         <Text style={styles.categoryBadgeText}>{work.category || 'Art'}</Text>
@@ -389,6 +395,17 @@ export function ArtistWorks({ onBack, artistId }) {
               </View>
 
               <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Price Estimate (₱)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. 2500"
+                  value={newWorkPriceEstimate}
+                  onChangeText={setNewWorkPriceEstimate}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Settings</Text>
                 <TouchableOpacity 
                   style={styles.visibilityToggle}
@@ -459,6 +476,13 @@ export function ArtistWorks({ onBack, artistId }) {
                   <Text style={{ fontSize: 16, color: '#4b5563', marginBottom: 24, lineHeight: 24 }}>
                     {selectedWork.description}
                   </Text>
+                ) : null}
+
+                {selectedWork.price_estimate ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, backgroundColor: '#fef9ee', borderRadius: 10, marginBottom: 20, borderWidth: 1, borderColor: '#f5deb3' }}>
+                    <Text style={{ fontSize: 16 }}>💰</Text>
+                    <Text style={{ fontWeight: '700', color: '#92400e', fontSize: 15 }}>Estimated Price: ₱{Number(selectedWork.price_estimate).toLocaleString()}</Text>
+                  </View>
                 ) : null}
 
                 <View style={styles.inputGroup}>

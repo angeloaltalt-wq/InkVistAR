@@ -313,6 +313,7 @@ function AdminStaff() {
                                 <Trash2 size={16} />
                             </button>
                             <span>{work.title}</span>
+                            {work.price_estimate && <span style={{color: '#daa520', fontSize: '0.8rem', fontWeight: '600'}}>₱{Number(work.price_estimate).toLocaleString()}</span>}
                         </div>
                     </div>
                 ))}

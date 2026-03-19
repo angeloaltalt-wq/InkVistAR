@@ -19,7 +19,8 @@ function ArtistGallery() {
         description: '',
         imageUrl: '',
         category: 'Realism',
-        isPublic: true
+        isPublic: true,
+        priceEstimate: ''
     });
     
     // Get the real logged-in user ID
@@ -84,7 +85,8 @@ function ArtistGallery() {
                 description: '', 
                 imageUrl: '',
                 category: 'Realism',
-                isPublic: true
+                isPublic: true,
+                priceEstimate: ''
             });
             fetchPortfolio();
         } catch (error) {
@@ -130,6 +132,7 @@ function ArtistGallery() {
                                 <div className="gallery-overlay">
                                     <h3>{work.title}</h3>
                                     <p>{work.category}</p>
+                                    {work.price_estimate && <p style={{color: '#daa520', fontWeight: '600', fontSize: '0.9rem'}}>₱{Number(work.price_estimate).toLocaleString()} est.</p>}
                                     <button className="delete-btn" onClick={(e) => { e.stopPropagation(); handleDelete(work.id); }}>
                                         <Trash2 size={16} />
                                     </button>
@@ -162,6 +165,12 @@ function ArtistGallery() {
                                     </span>
                                 </div>
                                 <p style={{lineHeight: '1.6', color: '#374151'}}>{selectedWork.description}</p>
+                                {selectedWork.price_estimate && (
+                                    <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', padding: '10px 14px', backgroundColor: '#fef9ee', borderRadius: '8px', border: '1px solid #f5deb3'}}>
+                                        <span style={{fontSize: '1.1rem'}}>💰</span>
+                                        <span style={{fontWeight: '600', color: '#92400e'}}>Estimated Price: ₱{Number(selectedWork.price_estimate).toLocaleString()}</span>
+                                    </div>
+                                )}
                                 <p style={{fontSize: '0.85rem', color: '#9ca3af', marginTop: '15px'}}>Uploaded on {new Date(selectedWork.created_at).toLocaleDateString()}</p>
                             </div>
                         </div>
@@ -208,10 +217,22 @@ function ArtistGallery() {
                                         </select>
                                     </div>
                                     <div className="form-group">
-                                        <label>Visibility</label>
-                                        <div style={{ marginTop: '10px' }}>
-                                            <label><input type="checkbox" checked={formData.isPublic} onChange={e => setFormData({...formData, isPublic: e.target.checked})} /> Public Gallery</label>
-                                        </div>
+                                        <label>Price Estimate (₱)</label>
+                                        <input 
+                                            type="number" 
+                                            className="form-input"
+                                            placeholder="e.g. 2500"
+                                            value={formData.priceEstimate}
+                                            onChange={e => setFormData({...formData, priceEstimate: e.target.value})}
+                                            min="0"
+                                            step="100"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label>Visibility</label>
+                                    <div style={{ marginTop: '10px' }}>
+                                        <label><input type="checkbox" checked={formData.isPublic} onChange={e => setFormData({...formData, isPublic: e.target.checked})} /> Public Gallery</label>
                                     </div>
                                 </div>
                                 <div className="form-group">

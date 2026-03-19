@@ -121,6 +121,7 @@ const Gallery = () => {
                 {item.title && <h3 className="image-card-title">{item.title}</h3>}
                 {item.artist_name && <p className="image-card-artist">by {item.artist_name}</p>}
                 {item.category && <span className="image-card-category">{item.category}</span>}
+                {item.price_estimate && <span className="image-card-category" style={{backgroundColor: 'rgba(218, 165, 32, 0.3)', color: '#ffd700', marginTop: '4px'}}>₱{Number(item.price_estimate).toLocaleString()} est.</span>}
               </div>
               <div className="watermark">INKVICTUS</div>
               <div className="glow-overlay"></div>
@@ -151,6 +152,7 @@ const Gallery = () => {
               {selectedImage.artist_name && <p className="modal-artist">Artist: <strong>{selectedImage.artist_name}</strong></p>}
               {selectedImage.category && <p className="modal-category">Category: <strong>{selectedImage.category}</strong></p>}
               {selectedImage.description && <p className="modal-description">{selectedImage.description}</p>}
+              {selectedImage.price_estimate && <p className="modal-category" style={{color: '#daa520'}}>Estimated Price: <strong>₱{Number(selectedImage.price_estimate).toLocaleString()}</strong></p>}
             </div>
           </div>
         </div>
