@@ -315,7 +315,7 @@ function ArtistGallery() {
                                         accept="image/*"
                                         onChange={handleImageUpload}
                                         className="form-input"
-                                        required
+                                        required={!formData.imageUrl}
                                     />
                                     {formData.imageUrl && (
                                         <img src={formData.imageUrl} alt="Preview" style={{width: '100%', marginTop: '10px', borderRadius: '8px'}} />
