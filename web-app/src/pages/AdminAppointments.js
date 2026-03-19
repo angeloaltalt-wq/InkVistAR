@@ -157,7 +157,9 @@ function AdminAppointments() {
             
             if (input === null) return; // User cancelled
             
-            price = parseFloat(input);
+            // Sanitize input: remove commas, currency symbols, spaces, keep numbers and decimal point
+            price = parseFloat(input.replace(/[^0-9.]/g, ''));
+            
             if (isNaN(price) || price < 0) {
                 alert("Please enter a valid positive number for the price.");
                 return;

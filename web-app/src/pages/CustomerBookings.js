@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
-import { Search, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Filter, CreditCard } from 'lucide-react';
 import './PortalStyles.css';
 import { API_URL } from '../config';
 import CustomerSideNav from '../components/CustomerSideNav';
@@ -12,6 +12,7 @@ function CustomerBookings(){
     const [statusFilter, setStatusFilter] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
+    const navigate = useNavigate();
     const user = JSON.parse(localStorage.getItem('user'));
     const customerId = user ? user.id : null;
 
@@ -25,11 +26,7 @@ function CustomerBookings(){
             try{
                 const res = await Axios.get(`${API_URL}/api/customer/${customerId}/appointments`);
                 if (res.data.success) {
-                    const fetchedAppointments = res.data.appointments || [];
-                    setAppointments(fetchedAppointments);
-                    
-                    // After fetching, check status of pending/unpaid ones
-                    checkPaymentStatuses(fetchedAppointments);
+                    setAppointments(res.data.appointments || []);
                 } else {
                     alert('Could not fetch your bookings: ' + res.data.message);
                 }
@@ -40,24 +37,6 @@ function CustomerBookings(){
                 setLoading(false);
             }
         };
-
-        const checkPaymentStatuses = async (list) => {
-            // Only check if they are pending or unpaid but have a price
-            const toCheck = list.filter(a => a.payment_status !== 'paid' && parseFloat(a.price || 0) > 0);
-            
-            for (const apt of toCheck) {
-                try {
-                    const statusRes = await Axios.get(`${API_URL}/api/appointments/${apt.id}/payment-status`);
-                    if (statusRes.data.success && statusRes.data.payment_status === 'paid') {
-                        // Update local state if it changed to paid
-                        setAppointments(prev => prev.map(p => p.id === apt.id ? { ...p, payment_status: 'paid' } : p));
-                    }
-                } catch (err) {
-                    console.warn(`Could not poll status for appointment ${apt.id}:`, err);
-                }
-            }
-        };
-
         fetchAppointments();
     }, [customerId]);
 
@@ -72,6 +51,14 @@ function CustomerBookings(){
     // Pagination Logic
     const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
     const displayedAppointments = filteredAppointments.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    const handlePay = (appointment) => {
+        if (!appointment.price || appointment.price <= 0) {
+            alert("Price has not been set by the studio yet. Please wait for confirmation.");
+            return;
+        }
+        navigate(`/payment?appointmentId=${appointment.id}&price=${appointment.price}`, { state: { appointmentId: appointment.id, price: appointment.price } });
+    };
 
     return (
         <div className="portal-layout">
@@ -115,40 +102,31 @@ function CustomerBookings(){
                             <>
                             <div className="table-responsive">
                                 <table className="portal-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Artist</th>
-                                            <th>Service</th>
-                                            <th>Date</th>
-                                            <th>Time</th>
-                                            <th>Price</th>
-                                            <th>Status</th>
-                                            <th>Payment</th>
-                                            <th>Action</th>
-                                        </tr>
-                                    </thead>
+                                    <thead><tr><th>Artist</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th><th>Price</th><th>Action</th></tr></thead>
                                     <tbody>{displayedAppointments.map(a=> (
                                         <tr key={a.id}>
                                             <td>{a.artist_name}</td>
                                             <td>{a.design_title}</td>
                                             <td>{new Date(a.appointment_date).toLocaleDateString()}</td>
                                             <td>{a.start_time}</td>
-                                            <td style={{ fontWeight: 'bold' }}>₱{parseFloat(a.price || 0).toLocaleString()}</td>
                                             <td><span className={`status-badge ${a.status.toLowerCase()}`}>{a.status}</span></td>
                                             <td>
-                                                <span className={`status-badge ${a.payment_status === 'paid' ? 'completed' : a.payment_status === 'pending' ? 'pending' : 'cancelled'}`} style={{ backgroundColor: a.payment_status === 'paid' ? '#dcfce7' : a.payment_status === 'pending' ? '#fef3c7' : '#f3f4f6', color: a.payment_status === 'paid' ? '#16a34a' : a.payment_status === 'pending' ? '#b45309' : '#64748b' }}>
-                                                    {a.payment_status ? a.payment_status.charAt(0).toUpperCase() + a.payment_status.slice(1) : 'Unpaid'}
-                                                </span>
+                                                {a.price > 0 ? `₱${Number(a.price).toLocaleString()}` : <span style={{color: '#9ca3af', fontStyle: 'italic'}}>Pending</span>}
                                             </td>
                                             <td>
-                                                {(['confirmed', 'completed'].includes(a.status?.toLowerCase())) && a.payment_status !== 'paid' && (
+                                                {(a.status === 'confirmed' || a.status === 'completed') && a.payment_status !== 'paid' ? (
                                                     <button 
                                                         className="btn btn-primary" 
-                                                        style={{ padding: '4px 10px', fontSize: '0.8rem' }}
-                                                        onClick={() => window.location.href = `/payment?appointmentId=${a.id}&price=${a.price}`}
+                                                        style={{padding: '5px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px'}}
+                                                        onClick={() => handlePay(a)}
+                                                        disabled={!a.price || a.price <= 0}
                                                     >
-                                                        Pay Now
+                                                        <CreditCard size={14}/> Pay Now
                                                     </button>
+                                                ) : a.payment_status === 'paid' ? (
+                                                    <span className="status-badge completed">Paid</span>
+                                                ) : (
+                                                    <span style={{color: '#9ca3af', fontSize: '0.9rem'}}>-</span>
                                                 )}
                                             </td>
                                         </tr>
