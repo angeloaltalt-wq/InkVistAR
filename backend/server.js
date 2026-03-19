@@ -2058,6 +2058,14 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
         priceNumber = Number(providedPrice);
       }
 
+      const isLatePayment = (appointment.status === 'completed' || appointment.status === 'finished');
+      const description = isLatePayment 
+        ? `Late payment for Appointment #${appointmentId}` 
+        : `Booking payment for Appointment #${appointmentId}`;
+      const itemName = isLatePayment 
+        ? `Tattoo Service - Balance payment (Appt #${appointmentId})` 
+        : (appointment.design_title || 'Tattoo Service');
+
       const amount = Math.round((priceNumber || 0) * 100); // centavos
       if (!amount || amount <= 0) {
         return res.status(400).json({
@@ -2065,7 +2073,7 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
           message: 'Appointment has no price set. Please set a price before taking payment.'
         });
       }
-      const description = `Appointment #${appointmentId} payment`;
+      
       const redirectBaseSuccess = `${FRONTEND_URL}/booking-confirmation`;
       const redirectBaseFailed = `${FRONTEND_URL}/customer/bookings`;
 
@@ -2076,7 +2084,7 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
               {
                 amount,
                 currency: 'PHP',
-                name: appointment.design_title || 'Tattoo Service',
+                name: itemName,
                 description: description,
                 quantity: 1
               }
@@ -2089,6 +2097,7 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
               customerId: String(appointment.customer_id),
               artistId: String(appointment.artist_id),
               mode: PAYMONGO_MODE,
+              isLatePayment: String(isLatePayment)
             },
             success_url: `${redirectBaseSuccess}?appointmentId=${appointmentId}`,
             cancel_url: `${redirectBaseFailed}?payment=failed&appointmentId=${appointmentId}`
@@ -2177,15 +2186,27 @@ app.get('/api/appointments/:id/payment-status', async (req, res) => {
           const pmStatus = pmData?.data?.attributes?.status;
           const paymentList = pmData?.data?.attributes?.payments || [];
           
-          // PayMongo status 'completed' or having any successful payments means it's paid
-          if (pmStatus === 'completed' || paymentList.length > 0) {
-            console.log(`✅ Polling confirmed PAID for Appointment ${appointmentId}`);
+          // PayMongo status 'completed' or having any items in the payments array means it's paid
+          const hasPaid = pmStatus === 'completed' || (Array.isArray(paymentList) && paymentList.length > 0);
+          
+          console.log(`ℹ️ Polling details for Appt ${appointmentId}: PM_Status=${pmStatus}, Payments_Found=${paymentList.length}, HasPaid=${hasPaid}`);
+
+          if (hasPaid) {
+            console.log(`✅ Polling confirmed PAID for Appointment ${appointmentId}. Synchronizing database...`);
+            
             // Update DB so future polls are faster
-            db.query("UPDATE appointments SET payment_status = 'paid' WHERE id = ?", [appointmentId]);
-            db.query("UPDATE payments SET status = 'paid' WHERE session_id = ?", [sessionId]);
+            db.query("UPDATE appointments SET payment_status = 'paid' WHERE id = ?", [appointmentId], (updErr) => {
+              if (updErr) console.error(`❌ Failed to update appointments status to paid for ${appointmentId}:`, updErr.message);
+              else console.log(`💾 Appointment ${appointmentId} updated to 'paid' in DB.`);
+            });
+            
+            db.query("UPDATE payments SET status = 'paid' WHERE session_id = ?", [sessionId], (updErr) => {
+              if (updErr) console.error(`❌ Failed to update payments record to paid for ${sessionId}:`, updErr.message);
+            });
+
             return res.json({ success: true, payment_status: 'paid' });
           } else {
-            console.log(`ℹ️ Polling result: PayMongo status is ${pmStatus}`);
+            console.log(`ℹ️ Polling result: Payment is still NOT detected as paid for Appt ${appointmentId}`);
           }
         } catch (pollErr) {
           console.error('❌ Polling PayMongo API error:', pollErr.message);
