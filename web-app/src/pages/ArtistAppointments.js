@@ -184,14 +184,20 @@ function ArtistAppointments(){
                                         {currentItems.length ? (
                                             <>
                                                 <table className="portal-table">
-                                                    <thead><tr><th>Client</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th></tr></thead>
+                                                    <thead><tr><th>Client</th><th>Service</th><th>Date</th><th>Time</th><th>Price</th><th>Status</th><th>Payment</th></tr></thead>
                                                     <tbody>{currentItems.map(a => (
                                                         <tr key={a.id}>
                                                             <td>{a.client_name}</td>
                                                             <td>{a.design_title}</td>
                                                             <td>{new Date(a.appointment_date).toLocaleDateString()}</td>
                                                             <td>{a.start_time}</td>
+                                                            <td style={{ fontWeight: 'bold' }}>₱{parseFloat(a.price || 0).toLocaleString()}</td>
                                                             <td><span className={`status-badge ${a.status}`}>{a.status}</span></td>
+                                                            <td>
+                                                                <span className={`status-badge ${a.payment_status === 'paid' ? 'completed' : a.payment_status === 'pending' ? 'pending' : 'cancelled'}`} style={{ backgroundColor: a.payment_status === 'paid' ? '#dcfce7' : a.payment_status === 'pending' ? '#fef3c7' : '#f3f4f6', color: a.payment_status === 'paid' ? '#16a34a' : a.payment_status === 'pending' ? '#b45309' : '#64748b' }}>
+                                                                    {a.payment_status ? a.payment_status.charAt(0).toUpperCase() + a.payment_status.slice(1) : 'Unpaid'}
+                                                                </span>
+                                                            </td>
                                                         </tr>
                                                     ))}</tbody>
                                                 </table>

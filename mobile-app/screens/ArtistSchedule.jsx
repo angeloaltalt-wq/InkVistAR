@@ -354,6 +354,23 @@ export function ArtistSchedule({ onBack, artistId, navigation }) {
                   </View>
                 </View>
 
+                {/* Added Price and Payment Status below client info */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#f3f4f6' }}>
+                  <Text style={{ fontWeight: 'bold', color: '#111827' }}>₱{parseFloat(apt.price || 0).toLocaleString()}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ 
+                      width: 8, 
+                      height: 8, 
+                      borderRadius: 4, 
+                      backgroundColor: apt.payment_status === 'paid' ? '#10b981' : (apt.payment_status === 'pending' ? '#f59e0b' : '#9ca3af'),
+                      marginRight: 4
+                    }} />
+                    <Text style={{ fontSize: 12, color: '#6b7280', textTransform: 'uppercase', fontWeight: '600' }}>
+                      {apt.payment_status || 'unpaid'}
+                    </Text>
+                  </View>
+                </View>
+
                 <View style={styles.appointmentActions}>
                   {(apt.status === 'confirmed' || apt.status === 'in_progress') && (
                     <TouchableOpacity 

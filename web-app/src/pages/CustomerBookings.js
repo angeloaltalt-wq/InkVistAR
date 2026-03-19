@@ -119,7 +119,7 @@ function CustomerBookings(){
                                                 </span>
                                             </td>
                                             <td>
-                                                {a.status === 'confirmed' && a.payment_status !== 'paid' && (
+                                                {(a.status === 'confirmed' || a.status === 'pending') && a.payment_status !== 'paid' && (
                                                     <button 
                                                         className="btn btn-primary" 
                                                         style={{ padding: '4px 10px', fontSize: '0.8rem' }}
