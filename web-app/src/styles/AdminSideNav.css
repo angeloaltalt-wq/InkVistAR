@@ -1,4 +1,13 @@
 /* Admin Side Navigation Styles */
+:root {
+    --sidenav-bg: #0f172a;
+    --sidenav-hover: rgba(255, 255, 255, 0.08);
+    --sidenav-active-bg: rgba(99, 102, 241, 0.15);
+    --sidenav-active-text: #818cf8;
+    --sidenav-text: #94a3b8;
+    --sidenav-header-text: #f8fafc;
+    --accent-color: #6366f1;
+}
 
 .admin-sidenav {
     position: fixed;
@@ -6,25 +15,46 @@
     top: 0;
     width: 260px;
     height: 100vh;
-    background-color: #1e293b;
-    color: #f1f5f9;
+    background-color: var(--sidenav-bg);
+    color: var(--sidenav-text);
     padding: 0;
-     overflow: hidden;
-     display: flex;
-     flex-direction: column;
-     box-shadow: none;
-     z-index: 1000;
-     transition: width 0.3s ease, transform 0.3s ease;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease;
 }
+
 /* Header */
 .sidenav-header {
-    padding: 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 24px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-     position: relative;
-    color: #f1f5f9;
+    position: relative;
+    color: var(--sidenav-header-text);
+    height: 80px;
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    overflow: hidden;
+}
+
+.logo-icon {
+    color: var(--accent-color);
+    flex-shrink: 0;
+}
+
+.logo-text {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    white-space: nowrap;
 }
 
 .close-nav {
@@ -50,7 +80,7 @@
 
 /* Navigation Menu */
 .sidenav-menu {
-    padding: 1.5rem 0;
+    padding: 1rem 0;
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -59,26 +89,26 @@
 
 .menu-section {
     flex: 1;
-    padding: 0 1rem;
+    padding: 0 12px;
     margin-bottom: 1rem;
     overflow-y: auto;
 }
 
 .menu-section-bottom {
-    padding-top: 1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 1.5rem 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
     margin-top: auto;
     flex: none;
 }
 
 .menu-label {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #64748b;
-    margin: 0 0 0.8rem 0;
-    padding: 0 0.5rem;
+    letter-spacing: 1px;
+    color: #475569;
+    margin: 1.5rem 0 0.75rem 0;
+    padding: 0 12px;
 }
 
 .menu-list {
@@ -88,7 +118,7 @@
 }
 
 .menu-list li {
-    margin-bottom: 0.5rem;
+    margin-bottom: 4px;
 }
 
 /* Menu Items */
@@ -96,47 +126,65 @@
     width: 100%;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 25px;
+    gap: 12px;
+    padding: 10px 16px;
     background: transparent;
     border: none;
-    border-radius: 0;
-    color: #94a3b8;
+    border-radius: 8px;
+    color: var(--sidenav-text);
     font-weight: 500;
     cursor: pointer;
-    transition: 0.2s;
-    font-size: 1rem;
+    transition: all 0.2s ease;
+    font-size: 0.9375rem;
+    position: relative;
 }
 
-.menu-item:hover, .menu-item.active {
-    background-color: rgba(255, 255, 255, 0.05);
-    color: white;
-    border-left: 4px solid #4f46e5;
-    transform: none;
-    box-shadow: none;
+.menu-item:hover {
+    background-color: var(--sidenav-hover);
+    color: #f1f5f9;
 }
 
-.menu-item:active {
-    transform: none;
+.menu-item.active {
+    background-color: var(--sidenav-active-bg);
+    color: var(--sidenav-active-text);
+    font-weight: 600;
+}
+
+.active-indicator {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 18px;
+    background-color: var(--accent-color);
+    border-radius: 4px 0 0 4px;
+    box-shadow: -2px 0 8px rgba(99, 102, 241, 0.5);
 }
 
 .menu-item svg {
     flex-shrink: 0;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.menu-item:hover svg, .menu-item.active svg {
+    opacity: 1;
 }
 
 .menu-text {
     flex: 1;
     text-align: left;
+    white-space: nowrap;
 }
 
 .menu-item.logout-item {
-    background: transparent;
-    border-color: transparent;
+    color: #f87171;
 }
 
 .menu-item.logout-item:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: transparent;
+    background-color: rgba(239, 68, 68, 0.1);
+    color: #fca5a5;
 }
 
 /* Mobile Menu Toggle */
@@ -197,24 +245,30 @@
 .admin-page-with-sidenav .admin-page {
     flex: 1;
     margin-left: 260px;
-    transition: margin-left 0.3s ease;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* When sidenav collapsed, reduce left margin */
 body.sidenav-collapsed .admin-page-with-sidenav .admin-page {
-    margin-left: 72px;
+    margin-left: 80px;
 }
 
+/* Collapsed State */
 .admin-sidenav.collapsed {
-    width: 72px;
+    width: 80px;
     overflow: visible;
 }
 
+.admin-sidenav.collapsed .logo-text,
 .admin-sidenav.collapsed .menu-text,
 .admin-sidenav.collapsed .menu-label,
-.admin-sidenav.collapsed .sidenav-header h3,
-.admin-sidenav.collapsed .sidenav-header span {
+.admin-sidenav.collapsed .dropdown-arrow {
     display: none;
+}
+
+.admin-sidenav.collapsed .logo-container {
+    justify-content: center;
+    width: 100%;
 }
 
 .admin-sidenav.collapsed .menu-item {
@@ -224,22 +278,45 @@ body.sidenav-collapsed .admin-page-with-sidenav .admin-page {
 
 .admin-sidenav.collapsed .sidenav-header {
     justify-content: center;
-    padding: 20px 0;
+    padding: 24px 0;
 }
 
+.admin-sidenav.collapsed .sidenav-toggle {
+    position: absolute;
+    bottom: -40px; /* Hide toggle or move it */
+    opacity: 0;
+}
+
+/* If you want toggle visible in collapsed mode, adjust top header */
+.admin-sidenav.collapsed:hover .sidenav-toggle {
+    opacity: 1;
+    bottom: 24px;
+    right: 24px;
+}
+
+/* Sidenav Toggle */
 .sidenav-toggle {
-    background: transparent;
-    border: none;
-    color: white;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--sidenav-text);
     cursor: pointer;
-    padding: 0.25rem;
-    display: inline-flex;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.2s;
     position: absolute;
     right: 10px;
     top: 20px;
     z-index: 1100;
+}
+
+.sidenav-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 @media (max-width: 768px) {
@@ -254,7 +331,7 @@ body.sidenav-collapsed .admin-page-with-sidenav .admin-page {
 
 /* Scrollbar Styling for Sidebar */
 .menu-section::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
 }
 
 .menu-section::-webkit-scrollbar-track {
@@ -262,8 +339,8 @@ body.sidenav-collapsed .admin-page-with-sidenav .admin-page {
 }
 
 .menu-section::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
 }
 
 .menu-section::-webkit-scrollbar-thumb:hover {
@@ -283,7 +360,7 @@ body.sidenav-collapsed .admin-page-with-sidenav .admin-page {
     margin-left: auto;
     display: flex;
     align-items: center;
-    transition: transform 0.2s;
+    transition: transform 0.3s;
 }
 
 .dropdown-toggle.open .dropdown-arrow {
@@ -292,8 +369,9 @@ body.sidenav-collapsed .admin-page-with-sidenav .admin-page {
 
 .dropdown-menu {
     list-style: none;
-    margin: 0;
-    padding: 0;
+    margin: 4px 0 8px 12px;
+    padding: 4px 0;
+    border-left: 1px solid rgba(255, 255, 255, 0.05);
     background-color: rgba(0, 0, 0, 0.2);
     border-radius: 0;
     overflow: hidden;
@@ -313,4 +391,15 @@ body.sidenav-collapsed .admin-page-with-sidenav .admin-page {
 
 .dropdown-menu .menu-item svg {
     opacity: 0.8;
+}
+
+.dropdown-child {
+    font-size: 0.875rem !important;
+    padding: 8px 16px !important;
+    margin-left: 12px;
+    width: calc(100% - 12px) !important;
+}
+
+.parent-active {
+    color: #f1f5f9;
 }

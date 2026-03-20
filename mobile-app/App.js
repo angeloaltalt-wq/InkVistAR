@@ -28,6 +28,7 @@ import { ArtistClients } from './screens/ArtistClients.jsx';
 import { ArtistWorks } from './screens/ArtistWorks.jsx';
 import { ArtistEarnings } from './screens/ArtistEarnings.jsx';
 import { ArtistNotifications } from './screens/ArtistNotifications.jsx';
+import { CustomerNotifications } from './screens/CustomerNotifications.jsx';
 
 // Import Admin pages
 import { AdminDashboard } from './screens/AdminDashboard.jsx';
@@ -567,7 +568,7 @@ export default function App() {
 
                 <Stack.Screen name="customer-notifications">
                   {(props) => (
-                    <ArtistNotifications
+                    <CustomerNotifications
                       {...props}
                       userId={user.id}
                       onBack={() => props.navigation.goBack()}

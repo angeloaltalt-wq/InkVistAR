@@ -1308,12 +1308,12 @@ app.get('/api/artist/dashboard/:artistId', (req, res) => {
 
       // Calculate earnings correctly (Completed & Paid only, net of commission)
       // Robust case-insensitive comparison
-      const paidCompletedAppts = appointments.filter(apt => 
-        (apt.status || '').toLowerCase() === 'completed' && 
+      const paidCompletedAppts = appointments.filter(apt =>
+        (apt.status || '').toLowerCase() === 'completed' &&
         (apt.payment_status || '').toLowerCase() === 'paid'
       );
-      
-      const totalEarnings = paidCompletedAppts.reduce((sum, apt) => 
+
+      const totalEarnings = paidCompletedAppts.reduce((sum, apt) =>
         sum + (parseFloat(apt.price || 0) * commissionRate), 0
       );
 
@@ -2093,11 +2093,11 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
       }
 
       const isLatePayment = (appointment.status === 'completed' || appointment.status === 'finished');
-      const description = isLatePayment 
-        ? `Late payment for Appointment #${appointmentId}` 
+      const description = isLatePayment
+        ? `Late payment for Appointment #${appointmentId}`
         : `Booking payment for Appointment #${appointmentId}`;
-      const itemName = isLatePayment 
-        ? `Tattoo Service - Balance payment (Appt #${appointmentId})` 
+      const itemName = isLatePayment
+        ? `Tattoo Service - Balance payment (Appt #${appointmentId})`
         : (appointment.design_title || 'Tattoo Service');
 
       const amount = Math.round((priceNumber || 0) * 100); // centavos
@@ -2107,7 +2107,7 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
           message: 'Appointment has no price set. Please set a price before taking payment.'
         });
       }
-      
+
       const redirectBaseSuccess = `${FRONTEND_URL}/booking-confirmation`;
       const redirectBaseFailed = `${FRONTEND_URL}/customer/bookings`;
 
@@ -2194,21 +2194,21 @@ app.get('/api/appointments/:id/payment-status', async (req, res) => {
     // 1. Check DB first
     db.query('SELECT payment_status FROM appointments WHERE id = ?', [appointmentId], async (err, results) => {
       if (err || results.length === 0) return res.status(404).json({ success: false, message: 'Not found' });
-      
+
       let currentStatus = results[0].payment_status;
-      
+
       if (currentStatus === 'paid') {
         return res.json({ success: true, payment_status: 'paid' });
       }
-      
+
       // 2. If not paid, check if we have an active checkout session
       db.query('SELECT session_id FROM payments WHERE appointment_id = ? ORDER BY created_at DESC LIMIT 1', [appointmentId], async (pErr, pResults) => {
         if (pErr || pResults.length === 0 || !pResults[0].session_id) {
           return res.json({ success: true, payment_status: currentStatus });
         }
-        
+
         const sessionId = pResults[0].session_id;
-        
+
         try {
           // Poll PayMongo directly
           console.log(`🔍 Polling PayMongo for session ${sessionId} (Appointment ${appointmentId})...`);
@@ -2216,24 +2216,24 @@ app.get('/api/appointments/:id/payment-status', async (req, res) => {
             headers: { 'Authorization': paymongoAuthHeader() }
           });
           const pmData = await pmRes.json();
-          
+
           const pmStatus = pmData?.data?.attributes?.status;
           const paymentList = pmData?.data?.attributes?.payments || [];
-          
+
           // PayMongo status 'completed' or having any items in the payments array means it's paid
           const hasPaid = pmStatus === 'completed' || (Array.isArray(paymentList) && paymentList.length > 0);
-          
+
           console.log(`ℹ️ Polling details for Appt ${appointmentId}: PM_Status=${pmStatus}, Payments_Found=${paymentList.length}, HasPaid=${hasPaid}`);
 
           if (hasPaid) {
             console.log(`✅ Polling confirmed PAID for Appointment ${appointmentId}. Synchronizing database...`);
-            
+
             // Update DB so future polls are faster
             db.query("UPDATE appointments SET payment_status = 'paid' WHERE id = ?", [appointmentId], (updErr) => {
               if (updErr) console.error(`❌ Failed to update appointments status to paid for ${appointmentId}:`, updErr.message);
               else console.log(`💾 Appointment ${appointmentId} updated to 'paid' in DB.`);
             });
-            
+
             db.query("UPDATE payments SET status = 'paid' WHERE session_id = ?", [sessionId], (updErr) => {
               if (updErr) console.error(`❌ Failed to update payments record to paid for ${sessionId}:`, updErr.message);
             });
@@ -2245,7 +2245,7 @@ app.get('/api/appointments/:id/payment-status', async (req, res) => {
         } catch (pollErr) {
           console.error('❌ Polling PayMongo API error:', pollErr.message);
         }
-        
+
         res.json({ success: true, payment_status: currentStatus });
       });
     });
@@ -2333,10 +2333,10 @@ app.post('/api/payments/webhook', (req, res) => {
     db.query('SELECT customer_id, artist_id, status FROM appointments WHERE id = ?', [appointmentId], (fetchErr, rows) => {
       if (!fetchErr && rows.length) {
         const appt = rows[0];
-        
+
         // If it was confirmed, maybe we want to notify or change something, 
         // but we leave 'status' alone as it might be 'in_progress' or 'completed' already.
-        
+
         createNotification(appt.customer_id, 'Payment Received', `Your payment for appointment #${appointmentId} is confirmed.`, 'payment_success', appointmentId);
         createNotification(appt.artist_id, 'Payment Received', `Payment for appointment #${appointmentId} is confirmed.`, 'payment_success', appointmentId);
       }
@@ -2454,24 +2454,62 @@ app.get('/api/customer/dashboard/:customerId', (req, res) => {
 
 // ========== NOTIFICATION ENDPOINTS ==========
 
-// Get notifications
+// Get notifications with pagination and filtering
 app.get('/api/notifications/:userId', (req, res) => {
   const { userId } = req.params;
+  const { page = 1, limit = 20, type } = req.query;
 
-  const query = 'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50';
+  const pageNum = parseInt(page, 10);
+  const limitNum = parseInt(limit, 10);
+  const offset = (pageNum - 1) * limitNum;
 
-  db.query(query, [userId], (err, results) => {
-    if (err) {
-      console.error('❌ Error fetching notifications:', err);
+  let query = 'SELECT * FROM notifications WHERE user_id = ?';
+  const queryParams = [userId];
+
+  if (type) {
+    query += ' AND type = ?';
+    queryParams.push(type);
+  }
+
+  query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+  queryParams.push(limitNum, offset);
+
+  // Also get total count for pagination info
+  let countQuery = 'SELECT COUNT(*) as total FROM notifications WHERE user_id = ?';
+  const countParams = [userId];
+
+  if (type) {
+    countQuery += ' AND type = ?';
+    countParams.push(type);
+  }
+
+  db.query(countQuery, countParams, (countErr, countResults) => {
+    if (countErr) {
+      console.error('❌ Error fetching notification count:', countErr);
       return res.status(500).json({ success: false, message: 'Database error' });
     }
 
-    const unreadCount = results.filter(n => !n.is_read).length;
+    db.query(query, queryParams, (err, results) => {
+      if (err) {
+        console.error('❌ Error fetching notifications:', err);
+        return res.status(500).json({ success: false, message: 'Database error' });
+      }
 
-    res.json({
-      success: true,
-      notifications: results,
-      unreadCount
+      const unreadCount = results.filter(n => !n.is_read).length;
+      const total = countResults[0]?.total || 0;
+      const hasMore = offset + results.length < total;
+
+      res.json({
+        success: true,
+        notifications: results,
+        unreadCount,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          hasMore
+        }
+      });
     });
   });
 });

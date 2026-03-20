@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  FlatList, 
-  SafeAreaView, 
-  ActivityIndicator
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  FlatList,
+  SafeAreaView,
+  ActivityIndicator,
+  ScrollView
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,7 +27,7 @@ const timeAgo = (dateString) => {
   return `${days}d ago`;
 };
 
-export function ArtistNotifications({ onBack, userId }) {
+export function CustomerNotifications({ onBack, userId }) {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -89,11 +90,10 @@ export function ArtistNotifications({ onBack, userId }) {
   const handlePress = async (item) => {
     if (!item.is_read) {
       await markNotificationAsRead(item.id);
-      setNotifications(notifications.map(n => 
+      setNotifications(notifications.map(n =>
         n.id === item.id ? { ...n, is_read: true } : n
       ));
     }
-    // Optional: Navigate to a specific screen based on item.type and item.related_id
   };
 
   const getIcon = (type) => {
@@ -103,6 +103,7 @@ export function ArtistNotifications({ onBack, userId }) {
       case 'appointment_confirmed': return { name: 'checkmark-circle', color: '#10b981' };
       case 'appointment_cancelled': return { name: 'close-circle', color: '#ef4444' };
       case 'appointment_completed': return { name: 'star', color: '#8b5cf6' };
+      case 'payment_success': return { name: 'card', color: '#059669' };
       default: return { name: 'notifications', color: '#6b7280' };
     }
   };
@@ -111,8 +112,8 @@ export function ArtistNotifications({ onBack, userId }) {
     const icon = getIcon(item.type);
 
     return (
-      <TouchableOpacity 
-        style={[styles.card, !item.is_read && styles.unreadCard]} 
+      <TouchableOpacity
+        style={[styles.card, !item.is_read && styles.unreadCard]}
         onPress={() => handlePress(item)}
         activeOpacity={0.7}
       >
@@ -263,6 +264,38 @@ const styles = StyleSheet.create({
     color: '#b8860b',
     fontWeight: '600',
   },
+  filterContainer: {
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+    paddingBottom: 12,
+  },
+  filterScroll: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f3f4f6',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  filterChipActive: {
+    backgroundColor: '#b8860b',
+    borderColor: '#b8860b',
+  },
+  filterText: {
+    fontSize: 13,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  filterTextActive: {
+    color: '#ffffff',
+    fontWeight: '600',
+  },
   listContent: {
     padding: 16,
   },
@@ -280,7 +313,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   unreadCard: {
-    backgroundColor: '#fffbeb', // Light yellow tint for unread
+    backgroundColor: '#fffbeb',
   },
   iconContainer: {
     width: 40,
@@ -360,38 +393,6 @@ const styles = StyleSheet.create({
   loadMoreText: {
     fontSize: 14,
     color: '#4b5563',
-    fontWeight: '600',
-  },
-  filterContainer: {
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-    paddingBottom: 12,
-  },
-  filterScroll: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#f3f4f6',
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  filterChipActive: {
-    backgroundColor: '#b8860b',
-    borderColor: '#b8860b',
-  },
-  filterText: {
-    fontSize: 13,
-    color: '#6b7280',
-    fontWeight: '500',
-  },
-  filterTextActive: {
-    color: '#ffffff',
     fontWeight: '600',
   },
   endMessage: {

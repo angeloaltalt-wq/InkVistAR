@@ -365,9 +365,15 @@ export const getGalleryWorks = async (filters = {}) => {
   return fetchAPI(endpoint);
 };
 
-// Get Notifications
-export const getNotifications = async (userId) => {
-  return fetchAPI(`/notifications/${userId}`);
+// Get Notifications with pagination and filtering
+export const getNotifications = async (userId, options = {}) => {
+  const { page = 1, limit = 20, type } = options;
+  const params = new URLSearchParams();
+  params.append('page', page);
+  params.append('limit', limit);
+  if (type) params.append('type', type);
+
+  return fetchAPI(`/notifications/${userId}?${params.toString()}`);
 };
 
 // Mark Notification as Read

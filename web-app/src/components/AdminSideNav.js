@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard,
     LogOut,
@@ -16,12 +16,14 @@ import {
     UserCircle,
     Receipt,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    AppWindow
 } from 'lucide-react';
 import '../styles/AdminSideNav.css';
 
 function AdminSideNav() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [collapsed, setCollapsed] = useState(() => {
         const stored = localStorage.getItem('adminSidenavCollapsed');
         return stored === 'true';
@@ -51,6 +53,9 @@ function AdminSideNav() {
         setUserManagementOpen(next);
         localStorage.setItem('userManagementOpen', next ? 'true' : 'false');
     };
+
+    const isActive = (path) => location.pathname === path;
+    const isParentActive = (children) => children.some(child => location.pathname === child.path);
 
     const quickActions = [
         {
@@ -127,11 +132,13 @@ function AdminSideNav() {
         navigate('/login');
     };
 
-
     return (
         <aside className={`admin-sidenav ${collapsed ? 'collapsed' : ''}`}>
             <div className="sidenav-header">
-                <h3>Admin Panel</h3>
+                <div className="logo-container">
+                    <AppWindow size={24} className="logo-icon" />
+                    <h3 className="logo-text">InkVistAR</h3>
+                </div>
                 <button className="sidenav-toggle" onClick={toggleCollapsed} title={collapsed ? 'Expand' : 'Collapse'}>
                     {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
                 </button>
@@ -139,16 +146,17 @@ function AdminSideNav() {
 
             <nav className="sidenav-menu">
                 <div className="menu-section">
-                    <p className="menu-label">Quick Actions</p>
+                    <p className="menu-label">Main Menu</p>
                     <ul className="menu-list">
                         {quickActions.map((action, index) => {
                             const IconComponent = action.icon;
+                            const active = action.path ? isActive(action.path) : isParentActive(action.children || []);
 
                             if (action.isDropdown) {
                                 return (
                                     <li key={index} className="dropdown-item">
                                         <button
-                                            className={`menu-item dropdown-toggle ${userManagementOpen ? 'open' : ''}`}
+                                            className={`menu-item dropdown-toggle ${userManagementOpen ? 'open' : ''} ${active ? 'parent-active' : ''}`}
                                             onClick={toggleUserManagement}
                                             title={action.label}
                                         >
@@ -162,10 +170,11 @@ function AdminSideNav() {
                                             <ul className="dropdown-menu">
                                                 {action.children.map((child, childIndex) => {
                                                     const ChildIcon = child.icon;
+                                                    const childActive = isActive(child.path);
                                                     return (
                                                         <li key={childIndex}>
                                                             <button
-                                                                className="menu-item dropdown-child"
+                                                                className={`menu-item dropdown-child ${childActive ? 'active' : ''}`}
                                                                 onClick={() => navigate(child.path)}
                                                                 title={child.description}
                                                             >
@@ -184,12 +193,13 @@ function AdminSideNav() {
                             return (
                                 <li key={index}>
                                     <button
-                                        className="menu-item"
+                                        className={`menu-item ${active ? 'active' : ''}`}
                                         onClick={() => navigate(action.path)}
                                         title={action.description}
                                     >
                                         <IconComponent size={20} />
                                         <span className="menu-text">{action.label}</span>
+                                        {active && <div className="active-indicator" />}
                                     </button>
                                 </li>
                             );
@@ -208,7 +218,7 @@ function AdminSideNav() {
                     </button>
                 </div>
             </nav>
-            </aside>
+        </aside>
     );
 }
 
