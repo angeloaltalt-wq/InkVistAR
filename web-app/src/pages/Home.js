@@ -88,11 +88,9 @@ function Home() {
                 <div className="hero-overlay"></div>
                 
                 <div className="hero-content">
-                    <div className="glass-hero-box">
-                        <h1 className="hero-title">INKVICTUS TATTOO</h1>
-                        <h2 className="hero-subtitle">BGC’s Premier Luxury Tattoo Studio</h2>
-                        <button onClick={() => navigate('/register')} className="hero-cta">Inquire Now</button>
-                    </div>
+                    <h1 className="hero-title">INKVICTUS TATTOO</h1>
+                    <h2 className="hero-subtitle">BGC’s Premier Luxury Tattoo Studio</h2>
+                    <button onClick={() => navigate('/register')} className="hero-cta">Inquire Now</button>
                 </div>
                 
                 <div className="ghost-text">W TOWER, BGC.</div>

@@ -10,10 +10,6 @@
     display: flex;
     flex-direction: column;
     position: relative;
-    --glass-bg: rgba(255, 255, 255, 0.03);
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
-    --glass-blur: blur(12px);
 }
 
 /* Navigation Styles Moved to Navbar.css */
@@ -74,20 +70,7 @@
     padding: 2rem;
 }
 
-.glass-hero-box {
-    background: rgba(13, 13, 13, 0.4);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    padding: 4rem;
-    border-radius: 40px;
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--glass-shadow);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    max-width: 900px;
-    animation: fadeIn 1s ease-out;
-}
+/* Hero Section Wrapper Removed Glass Styles */
 
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(20px); }
@@ -146,7 +129,7 @@
 /* Section 2: About / Studio Showcase */
 .about-section {
     padding: 8rem 2rem;
-    background: radial-gradient(circle at 50% 50%, #1a1a1a 0%, #0D0D0D 80%);
+    background-color: #0D0D0D;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -199,24 +182,14 @@
 }
 
 .about-text {
-    font-size: 1.25rem;
-    line-height: 1.8;
-    color: #e5e5e5;
+    max-width: 800px;
+    font-size: 1.2rem;
+    line-height: 2;
+    color: white;
     font-weight: 300;
-    margin: 0;
 }
 
-.glass-text-box {
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    padding: 3rem;
-    border-radius: 24px;
-    border: 1px solid var(--glass-border);
-    max-width: 900px;
-    margin-top: 2rem;
-    box-shadow: var(--glass-shadow);
-}
+/* About Section Wrapper Removed Glass Styles */
 
 /* Section 3: Testimonials */
 .testimonials-section {
@@ -298,12 +271,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--glass-shadow);
-    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    border: 1px solid #444;
     transform: scale(1.05);
 }
 
