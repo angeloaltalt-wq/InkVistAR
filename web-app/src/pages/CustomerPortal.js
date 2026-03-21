@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Heart, Users, Clock, LogOut } from 'lucide-react';
+import { Calendar, Heart, Award, Users, Clock, LogOut } from 'lucide-react';
 import './PortalStyles.css';
 import CustomerSideNav from '../components/CustomerSideNav';
 import { API_URL } from '../config';
@@ -12,7 +12,9 @@ function CustomerPortal() {
         name: '',
         email: '',
         appointments: 0,
-        favoriteArtists: 0
+        favoriteArtists: 0,
+        totalTattoos: 0,
+        savedDesigns: 0
     });
     const [appointments, setAppointments] = useState([]);
     const [artists, setArtists] = useState([]);
@@ -35,7 +37,9 @@ function CustomerPortal() {
                 setCustomer({
                     ...profile,
                     appointments: stats?.upcoming || 0,
-                    favoriteArtists: stats?.artists || 0
+                    favoriteArtists: stats?.artists || 0,
+                    totalTattoos: stats?.total_tattoos || 0,
+                    savedDesigns: stats?.saved_designs || 0
                 });
 
                 // Map appointments
@@ -68,7 +72,10 @@ function CustomerPortal() {
             <CustomerSideNav />
             <div className="portal-container customer-portal">
             <header className="portal-header">
-                <h1>My Tattoo Portal</h1>
+                <div className="header-title">
+                    <h1>My Tattoo Portal</h1>
+                    <p className="header-subtitle">Welcome back, {customer.name || 'Inker'}!</p>
+                </div>
                 <button className="logout-btn" onClick={() => navigate('/login')}>
                     <LogOut size={20} />
                     Logout
@@ -82,26 +89,37 @@ function CustomerPortal() {
                     <>
                         {/* Stats Grid */}
                         <div className="stats-grid">
-                            <div className="stat-card">
+                            <div className="stat-card" onClick={() => navigate('/customer/bookings')} style={{cursor: 'pointer'}}>
                                 <Calendar className="stat-icon" size={32} />
                                 <div className="stat-info">
-                                    <p className="stat-label">My Appointments</p>
-                                    <p className="stat-value">{customer.appointments || appointments.length}</p>
+                                    <p className="stat-label">Upcoming</p>
+                                    <p className="stat-value">{customer.appointments}</p>
                                 </div>
                             </div>
 
-                            <div className="stat-card">
-                                <Heart className="stat-icon" size={32} />
+                            <div className="stat-card" onClick={() => navigate('/customer/gallery')} style={{cursor: 'pointer'}}>
+                                <Heart className="stat-icon" size={32} style={{background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)'}} />
                                 <div className="stat-info">
-                                    <p className="stat-label">Favorite Artists</p>
-                                    <p className="stat-value">{customer.favoriteArtists || artists.length}</p>
+                                    <p className="stat-label">Favorites</p>
+                                    <p className="stat-value">{customer.savedDesigns}</p>
+                                </div>
+                            </div>
+
+                            <div className="stat-card" onClick={() => navigate('/customer/gallery')} style={{cursor: 'pointer'}}>
+                                <Award className="stat-icon" size={32} style={{background: 'linear-gradient(135deg, #C19A6B 0%, #8B4513 100%)'}} />
+                                <div className="stat-info">
+                                    <p className="stat-label">My Tattoos</p>
+                                    <p className="stat-value">{customer.totalTattoos}</p>
                                 </div>
                             </div>
                         </div>
 
                         {/* Upcoming Appointments */}
                         <div className="data-card">
-                            <h2>Upcoming Appointments</h2>
+                            <div className="card-header">
+                                <h2>Upcoming Sessions</h2>
+                                <button className="action-btn" onClick={() => navigate('/customer/book')}>Book New Session</button>
+                            </div>
                             <div className="table-responsive">
                                 {appointments.length > 0 ? (
                                     <table className="portal-table">
@@ -112,7 +130,6 @@ function CustomerPortal() {
                                                 <th>Date</th>
                                                 <th>Time</th>
                                                 <th>Status</th>
-                                                <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -123,26 +140,39 @@ function CustomerPortal() {
                                                     <td>{apt.date}</td>
                                                     <td>{apt.time}</td>
                                                     <td><span className={`status-badge ${apt.status.toLowerCase()}`}>{apt.status}</span></td>
-                                                    <td>
-                                                        <button className="action-btn">View</button>
-                                                        {apt.status === 'Scheduled' && <button className="action-btn">Cancel</button>}
-                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 ) : (
-                                    <p className="no-data">No appointments found</p>
+                                    <div className="empty-state-simple">
+                                        <p>No upcoming appointments scheduled.</p>
+                                    </div>
                                 )}
+                            </div>
+                        </div>
+
+                        <div className="quick-actions-grid">
+                            <div className="action-card" onClick={() => navigate('/customer/gallery')}>
+                                <Heart size={24} />
+                                <span>View Saved Designs</span>
+                            </div>
+                            <div className="action-card" onClick={() => navigate('/customer/gallery')}>
+                                <Award size={24} />
+                                <span>My Tattoo History</span>
+                            </div>
+                            <div className="action-card" onClick={() => navigate('/customer/book')}>
+                                <Calendar size={24} />
+                                <span>Schedule Session</span>
                             </div>
                         </div>
 
                         {/* Favorite Artists */}
                         <div className="data-card">
-                            <h2>Our Artists</h2>
+                            <h2>Recommended Artists</h2>
                             <div className="artists-grid">
                                 {artists.length > 0 ? (
-                                    artists.map((artist) => (
+                                    artists.slice(0, 4).map((artist) => (
                                         <div key={artist.id} className="artist-card">
                                             <h3>{artist.name}</h3>
                                             <p className="specialty">{artist.specialization || 'Professional Artist'}</p>
@@ -153,21 +183,6 @@ function CustomerPortal() {
                                 ) : (
                                     <p className="no-data">No artists found</p>
                                 )}
-                            </div>
-                        </div>
-
-                        {/* Profile */}
-                        <div className="data-card">
-                            <h2>My Profile</h2>
-                            <div className="profile-info">
-                                <div className="info-group">
-                                    <label>Name:</label>
-                                    <p>{customer.name}</p>
-                                </div>
-                                <div className="info-group">
-                                    <label>Email:</label>
-                                    <p>{customer.email}</p>
-                                </div>
                             </div>
                         </div>
                     </>

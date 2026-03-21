@@ -398,6 +398,15 @@ db.connect(err => {
       else {
         console.log('📅 Appointments table ready');
 
+        // MIGRATION: Add 'after_photo' column if it doesn't exist
+        db.query("SHOW COLUMNS FROM appointments LIKE 'after_photo'", (err, results) => {
+          if (!err && results.length === 0) {
+            console.log('🔄 Migrating appointments: Adding after_photo column...');
+            db.query("ALTER TABLE appointments ADD COLUMN after_photo LONGTEXT NULL");
+            console.log('✅ Added after_photo column to appointments');
+          }
+        });
+        
         // MIGRATION: Add 'price' column if it doesn't exist to prevent errors.
         db.query("SHOW COLUMNS FROM appointments LIKE 'price'", (err, results) => {
           if (!err && results.length === 0) {
@@ -1734,43 +1743,6 @@ app.get('/api/gallery/categories', (req, res) => {
   });
 });
 
-// Get all works for a public gallery
-app.get('/api/gallery/works', (req, res) => {
-  const { category } = req.query;
-
-  const query = `
-    SELECT 
-      pw.id,
-      pw.title,
-      pw.description,
-      pw.image_url,
-      pw.category,
-      pw.price_estimate,
-      pw.created_at,
-      u.name as artist_name,
-      a.studio_name
-    FROM portfolio_works pw
-    JOIN users u ON pw.artist_id = u.id
-    LEFT JOIN artists a ON u.id = a.user_id
-    WHERE pw.is_deleted = 0 AND pw.is_public = 1
-    ${category && category !== 'All' ? 'AND pw.category = ?' : ''}
-    ORDER BY pw.created_at DESC
-    LIMIT 100
-  `;
-
-  const params = [];
-  if (category && category !== 'All') {
-    params.push(category);
-  }
-
-  db.query(query, params, (err, results) => {
-    if (err) {
-      console.error('❌ Error fetching gallery works:', err);
-      return res.status(500).json({ success: false, message: 'Database error' });
-    }
-    res.json({ success: true, works: results });
-  });
-});
 
 // Customer browse artists
 app.get('/api/customer/artists', (req, res) => {
@@ -1905,9 +1877,10 @@ app.get('/api/gallery/works', (req, res) => {
 
   let query = `
     SELECT pw.id, pw.title, pw.description, pw.image_url, pw.category, pw.price_estimate, pw.created_at,
-           u.name as artist_name
+           u.name as artist_name, a.studio_name
     FROM portfolio_works pw
     JOIN users u ON pw.artist_id = u.id
+    LEFT JOIN artists a ON u.id = a.user_id
     WHERE pw.is_public = 1 AND (pw.is_deleted = 0 OR pw.is_deleted IS NULL)
   `;
   const params = [];
@@ -2432,28 +2405,114 @@ app.get('/api/customer/dashboard/:customerId', (req, res) => {
       const completedCount = appointmentResults.filter(a => a.status === 'completed').length;
       const uniqueArtists = new Set(appointmentResults.map(a => a.artist_name)).size;
 
-      const stats = {
-        total_tattoos: completedCount,
-        upcoming: upcoming.length,
-        saved_designs: 0, // This is now accurate until the feature is built
-        artists: uniqueArtists
-      };
+      // 2.5 Get Favorites Count
+      db.query('SELECT COUNT(*) as favCount FROM favorites WHERE user_id = ?', [customerId], (favErr, favResults) => {
+        const savedDesignsCount = favErr ? 0 : (favResults[0]?.favCount || 0);
 
-      // 3. Get Notifications
-      db.query('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 20', [customerId], (notifErr, notifResults) => {
-        const notifications = notifResults || [];
-        const unreadCount = notifications.filter(n => !n.is_read).length;
+        const stats = {
+          total_tattoos: completedCount,
+          upcoming: upcoming.length,
+          saved_designs: savedDesignsCount,
+          artists: uniqueArtists
+        };
 
-        res.json({
-          success: true,
-          customer,
-          appointments: upcoming,
-          stats,
-          notifications,
-          unreadCount
+        // 3. Get Notifications
+        db.query('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 20', [customerId], (notifErr, notifResults) => {
+          const notifications = notifResults || [];
+          const unreadCount = notifications.filter(n => !n.is_read).length;
+
+          res.json({
+            success: true,
+            customer,
+            appointments: upcoming,
+            stats,
+            notifications,
+            unreadCount
+          });
         });
       });
     });
+  });
+});
+
+// ========== CUSTOMER FEATURES: FAVORITES & MY TATTOOS ==========
+
+// Toggle favorite status
+app.post('/api/customer/favorites', (req, res) => {
+  const { userId, workId } = req.body;
+  if (!userId || !workId) return res.status(400).json({ success: false, message: 'Missing userId or workId' });
+
+  db.query('SELECT * FROM favorites WHERE user_id = ? AND work_id = ?', [userId, workId], (err, results) => {
+    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+
+    if (results.length > 0) {
+      db.query('DELETE FROM favorites WHERE user_id = ? AND work_id = ?', [userId, workId], (delErr) => {
+        if (delErr) return res.status(500).json({ success: false, message: 'Database error (Delete)' });
+        res.json({ success: true, favorited: false });
+      });
+    } else {
+      db.query('INSERT INTO favorites (user_id, work_id) VALUES (?, ?)', [userId, workId], (insErr) => {
+        if (insErr) return res.status(500).json({ success: false, message: 'Database error (Insert)' });
+        res.json({ success: true, favorited: true });
+      });
+    }
+  });
+});
+
+// Get user's favorites
+app.get('/api/customer/:userId/favorites', (req, res) => {
+  const { userId } = req.params;
+  const query = `
+    SELECT pw.*, u.name as artist_name, 1 as is_favorited
+    FROM portfolio_works pw
+    JOIN favorites f ON pw.id = f.work_id
+    JOIN users u ON pw.artist_id = u.id
+    WHERE f.user_id = ? AND pw.is_deleted = 0
+    ORDER BY f.created_at DESC
+  `;
+  db.query(query, [userId], (err, results) => {
+    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+    res.json({ success: true, favorites: results });
+  });
+});
+
+// Get customer's "gotten tattoos" (Completed appointments)
+app.get('/api/customer/:userId/my-tattoos', (req, res) => {
+  const { userId } = req.params;
+  const query = `
+    SELECT 
+      ap.id, 
+      ap.design_title as title, 
+      ap.appointment_date, 
+      ap.after_photo, 
+      ap.reference_image,
+      u.name as artist_name
+    FROM appointments ap
+    JOIN users u ON ap.artist_id = u.id
+    WHERE ap.customer_id = ? AND ap.status IN ('completed', 'finished') AND ap.is_deleted = 0
+    ORDER BY ap.appointment_date DESC
+  `;
+  db.query(query, [userId], (err, results) => {
+    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+    
+    // Fallback to reference image if after_photo is missing
+    const tattoos = results.map(t => ({
+      ...t,
+      image_url: t.after_photo || t.reference_image
+    }));
+    
+    res.json({ success: true, tattoos });
+  });
+});
+
+// Update after-photo for appointment
+app.put('/api/appointments/:id/after-photo', (req, res) => {
+  const { id } = req.params;
+  const { afterPhoto } = req.body;
+  
+  db.query('UPDATE appointments SET after_photo = ? WHERE id = ?', [afterPhoto, id], (err) => {
+    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+    res.json({ success: true, message: 'After photo updated successfully' });
   });
 });
 
