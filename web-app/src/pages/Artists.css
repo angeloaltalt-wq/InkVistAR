@@ -67,15 +67,27 @@
     border: 1px solid rgba(193, 154, 107, 0.3);
 }
 
-.team-photo {
+.team-photo-placeholder {
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    transition: transform 1s ease;
+    background: linear-gradient(135deg, #1A1A1A 0%, #0D0D0D 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #444;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border: 2px dashed rgba(193, 154, 107, 0.2);
+    transition: all 0.4s ease;
 }
 
-.team-photo-container:hover .team-photo {
-    transform: scale(1.05);
+.team-photo-container:hover .team-photo-placeholder {
+    background: linear-gradient(135deg, #222 0%, #151515 100%);
+    color: #C19A6B;
+    border-color: rgba(193, 154, 107, 1);
 }
 
 .team-badge {

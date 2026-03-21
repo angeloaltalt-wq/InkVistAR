@@ -52,11 +52,9 @@ function Artists() {
                 <div className="artists-hero-content">
                     <h1>Our Elite Artists</h1>
                     <div className="team-photo-container">
-                        <img 
-                            src="https://images.unsplash.com/photo-1590247813693-5541d1c609fd?auto=format&fit=crop&q=80&w=1200" 
-                            alt="Inkvictus Team" 
-                            className="team-photo"
-                        />
+                        <div className="team-photo-placeholder">
+                            <span>Insert Team Photo Here</span>
+                        </div>
                         <div className="team-badge">BGC'S FINEST</div>
                     </div>
                 </div>
