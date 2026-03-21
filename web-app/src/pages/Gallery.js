@@ -60,18 +60,27 @@ const Gallery = () => {
 
   // Fetch works from backend (re-fetch when category or artist changes)
   useEffect(() => {
+    // If we have an artistId in the URL but selectedArtist state hasn't updated yet, 
+    // skip this fetch to avoid "flash" of all works
+    const params = new URLSearchParams(location.search);
+    const artistIdInUrl = params.get('artistId');
+    if (artistIdInUrl && (!selectedArtist || selectedArtist.id !== artistIdInUrl)) {
+      return;
+    }
+
     setLoading(true);
     let url = `${API_URL}/api/gallery/works?`;
     
-    const params = new URLSearchParams();
+    const queryParams = new URLSearchParams();
     if (activeCategory && activeCategory !== 'All') {
-      params.append('category', activeCategory);
+      queryParams.append('category', activeCategory);
     }
     if (selectedArtist) {
-      params.append('artistId', selectedArtist.id);
+      queryParams.append('artistId', selectedArtist.id);
     }
     
-    url += params.toString();
+    url += queryParams.toString();
+    console.log(`[GALLERY] Fetching from URL: ${url}`);
 
     fetch(url)
       .then(res => res.json())
@@ -85,12 +94,12 @@ const Gallery = () => {
         console.error('Error fetching works:', err);
         setLoading(false);
       });
-  }, [activeCategory, selectedArtist]);
+  }, [activeCategory, selectedArtist, location.search]);
 
-  // Reset page when category changes
+  // Reset page when category or artist changes
   useEffect(() => {
      setCurrentPage(1);
-  }, [activeCategory]);
+  }, [activeCategory, selectedArtist]);
 
   // Pagination logic
   const totalPages = Math.ceil(works.length / itemsPerPage);
@@ -141,16 +150,19 @@ const Gallery = () => {
           </div>
         )}
 
-        <div className="filter-nav">
-          {categories.map(cat => (
-            <button
-              key={cat}
-              className={`filter-btn ${activeCategory === cat ? 'active' : ''}`}
-              onClick={() => setActiveCategory(cat)}
-            >
-              {cat}
-            </button>
-          ))}
+        <div className="filter-nav-container">
+          <span className="filter-label">STYLE FILTER:</span>
+          <div className="filter-nav">
+            {categories.map(cat => (
+              <button
+                key={cat}
+                className={`filter-btn ${activeCategory === cat ? 'active' : ''}`}
+                onClick={() => setActiveCategory(cat)}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
@@ -163,6 +175,7 @@ const Gallery = () => {
         ) : (
           paginatedWorks.map(item => (
             <div key={item.id} className="image-card" onClick={() => setSelectedImage(item)}>
+              {item.category && <span className="image-card-category">{item.category}</span>}
               <img 
                 src={item.image_url} 
                 alt={item.title || item.category || 'Tattoo artwork'} 
@@ -171,7 +184,6 @@ const Gallery = () => {
               <div className="image-card-overlay">
                 {item.title && <h3 className="image-card-title">{item.title}</h3>}
                 {item.artist_name && <p className="image-card-artist">by {item.artist_name}</p>}
-                {item.category && <span className="image-card-category">{item.category}</span>}
               </div>
               <div className="watermark">INKVICTUS</div>
               <div className="glow-overlay"></div>
