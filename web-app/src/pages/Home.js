@@ -69,8 +69,9 @@ function Home() {
     }, [location]);
 
     return (
-        <div className="home-container page-transition-wrapper">
+        <>
             <Navbar />
+            <div className="home-container page-transition-wrapper">
 
             {/* Section 1: Hero Screen */}
             <header className="hero-header">
@@ -127,6 +128,7 @@ function Home() {
 
             <ChatWidget />
         </div>
+        </>
     );
 }
 

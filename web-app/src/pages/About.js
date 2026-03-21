@@ -29,8 +29,9 @@ const About = () => {
     }, []);
 
     return (
-        <div className="home-container page-transition-wrapper" style={{ paddingTop: '80px' }}>
+        <>
             <Navbar />
+            <div className="home-container page-transition-wrapper" style={{ paddingTop: '80px' }}>
             
             <header className="about-header-v2" style={{ padding: '4rem 2rem', textAlign: 'center' }}>
                 <h1 className="about-title" style={{ fontSize: '4rem', marginBottom: '1rem' }}>Our Story</h1>
@@ -56,6 +57,7 @@ const About = () => {
 
             <ChatWidget />
         </div>
+        </>
     );
 };
 

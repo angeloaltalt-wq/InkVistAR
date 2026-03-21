@@ -43,8 +43,9 @@ function Artists() {
     }, []);
 
     return (
-        <div className="artists-page page-transition-wrapper">
+        <>
             <Navbar />
+            <div className="artists-page page-transition-wrapper">
 
             {/* Hero Section */}
             <header className="artists-hero">
@@ -104,6 +105,7 @@ function Artists() {
             </section>
             <ChatWidget />
         </div>
+        </>
     );
 }
 
