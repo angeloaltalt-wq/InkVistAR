@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Mail, Clock, Bell, User } from 'lucide-react';
 import './Contact.css';
+import Navbar from '../components/Navbar';
 import ChatWidget from '../components/ChatWidget';
 
 const Contact = () => {
@@ -23,21 +24,7 @@ const Contact = () => {
 
   return (
     <>
-      {/* Navigation Bar */}
-      <nav className={`home-nav ${isScrolled ? 'is-scrolled' : ''}`}>
-          <Link to="/" className="home-logo">INKVICTUS</Link>
-          <div className="home-nav-links">
-              <a href="/#about">About</a>
-              <Link to="/artists">Artists</Link>
-              <Link to="/gallery">Gallery</Link>
-              <Link to="/book">Booking</Link>
-              <Link to="/contact" className="active-link">Contact</Link>
-          </div>
-          <div className="home-auth-buttons">
-              <Link to="/login" className="login-link">Log In</Link>
-              <button onClick={() => navigate('/register')} className="signup-btn">Sign Up</button>
-          </div>
-      </nav>
+      <Navbar />
 
       <div className="contact-page">
       {/* Header Section */}

@@ -1,0 +1,113 @@
+/* Navigation Shared Styles */
+.home-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 3rem;
+    background: transparent;
+    z-index: 1000;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    --glass-bg: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+    --glass-blur: blur(12px);
+}
+
+.home-nav.is-scrolled {
+    background: rgba(13, 13, 13, 0.7);
+    padding: 1rem 3rem;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.home-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #C19A6B;
+    text-decoration: none;
+    letter-spacing: 2px;
+}
+
+.home-nav-links {
+    display: flex;
+    gap: 2.5rem;
+}
+
+.home-nav-links a {
+    color: white;
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.home-nav-links a:hover, .home-nav-links a.active-link {
+    color: #C19A6B;
+}
+
+.home-nav-links a.active-link::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background-color: #C19A6B;
+}
+
+.home-auth-buttons {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.home-auth-buttons .login-link {
+    color: white;
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: color 0.3s;
+}
+
+.home-auth-buttons .login-link:hover {
+    color: #C19A6B;
+}
+
+.home-auth-buttons .signup-btn {
+    background-color: #C19A6B;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.8rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.home-auth-buttons .signup-btn:hover {
+    background-color: #d4af87;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(193, 154, 107, 0.3);
+}
+
+@media (max-width: 768px) {
+    .home-nav {
+        padding: 1rem 1.5rem;
+    }
+    .home-nav-links {
+        display: none;
+    }
+}

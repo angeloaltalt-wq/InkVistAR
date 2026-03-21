@@ -18,70 +18,7 @@ body {
   align-items: center;
 }
 
-/* Navigation (Consistent with Home/Artists) */
-.home-nav {
-  position: sticky;
-  top: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem 3rem;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
-  z-index: 100;
-}
-
-.home-logo {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: #C19A6B;
-  text-decoration: none;
-}
-
-.home-nav-links {
-  display: flex;
-  gap: 2.5rem;
-}
-
-.home-nav-links a {
-  color: #fff;
-  text-decoration: none;
-  font-size: 1rem;
-  transition: color 0.3s;
-}
-
-.home-nav-links a:hover, .home-nav-links a.active-link {
-  color: #C19A6B;
-}
-
-.home-auth-buttons {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.home-auth-buttons .login-link {
-  color: #fff;
-  text-decoration: none;
-  font-size: 1rem;
-}
-
-.home-auth-buttons .signup-btn {
-  background-color: #C19A6B;
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 50px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.home-auth-buttons .signup-btn:hover {
-  background-color: #d4af87;
-}
+/* Navigation Styles Moved to Navbar.css */
 
 /* Header */
 .contact-header {

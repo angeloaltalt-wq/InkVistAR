@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import './Home.css'; // New CSS file
+import Navbar from '../components/Navbar';
 import ChatWidget from '../components/ChatWidget';
 
 function Home() {
@@ -69,21 +70,7 @@ function Home() {
 
     return (
         <div className="home-container">
-            {/* Navigation */}
-            <nav className={`home-nav ${isScrolled ? 'is-scrolled' : ''}`}>
-                <a href="/" className="home-logo">INKVICTUS</a>
-                <div className="home-nav-links">
-                    <a href="/#about">About</a>
-                    <Link to="/artists">Artists</Link>
-                    <Link to="/gallery">Gallery</Link>
-                    <Link to="/book">Booking</Link>
-                    <Link to="/contact">Contact</Link>
-                </div>
-                <div className="home-auth-buttons">
-                    <a href="/login" className="login-link">Log In</a>
-                    <button onClick={() => navigate('/register')} className="signup-btn">Sign Up</button>
-                </div>
-            </nav>
+            <Navbar />
 
             {/* Section 1: Hero Screen */}
             <header className="hero-header">
@@ -111,18 +98,6 @@ function Home() {
                 <div className="ghost-text">W TOWER, BGC.</div>
             </header>
 
-            {/* Section 2: About / Studio Showcase */}
-            <section id="about" className="about-section fade-section" ref={aboutRef}>
-                <h2 className="about-title">BGC’s Premier Luxury Tattoo Studio</h2>
-                <div className="about-image-container">
-                    <img src="https://images.unsplash.com/photo-1605218427368-35b0f99846b1?auto=format&fit=crop&q=80&w=1200" alt="Studio Interior" className="about-image" />
-                </div>
-                <div className="glass-text-box">
-                    <p className="about-text">
-                        Inkvictus Tattoo is more than just a studio; it is a sanctuary for art and expression. Located in the heart of BGC, we offer a premium experience that combines world-class artistry with the highest standards of hygiene and comfort. Our mission is to transform your vision into a timeless masterpiece.
-                    </p>
-                </div>
-            </section>
 
             {/* Section 3: Testimonials */}
             <section id="testimonials" className="testimonials-section fade-section" ref={testimonialsRef}>

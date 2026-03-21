@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import CustomerBookingWizard from '../components/CustomerBookingWizard';
+import Navbar from '../components/Navbar';
 import ChatWidget from '../components/ChatWidget';
 
 function PublicBooking() {
@@ -22,20 +23,7 @@ function PublicBooking() {
 
     return (
         <div style={{ backgroundColor: '#0D0D0D', minHeight: '100vh', color: '#fff', paddingBottom: '50px' }}>
-            <nav className={`home-nav ${isScrolled ? 'is-scrolled' : ''}`}>
-                <a href="/" className="home-logo">INKVICTUS</a>
-                <div className="home-nav-links">
-                    <a href="/#about">About</a>
-                    <Link to="/artists">Artists</Link>
-                    <Link to="/gallery">Gallery</Link>
-                    <Link to="/book" className="active-link">Booking</Link>
-                    <Link to="/contact">Contact</Link>
-                </div>
-                <div className="home-auth-buttons">
-                    <a href="/login" className="login-link">Log In</a>
-                    <button onClick={() => navigate('/register')} className="signup-btn">Sign Up</button>
-                </div>
-            </nav>
+            <Navbar />
 
             <div style={{ maxWidth: '800px', margin: '140px auto 0', padding: '0 20px' }}>
                 <header style={{ textAlign: 'center', marginBottom: '40px' }}>

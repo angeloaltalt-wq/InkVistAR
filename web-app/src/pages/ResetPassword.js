@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import Axios from 'axios';
 import { API_URL } from '../config';
+import Navbar from '../components/Navbar';
 import './ResetPassword.css';
 
 function ResetPassword() {
@@ -56,21 +57,7 @@ function ResetPassword() {
 
     return (
         <div className="reset-page-wrapper" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', padding: '80px 20px' }}>
-            {/* Navigation */}
-            <nav className="home-nav">
-                <a href="/" className="home-logo">INKVICTUS</a>
-                <div className="home-nav-links">
-                    <a href="/#about">About</a>
-                    <a href="/artists">Artists</a>
-                    <Link to="/gallery">Gallery</Link>
-                    <a href="/#booking">Booking</a>
-                    <Link to="/contact">Contact</Link>
-                </div>
-                <div className="home-auth-buttons">
-                    <a href="/login" className="login-link">Log In</a>
-                    <button onClick={() => navigate('/register')} className="signup-btn">Sign Up</button>
-                </div>
-            </nav>
+            <Navbar />
 
             <div className="reset-card" style={{ width: '90%', maxWidth: '450px' }}>
                 <div className="reset-header">

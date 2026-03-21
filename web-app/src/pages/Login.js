@@ -3,6 +3,7 @@ import Axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { API_URL } from '../config';
+import Navbar from '../components/Navbar';
 import './Login.css';
 
 function Login() {
@@ -160,21 +161,7 @@ function Login() {
 
     return (
         <>
-            {/* Navigation */}
-            <nav className="home-nav">
-                <a href="/" className="home-logo">INKVICTUS</a>
-                <div className="home-nav-links">
-                    <a href="/#about">About</a>
-                    <Link to="/artists">Artists</Link>
-                    <Link to="/gallery">Gallery</Link>
-                    <a href="/#booking">Booking</a>
-                    <Link to="/contact">Contact</Link>
-                </div>
-                <div className="home-auth-buttons">
-                    <a href="/login" className="login-link">Log In</a>
-                    <button onClick={() => navigate('/register')} className="signup-btn">Sign Up</button>
-                </div>
-            </nav>
+            <Navbar />
 
             <div className="login-page-wrapper" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
             <div className="login-card" style={{ width: '90%', maxWidth: '380px' }}>
