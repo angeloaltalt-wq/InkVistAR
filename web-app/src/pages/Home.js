@@ -101,9 +101,11 @@ function Home() {
                 <div className="hero-overlay"></div>
                 
                 <div className="hero-content">
-                    <h1 className="hero-title">INKVICTUS TATTOO</h1>
-                    <h2 className="hero-subtitle">BGC’s Premier Luxury Tattoo Studio</h2>
-                    <button onClick={() => navigate('/register')} className="hero-cta">Inquire Now</button>
+                    <div className="glass-hero-box">
+                        <h1 className="hero-title">INKVICTUS TATTOO</h1>
+                        <h2 className="hero-subtitle">BGC’s Premier Luxury Tattoo Studio</h2>
+                        <button onClick={() => navigate('/register')} className="hero-cta">Inquire Now</button>
+                    </div>
                 </div>
                 
                 <div className="ghost-text">W TOWER, BGC.</div>
@@ -115,9 +117,11 @@ function Home() {
                 <div className="about-image-container">
                     <img src="https://images.unsplash.com/photo-1605218427368-35b0f99846b1?auto=format&fit=crop&q=80&w=1200" alt="Studio Interior" className="about-image" />
                 </div>
-                <p className="about-text">
-                    Inkvictus Tattoo is more than just a studio; it is a sanctuary for art and expression. Located in the heart of BGC, we offer a premium experience that combines world-class artistry with the highest standards of hygiene and comfort. Our mission is to transform your vision into a timeless masterpiece.
-                </p>
+                <div className="glass-text-box">
+                    <p className="about-text">
+                        Inkvictus Tattoo is more than just a studio; it is a sanctuary for art and expression. Located in the heart of BGC, we offer a premium experience that combines world-class artistry with the highest standards of hygiene and comfort. Our mission is to transform your vision into a timeless masterpiece.
+                    </p>
+                </div>
             </section>
 
             {/* Section 3: Testimonials */}
