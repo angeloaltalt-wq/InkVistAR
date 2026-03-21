@@ -1918,9 +1918,14 @@ app.get('/api/gallery/works', (req, res) => {
     params.push(searchParam, searchParam, searchParam, searchParam);
   }
 
-  if (category) {
+  if (category && category !== 'All') {
     query += ` AND pw.category = ?`;
     params.push(category);
+  }
+
+  if (req.query.artistId) {
+    query += ` AND pw.artist_id = ?`;
+    params.push(req.query.artistId);
   }
 
   query += ` ORDER BY pw.created_at DESC LIMIT 100`;

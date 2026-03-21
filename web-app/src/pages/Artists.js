@@ -50,9 +50,14 @@ function Artists() {
             <header className="artists-hero">
                 <div className="artists-hero-overlay"></div>
                 <div className="artists-hero-content">
-                    <h1>Meet The Artists</h1>
-                    <div className="team-photo-placeholder">
-                        <span>Team Photo Placeholder</span>
+                    <h1>Our Elite Artists</h1>
+                    <div className="team-photo-container">
+                        <img 
+                            src="https://images.unsplash.com/photo-1590247813693-5541d1c609fd?auto=format&fit=crop&q=80&w=1200" 
+                            alt="Inkvictus Team" 
+                            className="team-photo"
+                        />
+                        <div className="team-badge">BGC'S FINEST</div>
                     </div>
                 </div>
             </header>
@@ -68,15 +73,31 @@ function Artists() {
                         <div className="loading-text">Loading artists...</div>
                     ) : (
                         artists.map((artist, index) => (
-                            <div key={artist.id || index} className="artist-card">
+                            <div key={artist.id || index} className="artist-card fade-in-up">
                                 <div className="artist-image-wrapper">
-                                    <img src="https://images.unsplash.com/photo-1598371839696-5c5bb00bdc28?auto=format&fit=crop&q=80&w=600" alt={artist.name} />
+                                    <img 
+                                        src={artist.profile_image || "https://images.unsplash.com/photo-1598371839696-5c5bb00bdc28?auto=format&fit=crop&q=80&w=600"} 
+                                        alt={artist.name} 
+                                    />
                                     <div className="artist-brand-overlay">V</div>
                                 </div>
                                 <div className="artist-info">
-                                    <h2>{artist.name}</h2>
+                                    <div className="artist-name-group">
+                                        <h2>{artist.name}</h2>
+                                        <div className="name-underline"></div>
+                                    </div>
                                     <p className="artist-specialty">{artist.specialization || 'Tattoo Artist'}</p>
-                                    <button className="view-portfolio-btn" onClick={() => navigate('/login')}>View Portfolio</button>
+                                    <div className="artist-stats">
+                                        <span>{artist.experience_years || 0} Years Exp.</span>
+                                        <span className="stat-divider">|</span>
+                                        <span>★ {artist.rating || '5.0'}</span>
+                                    </div>
+                                    <button 
+                                        className="view-portfolio-btn" 
+                                        onClick={() => navigate(`/gallery?artistId=${artist.id}&artistName=${encodeURIComponent(artist.name)}`)}
+                                    >
+                                        View Portfolio
+                                    </button>
                                 </div>
                             </div>
                         ))

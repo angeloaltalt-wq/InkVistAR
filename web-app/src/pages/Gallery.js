@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { API_URL } from '../config';
 import './Gallery.css';
 import Navbar from '../components/Navbar';
@@ -7,12 +7,27 @@ import ChatWidget from '../components/ChatWidget';
 
 const Gallery = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeCategory, setActiveCategory] = useState('All');
+  const [selectedArtist, setSelectedArtist] = useState(null);
   const [categories, setCategories] = useState(['All']);
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  // Parse query params for artist filter
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const artistId = params.get('artistId');
+    const artistName = params.get('artistName');
+    
+    if (artistId) {
+      setSelectedArtist({ id: artistId, name: artistName || 'Artist' });
+    } else {
+      setSelectedArtist(null);
+    }
+  }, [location.search]);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -43,12 +58,20 @@ const Gallery = () => {
       .catch(err => console.error('Error fetching categories:', err));
   }, []);
 
-  // Fetch works from backend (re-fetch when category changes)
+  // Fetch works from backend (re-fetch when category or artist changes)
   useEffect(() => {
     setLoading(true);
-    const url = activeCategory && activeCategory !== 'All'
-      ? `${API_URL}/api/gallery/works?category=${encodeURIComponent(activeCategory)}`
-      : `${API_URL}/api/gallery/works`;
+    let url = `${API_URL}/api/gallery/works?`;
+    
+    const params = new URLSearchParams();
+    if (activeCategory && activeCategory !== 'All') {
+      params.append('category', activeCategory);
+    }
+    if (selectedArtist) {
+      params.append('artistId', selectedArtist.id);
+    }
+    
+    url += params.toString();
 
     fetch(url)
       .then(res => res.json())
@@ -62,7 +85,7 @@ const Gallery = () => {
         console.error('Error fetching works:', err);
         setLoading(false);
       });
-  }, [activeCategory]);
+  }, [activeCategory, selectedArtist]);
 
   // Reset page when category changes
   useEffect(() => {
@@ -80,7 +103,44 @@ const Gallery = () => {
       <div className="gallery-page">
       {/* Header Section */}
       <header className="gallery-header">
-        <h1>OUR ARTWORK SPEAKS VOLUMES</h1>
+        <h1>{selectedArtist ? `PORTFOLIO: ${selectedArtist.name.toUpperCase()}` : 'OUR ARTWORK SPEAKS VOLUMES'}</h1>
+        
+        {selectedArtist && (
+          <div className="artist-filter-badge" style={{ 
+            margin: '10px 0 20px', 
+            background: 'rgba(193, 154, 107, 0.1)', 
+            border: '1px solid #C19A6B',
+            padding: '8px 20px',
+            borderRadius: '50px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '12px',
+            color: '#C19A6B',
+            fontWeight: '600'
+          }}>
+            <span>Showing works by {selectedArtist.name}</span>
+            <button 
+              onClick={() => navigate('/gallery')}
+              style={{ 
+                background: '#C19A6B', 
+                border: 'none', 
+                color: 'black', 
+                borderRadius: '50%', 
+                width: '20px', 
+                height: '20px', 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '12px',
+                fontWeight: 'bold'
+              }}
+            >
+              &times;
+            </button>
+          </div>
+        )}
+
         <div className="filter-nav">
           {categories.map(cat => (
             <button
