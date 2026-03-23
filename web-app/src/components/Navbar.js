@@ -45,7 +45,7 @@ const Navbar = () => {
                 <Link to="/about" className={isActive('/about') ? 'active-link' : ''}>About</Link>
                 <Link to="/artists" className={isActive('/artists') ? 'active-link' : ''}>Artists</Link>
                 <Link to="/gallery" className={isActive('/gallery') ? 'active-link' : ''}>Gallery</Link>
-                <Link to="/book" className={isActive('/book') ? 'active-link' : ''}>Booking</Link>
+                <Link to="/book" className={isActive('/book') ? 'active-link' : ''}>Book Consultation</Link>
                 <Link to="/contact" className={isActive('/contact') ? 'active-link' : ''}>Contact</Link>
             </div>
             <div className="home-auth-buttons">

@@ -27,8 +27,8 @@ function PublicBooking() {
 
             <div style={{ maxWidth: '800px', margin: '140px auto 0', padding: '0 20px' }}>
                 <header style={{ textAlign: 'center', marginBottom: '40px' }}>
-                    <h1 style={{ color: '#C19A6B', fontFamily: '"Playfair Display", serif', fontSize: '3rem', margin: '0 0 10px 0' }}>BOOK AN APPOINTMENT</h1>
-                    <p style={{ color: '#aaa', fontSize: '1.1rem' }}>Select your artist, date, and let us know what you want to create.</p>
+                    <h1 style={{ color: '#C19A6B', fontFamily: '"Playfair Display", serif', fontSize: '3rem', margin: '0 0 10px 0' }}>BOOK A CONSULTATION</h1>
+                    <p style={{ color: '#aaa', fontSize: '1.1rem' }}>Tell us about your next masterpiece and schedule a consultation to discuss it with our team.</p>
                 </header>
 
                 <div style={{ backgroundColor: '#fff', borderRadius: '15px', color: '#000', overflow: 'hidden' }}>
