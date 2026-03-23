@@ -135,7 +135,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
 
             if (response.data.success) {
                 const { appointmentId } = response.data;
-                const price = formData.artist.hourly_rate || 50; // Pass the price to the payment page
+                const price = 1500; // Fixed deposit/base fee instead of hourly rate
                 // Store for refresh resilience
                 sessionStorage.setItem('pendingPayment', JSON.stringify({ appointmentId, price }));
                 navigate(`/payment?appointmentId=${appointmentId}&price=${price}`, { state: { appointmentId, price } });
@@ -267,7 +267,6 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                         </div>
                         <h4 style={{margin: '0 0 5px 0'}}>{artist.name}</h4>
                         <p style={{margin: '0 0 5px 0', fontSize: '0.9rem', color: '#6b7280'}}>{artist.studio_name}</p>
-                        <p style={{margin: 0, fontWeight: 'bold', color: '#daa520'}}>₱{artist.hourly_rate}/hr</p>
                     </div>
                 ))}
             </div>

@@ -220,15 +220,6 @@ function AdminStaff() {
                     />
                 </div>
                 <div className="form-group">
-                    <label>Hourly Rate (₱)</label>
-                    <input 
-                        type="number" 
-                        className="form-input" 
-                        value={formData.hourly_rate || 0} 
-                        onChange={e => setFormData({...formData, hourly_rate: e.target.value})}
-                    />
-                </div>
-                <div className="form-group">
                     <label>Experience (Years)</label>
                     <input 
                         type="number" 

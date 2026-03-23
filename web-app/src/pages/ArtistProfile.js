@@ -137,25 +137,14 @@ function ArtistProfile(){
                                         placeholder="e.g. Realism, Traditional, Japanese"
                                     />
                                 </div>
-                                <div className="form-row" style={{ display: 'flex', gap: '20px' }}>
-                                    <div className="form-group" style={{ flex: 1 }}>
-                                        <label><DollarSign size={16}/> Hourly Rate (₱)</label>
-                                        <input 
-                                            type="number" 
-                                            className="form-input"
-                                            value={profile.hourly_rate}
-                                            onChange={e => setProfile({...profile, hourly_rate: e.target.value})}
-                                        />
-                                    </div>
-                                    <div className="form-group" style={{ flex: 1 }}>
-                                        <label><Clock size={16}/> Experience (Years)</label>
-                                        <input 
-                                            type="number" 
-                                            className="form-input"
-                                            value={profile.experience_years}
-                                            onChange={e => setProfile({...profile, experience_years: e.target.value})}
-                                        />
-                                    </div>
+                                <div className="form-group">
+                                    <label><Clock size={16}/> Experience (Years)</label>
+                                    <input 
+                                        type="number" 
+                                        className="form-input" 
+                                        value={profile.experience_years}
+                                        onChange={e => setProfile({...profile, experience_years: e.target.value})}
+                                    />
                                 </div>
 
 

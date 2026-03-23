@@ -112,7 +112,7 @@ function AdminDashboard() {
 
                     // Revenue Calculation
                     if (apt.status === 'completed') {
-                        const price = Number(apt.hourly_rate) || 150; // Fallback price
+                        const price = 1500; // Fixed default price
                         totalRev += price;
                         if (aptDateStr === todayStr) dailyRev += price;
                         const aptDate = new Date(aptDateStr);

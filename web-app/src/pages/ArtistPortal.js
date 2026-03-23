@@ -99,14 +99,6 @@ function ArtistPortal() {
                                     <p className="stat-value">{artist?.appointments || 0}</p>
                                 </div>
                             </div>
-
-                            <div className="stat-card">
-                                <Clock className="stat-icon" size={32} />
-                                <div className="stat-info">
-                                    <p className="stat-label">Hourly Rate</p>
-                                    <p className="stat-value">₱{artist?.hourly_rate || 0}/hr</p>
-                                </div>
-                            </div>
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
