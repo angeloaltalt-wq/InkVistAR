@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Calendar, List, ChevronLeft, ChevronRight, Search, Filter, SlidersHorizontal } from 'lucide-react';
+import { Calendar, List, ChevronLeft, ChevronRight, Search, Filter, SlidersHorizontal, Plus, Check } from 'lucide-react';
 import AdminSideNav from '../components/AdminSideNav';
 import ManagerSideNav from '../components/ManagerSideNav';
 import './AdminAppointments.css';
@@ -19,6 +19,7 @@ function AdminAppointments() {
     const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
     const [currentDate, setCurrentDate] = useState(new Date());
     const [searchTerm, setSearchTerm] = useState('');
+    const [clientSearch, setClientSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [dateFilter, setDateFilter] = useState('');
     const [sortBy, setSortBy] = useState('date');
@@ -179,8 +180,9 @@ function AdminAppointments() {
 
     const handleEdit = (appointment) => {
         setSelectedAppointment(appointment);
+        const client = clients.find(c => c.name === appointment.clientName);
         setFormData({
-            clientId: clients.find(c => c.name === appointment.clientName)?.id || '',
+            clientId: client?.id || '',
             artistId: artists.find(a => a.name === appointment.artistName)?.id || '',
             serviceType: appointment.serviceType,
             date: appointment.date,
@@ -189,6 +191,7 @@ function AdminAppointments() {
             notes: appointment.notes,
             price: appointment.price
         });
+        setClientSearch(client?.name || '');
         openModal();
     };
 
@@ -201,18 +204,19 @@ function AdminAppointments() {
         }
     };
 
-    const handleAddNew = () => {
+    const handleAddNew = (prefilledDate = null) => {
         setSelectedAppointment(null);
         setFormData({
             clientId: '',
             artistId: '',
             serviceType: '',
-            date: '',
-            time: '',
+            date: prefilledDate || new Date().toISOString().split('T')[0],
+            time: '13:00',
             status: 'confirmed',
             notes: '',
-            price: 1
+            price: 0
         });
+        setClientSearch('');
         openModal();
     };
 
@@ -371,9 +375,16 @@ function AdminAppointments() {
                                     minHeight: '100px', 
                                     padding: '8px', 
                                     borderRadius: '8px',
-                                    backgroundColor: 'white'
-                                }}>
-                                    <div style={{ fontWeight: 'bold', marginBottom: '5px', color: isToday ? '#6366f1' : '#334155' }}>{day}</div>
+                                    backgroundColor: 'white',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }} 
+                                className="calendar-day-cell"
+                                onClick={() => handleAddNew(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`)}>
+                                    <div style={{ fontWeight: 'bold', marginBottom: '5px', color: isToday ? '#6366f1' : '#334155', display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>{day}</span>
+                                        <Plus size={12} style={{ opacity: 0.5 }} />
+                                    </div>
                                     {dayAppts.map(apt => (
                                         <div key={apt.id} style={{ 
                                             fontSize: '0.75rem', 
@@ -386,7 +397,11 @@ function AdminAppointments() {
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
                                             cursor: 'pointer'
-                                        }} title={`${apt.time || 'N/A'} - ${apt.clientName} (${apt.artistName})`} onClick={() => handleEdit(apt)}>
+                                        }} title={`${apt.time || 'N/A'} - ${apt.clientName} (${apt.artistName})`} 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEdit(apt);
+                                        }}>
                                             {(apt.time || '').slice(0,5)} {apt.clientName}
                                         </div>
                                     ))}
@@ -557,51 +572,112 @@ function AdminAppointments() {
                         </div>
                         <div className="modal-body">
                             <div className="form-row">
-                                <div className="form-group">
-                                    <label>Client (Walk-in Registration) *</label>
-                                    <select
-                                        value={formData.clientId}
-                                        onChange={(e) => setFormData({...formData, clientId: e.target.value})}
-                                        className="form-input"
-                                    >
-                                        <option value="">Select Client</option>
-                                        {clients.map(c => <option key={c.id} value={c.id}>{c.name} ({c.email})</option>)}
-                                    </select>
+                                <div className="form-group" style={{ position: 'relative' }}>
+                                    <label>Client Search *</label>
+                                    <div className="premium-search-box" style={{ maxWidth: '100%', marginBottom: '5px' }}>
+                                        <Search size={16} />
+                                        <input
+                                            type="text"
+                                            placeholder="Type client name or email..."
+                                            value={clientSearch}
+                                            onChange={(e) => setClientSearch(e.target.value)}
+                                        />
+                                    </div>
+                                    {clientSearch && !formData.clientId && (
+                                        <div className="glass-card" style={{ 
+                                            position: 'absolute', 
+                                            top: '100%', 
+                                            left: 0, 
+                                            right: 0, 
+                                            zIndex: 10, 
+                                            maxHeight: '200px', 
+                                            overflowY: 'auto', 
+                                            background: 'white', 
+                                            marginTop: '2px' 
+                                        }}>
+                                            {clients.filter(c => 
+                                                c.name.toLowerCase().includes(clientSearch.toLowerCase()) || 
+                                                c.email.toLowerCase().includes(clientSearch.toLowerCase())
+                                            ).map(c => (
+                                                <div 
+                                                    key={c.id} 
+                                                    style={{ padding: '10px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}
+                                                    onClick={() => {
+                                                        setFormData({ ...formData, clientId: c.id });
+                                                        setClientSearch(c.name);
+                                                    }}
+                                                    onMouseEnter={(e) => e.target.style.background = '#f8fafc'}
+                                                    onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                                                >
+                                                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{c.name}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{c.email}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {formData.clientId && (
+                                        <div style={{ fontSize: '0.8rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                                            <Check size={14} /> Selected: {clients.find(c => c.id === formData.clientId)?.name}
+                                            <button 
+                                                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', padding: 0, marginLeft: 'auto' }}
+                                                onClick={() => { setFormData({ ...formData, clientId: '' }); setClientSearch(''); }}
+                                            >
+                                                Clear
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="form-group">
                                     <label>Assign Artist *</label>
                                     <select
                                         value={formData.artistId}
                                         onChange={(e) => setFormData({...formData, artistId: e.target.value})}
-                                        className="form-input"
+                                        className="premium-select-v2"
+                                        style={{ width: '100%' }}
                                     >
                                         <option value="">Select Artist</option>
                                         {artists.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                                     </select>
                                 </div>
                             </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Service Type *</label>
-                                    <select
-                                        value={formData.serviceType}
-                                        onChange={(e) => setFormData({...formData, serviceType: e.target.value})}
-                                        className="form-input"
-                                    >
-                                        <option value="">Select Service</option>
-                                        <option value="Tattoo Session">Tattoo Session</option>
-                                        <option value="Consultation">Consultation</option>
-                                        <option value="Piercing">Piercing</option>
-                                        <option value="Touch-up">Touch-up</option>
-                                        <option value="Aftercare Check">Aftercare Check</option>
-                                    </select>
+                            
+                            <div className="form-group">
+                                <label>Quick Select Service Type *</label>
+                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                                    {['Tattoo Session', 'Consultation', 'Piercing', 'Touch-up'].map(service => (
+                                        <button
+                                            key={service}
+                                            className={`badge ${formData.serviceType === service ? 'status-confirmed' : ''}`}
+                                            style={{ cursor: 'pointer', border: '1px solid #e2e8f0', padding: '6px 12px' }}
+                                            onClick={() => setFormData({ ...formData, serviceType: service })}
+                                        >
+                                            {service}
+                                        </button>
+                                    ))}
                                 </div>
+                                <select
+                                    value={formData.serviceType}
+                                    onChange={(e) => setFormData({...formData, serviceType: e.target.value})}
+                                    className="premium-select-v2"
+                                    style={{ width: '100%' }}
+                                >
+                                    <option value="">Custom Service Type</option>
+                                    <option value="Tattoo Session">Tattoo Session</option>
+                                    <option value="Consultation">Consultation</option>
+                                    <option value="Piercing">Piercing</option>
+                                    <option value="Touch-up">Touch-up</option>
+                                    <option value="Aftercare Check">Aftercare Check</option>
+                                </select>
+                            </div>
+
+                            <div className="form-row">
                                 <div className="form-group">
                                     <label>Status *</label>
                                     <select 
                                         value={formData.status}
                                         onChange={(e) => setFormData({...formData, status: e.target.value})}
-                                        className="form-input"
+                                        className="premium-select-v2"
+                                        style={{ width: '100%' }}
                                     >
                                         <option value="confirmed">Confirmed</option>
                                         <option value="pending">Pending</option>
@@ -617,7 +693,8 @@ function AdminAppointments() {
                                         type="date"
                                         value={formData.date}
                                         onChange={(e) => setFormData({...formData, date: e.target.value})}
-                                        className="form-input"
+                                        className="premium-select-v2"
+                                        style={{ width: '100%', backgroundImage: 'none' }}
                                     />
                                 </div>
                                 <div className="form-group">
@@ -626,7 +703,8 @@ function AdminAppointments() {
                                         type="time"
                                         value={formData.time}
                                         onChange={(e) => setFormData({...formData, time: e.target.value})}
-                                        className="form-input"
+                                        className="premium-select-v2"
+                                        style={{ width: '100%', backgroundImage: 'none' }}
                                     />
                                 </div>
                             </div>
@@ -636,7 +714,8 @@ function AdminAppointments() {
                                     type="number"
                                     value={formData.price}
                                     onChange={(e) => setFormData({...formData, price: e.target.value})}
-                                    className="form-input"
+                                    className="premium-select-v2"
+                                    style={{ width: '100%', backgroundImage: 'none' }}
                                     placeholder="e.g. 35000"
                                 />
                             </div>
@@ -645,7 +724,8 @@ function AdminAppointments() {
                                 <textarea
                                     value={formData.notes}
                                     onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                                    className="form-input"
+                                    className="premium-select-v2"
+                                    style={{ width: '100%', height: 'auto', backgroundImage: 'none' }}
                                     rows="3"
                                 />
                                 <button type="button" className="btn btn-secondary" style={{marginTop: '5px', fontSize: '0.8rem', padding: '5px 10px'}} onClick={handleMultiSession}>
