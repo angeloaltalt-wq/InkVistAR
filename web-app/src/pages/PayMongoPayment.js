@@ -44,8 +44,9 @@ const PayMongoPayment = () => {
             }
         } catch (error) {
             console.error('Failed to create checkout session:', error);
+            const errorMsg = error.response?.data?.message || error.message || 'Failed to initialize payment.';
             setStatus('failed');
-            alert('Failed to initialize payment. Please try again.');
+            alert(`Error: ${errorMsg}\n\nPlease try again or contact support.`);
         }
     };
 

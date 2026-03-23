@@ -169,11 +169,11 @@ function CustomerBookings(){
                                                     )}
 
                                                         <button 
+                                                            className="billing-details-btn"
                                                             title="View Payment Details"
-                                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '4px' }}
                                                             onClick={() => handleViewDetails(a)}
                                                         >
-                                                            <Info size={16} />
+                                                            <Info size={16} /> Billing Details
                                                         </button>
                                                 </div>
                                             </td>

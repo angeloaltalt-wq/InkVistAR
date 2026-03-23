@@ -2173,6 +2173,7 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
           };
 
           try {
+            console.log(`[PayMongo] Creating session for Appt #${appointmentId}, Amount: ${sessionAmount}c, Type: ${paymentType || 'full'}`);
             const response = await fetch(`${PAYMONGO_API_BASE}/checkout_sessions`, {
               method: 'POST',
               headers: {
@@ -2184,8 +2185,12 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
             const data = await response.json();
 
             if (!response.ok) {
-              console.error('❌ PayMongo error:', data);
-              return res.status(502).json({ success: false, message: 'Failed to create checkout session', error: data });
+              console.error('❌ PayMongo API Error:', JSON.stringify(data, null, 2));
+              return res.status(502).json({ 
+                  success: false, 
+                  message: `PayMongo Error: ${data.errors?.[0]?.detail || 'Unknown error'}`,
+                  error: data 
+              });
             }
 
             const checkoutUrl = data?.data?.attributes?.checkout_url;
