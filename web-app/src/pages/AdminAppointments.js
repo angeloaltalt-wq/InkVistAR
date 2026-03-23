@@ -212,7 +212,7 @@ function AdminAppointments() {
             serviceType: '',
             date: prefilledDate || new Date().toISOString().split('T')[0],
             time: '13:00',
-            status: 'confirmed',
+            status: 'pending',
             notes: '',
             price: 0
         });
