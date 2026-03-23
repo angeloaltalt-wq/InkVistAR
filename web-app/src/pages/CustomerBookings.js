@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Axios from 'axios';
-import { Search, ChevronLeft, ChevronRight, Filter, CreditCard } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Filter, CreditCard, Eye, CheckCircle, Info } from 'lucide-react';
 import './PortalStyles.css';
 import { API_URL } from '../config';
 import CustomerSideNav from '../components/CustomerSideNav';
@@ -120,20 +120,37 @@ function CustomerBookings(){
                                                 {a.price > 0 ? `₱${Number(a.price).toLocaleString()}` : <span style={{color: '#9ca3af', fontStyle: 'italic'}}>Pending</span>}
                                             </td>
                                             <td>
-                                                {(a.status === 'confirmed' || a.status === 'completed') && a.payment_status !== 'paid' ? (
-                                                    <button 
-                                                        className="btn btn-primary" 
-                                                        style={{padding: '5px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px'}}
-                                                        onClick={() => handlePay(a)}
-                                                        disabled={!a.price || a.price <= 0}
-                                                    >
-                                                        <CreditCard size={14}/> Pay Now
-                                                    </button>
-                                                ) : a.payment_status === 'paid' ? (
-                                                    <span className="status-badge completed">Paid</span>
-                                                ) : (
-                                                    <span style={{color: '#9ca3af', fontSize: '0.9rem'}}>-</span>
-                                                )}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    {a.status === 'pending' && a.price > 0 && a.payment_status === 'unpaid' ? (
+                                                        <button 
+                                                            className="btn btn-primary" 
+                                                            style={{padding: '5px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px'}}
+                                                            onClick={() => handlePay(a)}
+                                                        >
+                                                            <CreditCard size={14}/> Pay Deposit
+                                                        </button>
+                                                    ) : a.payment_status === 'paid' ? (
+                                                        <span className="status-badge completed" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                                            <CheckCircle size={12}/> Paid
+                                                        </span>
+                                                    ) : a.payment_status === 'downpayment_paid' ? (
+                                                        <span className="status-badge confirmed" style={{ backgroundColor: '#eff6ff', color: '#1d4ed8', display: 'flex', alignItems: 'center', gap: '3px', border: '1px solid #bfdbfe' }}>
+                                                            <CheckCircle size={12}/> Deposit Paid
+                                                        </span>
+                                                    ) : (
+                                                        <span style={{color: '#9ca3af', fontSize: '0.9rem'}}>-</span>
+                                                    )}
+
+                                                    {a.payment_status !== 'unpaid' && (
+                                                        <button 
+                                                            title="View Payment Details"
+                                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '4px' }}
+                                                            onClick={() => alert(`Billing Summary for Appt #${a.id}:\nStatus: ${a.payment_status?.replace('_', ' ').toUpperCase()}\nTotal Price: ₱${a.price.toLocaleString()}`)}
+                                                        >
+                                                            <Info size={16} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}</tbody>

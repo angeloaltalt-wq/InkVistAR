@@ -38,7 +38,8 @@ import CustomerBookings from './pages/CustomerBookings';
 import CustomerGallery from './pages/CustomerGallery';
 import CustomerProfile from './pages/CustomerProfile';
 import CustomerBookingCreate from './pages/CustomerBookingCreate';
-import PaymentSimulation from './pages/PaymentSimulation';
+import PayMongoPayment from './pages/PayMongoPayment';
+import CustomerTransactions from './pages/CustomerTransactions';
 import BookingConfirmation from './pages/BookingConfirmation';
 import TryOn from './pages/TryOn';
 import AdminNotifications from './pages/AdminNotifications';
@@ -149,7 +150,8 @@ function App() {
           <Route path="/customer/gallery" element={<ProtectedRoute allowedRoles={['customer']}><CustomerGallery /></ProtectedRoute>} />
           <Route path="/customer/book" element={<ProtectedRoute allowedRoles={['customer']}><CustomerBookingCreate /></ProtectedRoute>} />
           <Route path="/customer/profile" element={<ProtectedRoute allowedRoles={['customer']}><CustomerProfile /></ProtectedRoute>} />
-          <Route path="/payment" element={<ProtectedRoute allowedRoles={['customer']}><PaymentSimulation /></ProtectedRoute>} />
+          <Route path="/customer/transactions" element={<ProtectedRoute allowedRoles={['customer']}><CustomerTransactions /></ProtectedRoute>} />
+          <Route path="/payment" element={<ProtectedRoute allowedRoles={['customer']}><PayMongoPayment /></ProtectedRoute>} />
           <Route path="/customer/try-on" element={<ProtectedRoute allowedRoles={['customer']}><TryOn /></ProtectedRoute>} />
           <Route path="/booking-confirmation" element={<ProtectedRoute allowedRoles={['customer']}><BookingConfirmation /></ProtectedRoute>} />
           <Route path="/admin/inventory" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><AdminInventory /></ProtectedRoute>} />

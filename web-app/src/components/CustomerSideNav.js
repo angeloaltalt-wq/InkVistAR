@@ -9,7 +9,8 @@ import {
     ChevronRight,
     LogOut,
     PlusCircle,
-    Sparkles
+    Sparkles,
+    Receipt
 } from 'lucide-react';
 import '../styles/CustomerSideNav.css';
 

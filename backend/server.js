@@ -2068,7 +2068,7 @@ app.put('/api/appointments/:id/details', (req, res) => {
 
 // Create a PayMongo Checkout Session
 app.post('/api/payments/create-checkout-session', async (req, res) => {
-  const { appointmentId, price: providedPrice } = req.body;
+  const { appointmentId, price: providedPrice, paymentType } = req.body; // paymentType: 'full' or 'deposit'
 
   if (!appointmentId) {
     return res.status(400).json({ success: false, message: 'appointmentId is required' });
@@ -2100,12 +2100,18 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
       const isLatePayment = (appointment.status === 'completed' || appointment.status === 'finished');
       const description = isLatePayment
         ? `Late payment for Appointment #${appointmentId}`
-        : `Booking payment for Appointment #${appointmentId}`;
+        : `${paymentType === 'deposit' ? 'Deposit' : 'Booking'} payment for Appointment #${appointmentId}`;
+      
       const itemName = isLatePayment
         ? `Tattoo Service - Balance payment (Appt #${appointmentId})`
-        : (appointment.design_title || 'Tattoo Service');
+        : (appointment.design_title || 'Tattoo Service') + (paymentType === 'deposit' ? ' (Deposit)' : '');
 
-      const amount = Math.round((priceNumber || 0) * 100); // centavos
+      let finalPrice = priceNumber || 0;
+      if (paymentType === 'deposit') {
+          finalPrice = Math.max(100, Math.round(finalPrice * 0.3)); // 30% deposit, min 100 pesos for PayMongo
+      }
+
+      const amount = Math.round(finalPrice * 100); // centavos
       if (!amount || amount <= 0) {
         return res.status(400).json({
           success: false,
@@ -2136,6 +2142,7 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
               customerId: String(appointment.customer_id),
               artistId: String(appointment.artist_id),
               mode: PAYMONGO_MODE,
+              paymentType: paymentType || 'full',
               isLatePayment: String(isLatePayment)
             },
             success_url: `${redirectBaseSuccess}?appointmentId=${appointmentId}`,
@@ -2234,16 +2241,20 @@ app.get('/api/appointments/:id/payment-status', async (req, res) => {
             console.log(`✅ Polling confirmed PAID for Appointment ${appointmentId}. Synchronizing database...`);
 
             // Update DB so future polls are faster
-            db.query("UPDATE appointments SET payment_status = 'paid' WHERE id = ?", [appointmentId], (updErr) => {
+            const paymentType = pmData?.data?.attributes?.metadata?.paymentType || 'full';
+            const newPaymentStatus = paymentType === 'deposit' ? 'downpayment_paid' : 'paid';
+            const newAptStatus = (appointment.status === 'pending' || appointment.status === 'confirmed') ? 'confirmed' : appointment.status;
+
+            db.query("UPDATE appointments SET payment_status = ?, status = ? WHERE id = ?", [newPaymentStatus, newAptStatus, appointmentId], (updErr) => {
               if (updErr) console.error(`❌ Failed to update appointments status to paid for ${appointmentId}:`, updErr.message);
-              else console.log(`💾 Appointment ${appointmentId} updated to 'paid' in DB.`);
+              else console.log(`💾 Appointment ${appointmentId} updated to '${newPaymentStatus}' in DB.`);
             });
 
             db.query("UPDATE payments SET status = 'paid' WHERE session_id = ?", [sessionId], (updErr) => {
               if (updErr) console.error(`❌ Failed to update payments record to paid for ${sessionId}:`, updErr.message);
             });
 
-            return res.json({ success: true, payment_status: 'paid' });
+            return res.json({ success: true, payment_status: newPaymentStatus });
           } else {
             console.log(`ℹ️ Polling result: Payment is still NOT detected as paid for Appt ${appointmentId}`);
           }
@@ -2327,23 +2338,25 @@ app.post('/api/payments/webhook', (req, res) => {
 
   // If paid, update appointment and notify
   if (status === 'paid' && appointmentId) {
-    db.query("UPDATE appointments SET payment_status = 'paid' WHERE id = ?", [appointmentId], (updateErr) => {
-      if (updateErr) {
-        console.error('❌ Error marking appointment paid:', updateErr.message);
-      } else {
-        console.log('✅ Appointment', appointmentId, 'marked as PAID');
-      }
-    });
-
-    db.query('SELECT customer_id, artist_id, status FROM appointments WHERE id = ?', [appointmentId], (fetchErr, rows) => {
+    const paymentType = metadata.paymentType || 'full';
+    const newPaymentStatus = paymentType === 'deposit' ? 'downpayment_paid' : 'paid';
+    
+    // Get current status first to determine new status
+    db.query('SELECT status, customer_id, artist_id FROM appointments WHERE id = ?', [appointmentId], (fetchErr, rows) => {
       if (!fetchErr && rows.length) {
         const appt = rows[0];
+        const newAptStatus = (appt.status === 'pending') ? 'confirmed' : appt.status;
 
-        // If it was confirmed, maybe we want to notify or change something, 
-        // but we leave 'status' alone as it might be 'in_progress' or 'completed' already.
-
-        createNotification(appt.customer_id, 'Payment Received', `Your payment for appointment #${appointmentId} is confirmed.`, 'payment_success', appointmentId);
-        createNotification(appt.artist_id, 'Payment Received', `Payment for appointment #${appointmentId} is confirmed.`, 'payment_success', appointmentId);
+        db.query("UPDATE appointments SET payment_status = ?, status = ? WHERE id = ?", [newPaymentStatus, newAptStatus, appointmentId], (updateErr) => {
+          if (updateErr) {
+            console.error('❌ Error marking appointment paid:', updateErr.message);
+          } else {
+            console.log('✅ Appointment', appointmentId, 'marked as', newPaymentStatus);
+            
+            createNotification(appt.customer_id, 'Payment Received', `Your ${paymentType === 'deposit' ? 'deposit' : 'payment'} for appointment #${appointmentId} is confirmed.`, 'payment_success', appointmentId);
+            createNotification(appt.artist_id, 'Payment Received', `Payment for appointment #${appointmentId} is confirmed.`, 'payment_success', appointmentId);
+          }
+        });
       }
     });
   }
@@ -2374,6 +2387,28 @@ app.get('/api/payments/status', (req, res) => {
     }
 
     res.json({ success: true, status: rows[0].status, amount: rows[0].amount, currency: rows[0].currency });
+  });
+});
+
+// Get Customer Transaction History
+app.get('/api/customer/:customerId/transactions', (req, res) => {
+  const { customerId } = req.params;
+  const query = `
+    SELECT 
+      p.id, p.amount, p.currency, p.status, p.created_at, p.session_id, p.paymongo_payment_id,
+      ap.design_title, ap.id as appointment_id
+    FROM payments p
+    JOIN appointments ap ON p.appointment_id = ap.id
+    WHERE ap.customer_id = ?
+    ORDER BY p.created_at DESC
+  `;
+  
+  db.query(query, [customerId], (err, results) => {
+    if (err) {
+      console.error('❌ Error fetching transactions:', err.message);
+      return res.status(500).json({ success: false, message: 'Database error' });
+    }
+    res.json({ success: true, transactions: results });
   });
 });
 
