@@ -4,6 +4,7 @@ import { MapPin, Mail, Clock, Bell, User } from 'lucide-react';
 import './Contact.css';
 import Navbar from '../components/Navbar';
 import ChatWidget from '../components/ChatWidget';
+import Footer from '../components/Footer';
 
 const Contact = () => {
   const navigate = useNavigate();
@@ -95,6 +96,7 @@ const Contact = () => {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
     <ChatWidget />
     </>

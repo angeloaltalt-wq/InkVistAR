@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import './Home.css'; // New CSS file
 import Navbar from '../components/Navbar';
-import ChatWidget from '../components/ChatWidget';
+import ChatWidget from '../components/ChatWidget';import Footer from '../components/Footer';
 
 function Home() {
     const navigate = useNavigate();
@@ -126,8 +126,9 @@ function Home() {
                 </div>
             </section>
 
+                <Footer />
+            </div>
             <ChatWidget />
-        </div>
         </>
     );
 }

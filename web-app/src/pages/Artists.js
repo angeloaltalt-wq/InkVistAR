@@ -5,6 +5,7 @@ import { API_URL } from '../config';
 import './Artists.css';
 import Navbar from '../components/Navbar';
 import ChatWidget from '../components/ChatWidget';
+import Footer from '../components/Footer';
 
 function Artists() {
     const navigate = useNavigate();
@@ -103,8 +104,9 @@ function Artists() {
                     )}
                 </div>
             </section>
+                <Footer />
+            </div>
             <ChatWidget />
-        </div>
         </>
     );
 }

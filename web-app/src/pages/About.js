@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Navbar from '../components/Navbar';
 import ChatWidget from '../components/ChatWidget';
+import Footer from '../components/Footer';
 import './Home.css'; // Reuse Home styles for consistency
 
 const About = () => {
@@ -55,8 +56,9 @@ const About = () => {
                 </div>
             </section>
 
+                <Footer />
+            </div>
             <ChatWidget />
-        </div>
         </>
     );
 };

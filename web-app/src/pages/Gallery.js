@@ -4,6 +4,7 @@ import { API_URL } from '../config';
 import './Gallery.css';
 import Navbar from '../components/Navbar';
 import ChatWidget from '../components/ChatWidget';
+import Footer from '../components/Footer';
 
 const Gallery = () => {
   const navigate = useNavigate();
@@ -228,8 +229,9 @@ const Gallery = () => {
         </div>
       )}
 
+        <Footer />
+      </div>
       <ChatWidget />
-    </div>
     </>
   );
 };
