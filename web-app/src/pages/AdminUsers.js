@@ -5,6 +5,7 @@ import AdminSideNav from '../components/AdminSideNav';
 import ManagerSideNav from '../components/ManagerSideNav';
 import './AdminUsers.css';
 import { API_URL } from '../config';
+import { Search, Filter, SlidersHorizontal, UserPlus } from 'lucide-react';
 
 function AdminUsers() {
     const navigate = useNavigate();
@@ -223,23 +224,26 @@ function AdminUsers() {
                 </div>
             </header>
 
-            <div className="filters-section">
-                <div className="search-box" style={{ maxWidth: '300px' }}>
+            <div className="premium-filter-bar">
+                <div className="premium-search-box">
+                    <Search size={18} className="text-muted" />
                     <input
                         type="text"
                         placeholder="Search by name, email, or phone..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="search-input"
                     />
                 </div>
 
-                <div className="filter-controls">
+                <div className="premium-filters-group">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600' }}>
+                        <Filter size={16} />
+                        <span>Filter by:</span>
+                    </div>
                     <select 
                         value={filterRole} 
                         onChange={(e) => setFilterRole(e.target.value)}
-                        className="select-input"
-                        style={{ maxWidth: '200px' }}
+                        className="premium-select-v2"
                     >
                         <option value="all">All Roles</option>
                         <option value="admin">Admin</option>
@@ -251,22 +255,24 @@ function AdminUsers() {
                     <select 
                         value={filterStatus} 
                         onChange={(e) => setFilterStatus(e.target.value)}
-                        className="select-input"
-                        style={{ maxWidth: '200px' }}
+                        className="premium-select-v2"
                     >
                         <option value="active">Active Users</option>
                         <option value="deleted">Deactivated Users</option>
                     </select>
 
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600', marginLeft: '0.5rem' }}>
+                        <SlidersHorizontal size={16} />
+                        <span>Sort:</span>
+                    </div>
                     <select 
                         value={sortBy} 
                         onChange={(e) => setSortBy(e.target.value)}
-                        className="select-input"
-                        style={{ maxWidth: '200px' }}
+                        className="premium-select-v2"
                     >
-                        <option value="name">Sort by Name</option>
-                        <option value="email">Sort by Email</option>
-                        <option value="role">Sort by Role</option>
+                        <option value="name">Name</option>
+                        <option value="email">Email</option>
+                        <option value="role">Role</option>
                     </select>
                 </div>
             </div>

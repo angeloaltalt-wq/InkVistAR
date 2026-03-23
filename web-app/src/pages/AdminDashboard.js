@@ -20,7 +20,8 @@ import {
     TrendingUp,
     ArrowUpRight,
     Activity,
-    CalendarDays
+    CalendarDays,
+    Filter
 } from 'lucide-react';
 import './AdminDashboard.css';
 import AdminSideNav from '../components/AdminSideNav';
@@ -362,43 +363,49 @@ function AdminDashboard() {
                                             <CalendarDays size={20} />
                                             <h2>Upcoming Appointments</h2>
                                         </div>
-                                        <div className="card-actions">
-                                            <div className="filter-group-v2">
-                                                <input 
-                                                    type="radio" 
-                                                    id="sort-upcoming" 
-                                                    name="sortType" 
-                                                    className="filter-radio-btn" 
-                                                    checked={sortType === 'upcoming'} 
-                                                    onChange={() => setSortType('upcoming')}
-                                                />
-                                                <label htmlFor="sort-upcoming" className="filter-label-v2">Upcoming</label>
-                                                
-                                                <input 
-                                                    type="radio" 
-                                                    id="sort-latest" 
-                                                    name="sortType" 
-                                                    className="filter-radio-btn" 
-                                                    checked={sortType === 'latest_added'} 
-                                                    onChange={() => setSortType('latest_added')}
-                                                />
-                                                <label htmlFor="sort-latest" className="filter-label-v2">Latest Added</label>
+                                        <div className="premium-filter-bar">
+                                            <div className="premium-filters-group">
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600' }}>
+                                                    <Filter size={16} />
+                                                    <span>Sort by:</span>
+                                                </div>
+                                                <div className="filter-group-v2">
+                                                    <input 
+                                                        type="radio" 
+                                                        id="sort-upcoming" 
+                                                        name="sortType" 
+                                                        className="filter-radio-btn" 
+                                                        checked={sortType === 'upcoming'} 
+                                                        onChange={() => setSortType('upcoming')}
+                                                    />
+                                                    <label htmlFor="sort-upcoming" className="filter-label-v2">Upcoming</label>
+                                                    
+                                                    <input 
+                                                        type="radio" 
+                                                        id="sort-latest" 
+                                                        name="sortType" 
+                                                        className="filter-radio-btn" 
+                                                        checked={sortType === 'latest_added'} 
+                                                        onChange={() => setSortType('latest_added')}
+                                                    />
+                                                    <label htmlFor="sort-latest" className="filter-label-v2">Latest Added</label>
+                                                </div>
+
+                                                <select 
+                                                    className="premium-select-v2" 
+                                                    value={statusFilter} 
+                                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                                >
+                                                    <option value="all">All Status</option>
+                                                    <option value="pending">Pending</option>
+                                                    <option value="confirmed">Confirmed</option>
+                                                    <option value="completed">Completed</option>
+                                                    <option value="cancelled">Cancelled</option>
+                                                </select>
                                             </div>
 
-                                            <select 
-                                                className="status-select-v2" 
-                                                value={statusFilter} 
-                                                onChange={(e) => setStatusFilter(e.target.value)}
-                                            >
-                                                <option value="all">All Status</option>
-                                                <option value="pending">Pending</option>
-                                                <option value="confirmed">Confirmed</option>
-                                                <option value="completed">Completed</option>
-                                                <option value="cancelled">Cancelled</option>
-                                            </select>
-
-                                            <div className="search-box-v2">
-                                                <Search size={16} />
+                                            <div className="premium-search-box">
+                                                <Search size={16} className="text-muted" />
                                                 <input 
                                                     type="text" 
                                                     placeholder="Filter by name..." 

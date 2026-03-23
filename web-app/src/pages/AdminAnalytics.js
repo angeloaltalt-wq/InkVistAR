@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { DollarSign, Calendar, Users, Download, Package, Printer } from 'lucide-react';
+import { DollarSign, Calendar, Users, Download, Package, Printer, Filter } from 'lucide-react';
 import AdminSideNav from '../components/AdminSideNav';
 import './AdminAnalytics.css';
 import { API_URL } from '../config';
@@ -76,11 +76,20 @@ function AdminAnalytics() {
                     <button className="btn btn-primary" onClick={handleExport} style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
                         <Download size={18} /> Export Report
                     </button>
+                </div>
+            </header>
+
+            <div className="premium-filter-bar" style={{ margin: '20px 2rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600' }}>
+                        <Filter size={16} />
+                        <span>Time Range:</span>
+                    </div>
                     <select 
                         value={dateRange}
                         onChange={(e) => setDateRange(e.target.value)}
-                        className="select-input"
-                        style={{ maxWidth: '200px' }}
+                        className="premium-select-v2"
+                        style={{ minWidth: '180px' }}
                     >
                         <option value="week">Last Week</option>
                         <option value="month">This Month</option>
@@ -88,7 +97,7 @@ function AdminAnalytics() {
                         <option value="year">This Year</option>
                     </select>
                 </div>
-            </header>
+            </div>
 
             {loading ? (
                 <div className="no-data" style={{padding: '4rem'}}>Loading analytics...</div>

@@ -139,37 +139,34 @@ function AdminNotifications() {
 
                 <main className="dashboard-main-content">
                     <div className="glass-card table-card-v2 full-width">
-                        <div className="card-header-v2">
-                            <div className="header-title" style={{ gap: '15px' }}>
-                                <div 
-                                    className={`filter-chip ${activeFilter === 'all' ? 'active' : ''}`} 
-                                    onClick={() => setActiveFilter('all')}
-                                >
-                                    All Notifications
-                                </div>
-                                <div 
-                                    className={`filter-chip ${activeFilter === 'inventory' ? 'active' : ''}`} 
-                                    onClick={() => setActiveFilter('inventory')}
-                                >
-                                    Inventory
-                                </div>
-                                <div 
-                                    className={`filter-chip ${activeFilter === 'appointment' ? 'active' : ''}`} 
-                                    onClick={() => setActiveFilter('appointment')}
-                                >
-                                    Booking
-                                </div>
+                        <div className="premium-filter-bar" style={{ margin: '20px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <div className="premium-search-box" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                                <Search size={18} style={{ color: 'rgba(255,255,255,0.4)' }} />
+                                <input
+                                    type="text"
+                                    placeholder="Search notifications..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    style={{ color: 'white' }}
+                                />
                             </div>
-                            <div className="card-actions">
-                                <div className="search-box-v2">
-                                    <Search size={16} />
-                                    <input 
-                                        type="text" 
-                                        placeholder="Search notifications..." 
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                    />
+
+                            <div className="premium-filters-group">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', fontWeight: '600' }}>
+                                    <Filter size={16} />
+                                    <span>Type:</span>
                                 </div>
+                                <select 
+                                    value={activeFilter} 
+                                    onChange={(e) => setActiveFilter(e.target.value)}
+                                    className="premium-select-v2"
+                                    style={{ background: 'rgba(255,255,255,0.1)', color: 'white', borderColor: 'rgba(255,255,255,0.2)' }}
+                                >
+                                    <option value="all">All Notifications</option>
+                                    <option value="inventory">Inventory Alerts</option>
+                                    <option value="appointment">Booking Requests</option>
+                                    <option value="system">System Updates</option>
+                                </select>
                             </div>
                         </div>
 

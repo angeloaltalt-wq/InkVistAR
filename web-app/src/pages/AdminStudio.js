@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
-import { MapPin, Clock, Users, Power, Trash2, Edit2, Plus, X } from 'lucide-react';
+import { MapPin, Clock, Users, Power, Trash2, Edit2, Plus, X, Search, Filter, SlidersHorizontal } from 'lucide-react';
 import AdminSideNav from '../components/AdminSideNav';
 import { API_URL } from '../config';
 import './AdminUsers.css'; // Reusing styles
@@ -18,6 +18,7 @@ function AdminStudio() {
     });
     const [editingId, setEditingId] = useState(null);
     const [filterStatus, setFilterStatus] = useState('active');
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         fetchBranches();
@@ -118,6 +119,11 @@ function AdminStudio() {
         openModal();
     };
 
+    const filteredBranches = branches.filter(b => 
+        b.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        b.address.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
         <div className="admin-page-with-sidenav">
             <AdminSideNav />
@@ -127,11 +133,40 @@ function AdminStudio() {
                     <button className="btn btn-primary" onClick={openAddModal}><Plus size={18} style={{marginRight:'5px'}}/> Add Branch</button>
                 </header>
 
-                <div className="filters-section" style={{margin: '0 2rem 1rem 2rem', padding: '1rem'}}>
-                    <select className="select-input" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ maxWidth: '200px' }}>
-                        <option value="active">Active Branches</option>
-                        <option value="deleted">Deleted Branches</option>
-                    </select>
+                <div className="premium-filter-bar" style={{ margin: '0 2rem 1.5rem 2rem' }}>
+                    <div className="premium-search-box">
+                        <Search size={18} className="text-muted" />
+                        <input
+                            type="text"
+                            placeholder="Search branches by name or address..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="premium-filters-group">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600' }}>
+                            <Filter size={16} />
+                            <span>Status:</span>
+                        </div>
+                        <select 
+                            className="premium-select-v2" 
+                            value={filterStatus} 
+                            onChange={(e) => setFilterStatus(e.target.value)} 
+                        >
+                            <option value="active">Active Branches</option>
+                            <option value="deleted">Deleted Branches</option>
+                        </select>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600', marginLeft: '0.5rem' }}>
+                            <SlidersHorizontal size={16} />
+                            <span>Sort:</span>
+                        </div>
+                        <select className="premium-select-v2">
+                            <option value="name">Name</option>
+                            <option value="capacity">Capacity</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div className="stats-row">
@@ -162,7 +197,7 @@ function AdminStudio() {
                                     <tbody>
                                         {loading ? (
                                             <tr><td colSpan="6" className="no-data" style={{textAlign: 'center', padding: '2rem'}}>Loading branches...</td></tr>
-                                        ) : branches && branches.length > 0 ? branches.map((branch) => {
+                                        ) : filteredBranches && filteredBranches.length > 0 ? filteredBranches.map((branch) => {
                                             if (!branch) return null;
                                             const capacity = Number(branch.capacity) || 1;
                                             const occupancy = Number(branch.current_occupancy) || 0;

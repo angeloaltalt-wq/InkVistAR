@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
-import { Plus, Download, FileText, Settings, CreditCard, DollarSign, CheckCircle, Printer, X, Trash2, Edit } from 'lucide-react';
+import { Plus, Download, FileText, Settings, CreditCard, DollarSign, CheckCircle, Printer, X, Trash2, Edit, Search, Filter, SlidersHorizontal } from 'lucide-react';
 import AdminSideNav from '../components/AdminSideNav';
 import './AdminUsers.css';
 import './AdminSettings.css'; // Reusing form styles
@@ -11,6 +11,8 @@ function AdminBilling() {
     const [activeTab, setActiveTab] = useState('invoices');
     const [invoices, setInvoices] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
 
     const [config, setConfig] = useState({
         baseRate: 150,
@@ -143,9 +145,16 @@ function AdminBilling() {
         }
     };
 
+    const filteredInvoices = invoices.filter(inv => {
+        const matchesSearch = inv.client_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                              inv.id.toString().includes(searchTerm);
+        const matchesStatus = statusFilter === 'all' || inv.status.toLowerCase() === statusFilter.toLowerCase();
+        return matchesSearch && matchesStatus;
+    });
+
     // Pagination logic
-    const totalPages = Math.ceil(invoices.length / itemsPerPage);
-    const paginatedInvoices = invoices.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
+    const paginatedInvoices = filteredInvoices.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     return (
         <div className="admin-page-with-sidenav">
@@ -180,10 +189,46 @@ function AdminBilling() {
                             </div>
                         </div>
 
-                        <div style={{padding: '0 2rem', marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end'}}>
-                             <button className="btn btn-primary" onClick={openModal}>
-                                <Plus size={18} style={{marginRight: '5px'}}/> Create Invoice
-                            </button>
+                        <div className="premium-filter-bar">
+                            <div className="premium-search-box">
+                                <Search size={18} className="text-muted" />
+                                <input
+                                    type="text"
+                                    placeholder="Search invoices by client or ID..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="premium-filters-group">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600' }}>
+                                    <Filter size={16} />
+                                    <span>Status:</span>
+                                </div>
+                                <select 
+                                    value={statusFilter} 
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="premium-select-v2"
+                                >
+                                    <option value="all">All Status</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="paid">Paid</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600', marginLeft: '0.5rem' }}>
+                                    <SlidersHorizontal size={16} />
+                                    <span>Sort:</span>
+                                </div>
+                                <select className="premium-select-v2">
+                                    <option value="date">Date</option>
+                                    <option value="amount">Amount</option>
+                                </select>
+
+                                <button className="btn btn-primary" onClick={openModal} style={{ marginLeft: '1rem' }}>
+                                    <Plus size={18} style={{ marginRight: '5px' }} /> Create Invoice
+                                </button>
+                            </div>
                         </div>
 
                         <div className="table-card">
@@ -236,7 +281,7 @@ function AdminBilling() {
                         </div>
 
                         {/* Pagination Controls */}
-                        {invoices.length > 0 && (
+                        {filteredInvoices.length > 0 && (
                             <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <label>Items per page:</label>
@@ -248,7 +293,7 @@ function AdminBilling() {
                                     </select>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                    <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Page {currentPage} of {totalPages} ({invoices.length} items)</span>
+                                    <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Page {currentPage} of {totalPages} ({filteredInvoices.length} items)</span>
                                     <button className="btn btn-secondary" style={{ padding: '5px 15px' }} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Previous</button>
                                     <button className="btn btn-secondary" style={{ padding: '5px 15px' }} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next</button>
                                 </div>

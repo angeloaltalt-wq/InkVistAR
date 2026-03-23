@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Package, History, ArrowUpCircle, ArrowDownCircle, X, RotateCcw, Printer, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, Package, History, ArrowUpCircle, ArrowDownCircle, X, RotateCcw, Printer, Download, Search, Filter, SlidersHorizontal } from 'lucide-react';
 import AdminSideNav from '../components/AdminSideNav';
 import './AdminInventory.css';
 import ManagerSideNav from '../components/ManagerSideNav';
@@ -363,23 +363,26 @@ function AdminInventory() {
                 </div>
             </header>
 
-            <div className="filters-section">
-                <div className="search-box" style={{ maxWidth: '300px' }}>
+            <div className="premium-filter-bar">
+                <div className="premium-search-box">
+                    <Search size={18} className="text-muted" />
                     <input
                         type="text"
                         placeholder="Search items or suppliers..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="search-input"
                     />
                 </div>
 
-                <div className="filter-controls">
+                <div className="premium-filters-group">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600' }}>
+                        <Filter size={16} />
+                        <span>Filter by:</span>
+                    </div>
                     <select 
                         value={itemStatusFilter}
                         onChange={(e) => setItemStatusFilter(e.target.value)}
-                        className="select-input"
-                        style={{ maxWidth: '200px' }}
+                        className="premium-select-v2"
                     >
                         <option value="active">Active Items</option>
                         <option value="deleted">Deleted Items</option>
@@ -388,8 +391,7 @@ function AdminInventory() {
                     <select 
                         value={categoryFilter}
                         onChange={(e) => setCategoryFilter(e.target.value)}
-                        className="select-input"
-                        style={{ maxWidth: '200px' }}
+                        className="premium-select-v2"
                     >
                         <option value="all">All Categories</option>
                         <option value="ink">Ink</option>
@@ -402,8 +404,7 @@ function AdminInventory() {
                     <select
                         value={stockStatusFilter}
                         onChange={(e) => setStockStatusFilter(e.target.value)}
-                        className="select-input"
-                        style={{ maxWidth: '200px' }}
+                        className="premium-select-v2"
                     >
                         <option value="all">All Stock Levels</option>
                         <option value="out_of_stock">Out of Stock</option>
@@ -412,15 +413,18 @@ function AdminInventory() {
                         <option value="overstock">Overstock</option>
                     </select>
 
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600', marginLeft: '0.5rem' }}>
+                        <SlidersHorizontal size={16} />
+                        <span>Sort:</span>
+                    </div>
                     <select 
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value)}
-                        className="select-input"
-                        style={{ maxWidth: '200px' }}
+                        className="premium-select-v2"
                     >
-                        <option value="name">Sort by Name</option>
-                        <option value="stock">Sort by Stock</option>
-                        <option value="category">Sort by Category</option>
+                        <option value="name">Name</option>
+                        <option value="stock">Stock Level</option>
+                        <option value="category">Category</option>
                     </select>
                 </div>
             </div>

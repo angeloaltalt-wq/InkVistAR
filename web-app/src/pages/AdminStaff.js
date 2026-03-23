@@ -3,7 +3,8 @@ import Axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
     User, Mail, Phone, Calendar, Image, DollarSign, 
-    BarChart3, Clock, Trash2, X, Save, Shield, Briefcase 
+    BarChart3, Clock, Trash2, X, Save, Shield, Briefcase, 
+    Search, Filter, SlidersHorizontal 
 } from 'lucide-react';
 import AdminSideNav from '../components/AdminSideNav';
 import ManagerSideNav from '../components/ManagerSideNav';
@@ -362,28 +363,43 @@ function AdminStaff() {
                 <h1>Staff Management</h1>
             </header>
 
-            <div className="filters-section">
-                <div className="search-box" style={{ maxWidth: '300px' }}>
+            <div className="premium-filter-bar">
+                <div className="premium-search-box">
+                    <Search size={18} className="text-muted" />
                     <input
                         type="text"
-                        placeholder="Search staff..."
+                        placeholder="Search staff by name or email..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="search-input"
                     />
                 </div>
 
-                <div className="filter-controls">
+                <div className="premium-filters-group">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600' }}>
+                        <Filter size={16} />
+                        <span>Filter by:</span>
+                    </div>
                     <select 
                         value={roleFilter} 
                         onChange={(e) => setRoleFilter(e.target.value)}
-                        className="select-input"
-                        style={{ maxWidth: '200px' }}
+                        className="premium-select-v2"
                     >
                         <option value="all">All Roles</option>
                         <option value="artist">Artist</option>
                         <option value="manager">Manager</option>
                         <option value="admin">Admin</option>
+                    </select>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600', marginLeft: '0.5rem' }}>
+                        <SlidersHorizontal size={16} />
+                        <span>Sort:</span>
+                    </div>
+                    <select 
+                        className="premium-select-v2"
+                        defaultValue="name"
+                    >
+                        <option value="name">Name</option>
+                        <option value="email">Email</option>
                     </select>
                 </div>
             </div>

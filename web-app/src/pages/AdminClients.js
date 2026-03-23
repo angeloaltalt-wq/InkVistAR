@@ -3,7 +3,7 @@ import Axios from 'axios';
 import AdminSideNav from '../components/AdminSideNav';
 import { API_URL } from '../config';
 import './AdminUsers.css';
-import { User, Calendar, FileText, Edit2, Trash2, Save, X, RotateCcw } from 'lucide-react';
+import { User, Calendar, FileText, Edit2, Trash2, Save, X, RotateCcw, Search, Filter, SlidersHorizontal } from 'lucide-react';
 
 function AdminClients() {
     const [clients, setClients] = useState([]);
@@ -150,24 +150,37 @@ function AdminClients() {
                     <h1>Client Management</h1>
                 </header>
 
-                <div className="filters-section">
-                    <div className="search-box" style={{ maxWidth: '300px' }}>
+                <div className="premium-filter-bar">
+                    <div className="premium-search-box">
+                        <Search size={18} className="text-muted" />
                         <input
                             type="text"
                             placeholder="Search clients..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="search-input"
                         />
                     </div>
-                    <div className="filter-controls">
+                    <div className="premium-filters-group">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600' }}>
+                            <Filter size={16} />
+                            <span>Status:</span>
+                        </div>
                         <select 
                             value={filterStatus} 
                             onChange={(e) => setFilterStatus(e.target.value)}
-                            className="select-input"
+                            className="premium-select-v2"
                         >
                             <option value="active">Active Clients</option>
                             <option value="deleted">Deactivated Clients</option>
+                        </select>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600', marginLeft: '0.5rem' }}>
+                            <SlidersHorizontal size={16} />
+                            <span>Sort:</span>
+                        </div>
+                        <select className="premium-select-v2">
+                            <option value="name">Name</option>
+                            <option value="join_date">Join Date</option>
                         </select>
                     </div>
                 </div>

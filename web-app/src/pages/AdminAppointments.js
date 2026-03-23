@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Calendar, List, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, List, ChevronLeft, ChevronRight, Search, Filter, SlidersHorizontal } from 'lucide-react';
 import AdminSideNav from '../components/AdminSideNav';
 import ManagerSideNav from '../components/ManagerSideNav';
 import './AdminAppointments.css';
@@ -393,23 +393,26 @@ function AdminAppointments() {
                 </div>
             ) : (
                 <>
-                    <div className="filters-section">
-                        <div className="search-box" style={{ maxWidth: '300px' }}>
+                    <div className="premium-filter-bar">
+                        <div className="premium-search-box">
+                            <Search size={18} className="text-muted" />
                             <input
                                 type="text"
                                 placeholder="Search appointments..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="search-input"
                             />
                         </div>
 
-                        <div className="filter-controls">
+                        <div className="premium-filters-group">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600' }}>
+                                <Filter size={16} />
+                                <span>Filter by:</span>
+                            </div>
                             <select 
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
-                                className="select-input"
-                                style={{ maxWidth: '200px' }}
+                                className="premium-select-v2"
                             >
                                 <option value="all">All Status</option>
                                 <option value="confirmed">Confirmed</option>
@@ -423,20 +426,23 @@ function AdminAppointments() {
                                 type="date"
                                 value={dateFilter}
                                 onChange={(e) => setDateFilter(e.target.value)}
-                                className="input-date"
-                                style={{ maxWidth: '200px' }}
+                                className="premium-select-v2"
+                                style={{ paddingRight: '1rem', backgroundImage: 'none' }}
                             />
 
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600', marginLeft: '0.5rem' }}>
+                                <SlidersHorizontal size={16} />
+                                <span>Sort:</span>
+                            </div>
                             <select 
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value)}
-                                className="select-input"
-                                style={{ maxWidth: '200px' }}
+                                className="premium-select-v2"
                             >
-                                <option value="date">Sort by Date</option>
-                                <option value="client">Sort by Client</option>
-                                <option value="artist">Sort by Artist</option>
-                                <option value="status">Sort by Status</option>
+                                <option value="date">Date</option>
+                                <option value="client">Client</option>
+                                <option value="artist">Artist</option>
+                                <option value="status">Status</option>
                             </select>
                         </div>
                     </div>
