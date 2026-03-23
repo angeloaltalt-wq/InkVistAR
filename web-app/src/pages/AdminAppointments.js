@@ -39,7 +39,7 @@ function AdminAppointments() {
         time: '',
         status: 'confirmed',
         notes: '',
-        price: 1
+        price: 0
     });
 
     // Modal animation handlers
@@ -244,8 +244,8 @@ function AdminAppointments() {
         let priceInput = formData.price ? String(formData.price).replace(/[^0-9.]/g, '') : '0';
         let priceValue = parseFloat(priceInput);
 
-        // Enforce minimum price of 1 if 0 or empty is provided to prevent payment errors
-        const finalPrice = (!priceValue || priceValue <= 0) ? 1 : priceValue;
+        // Accept 0 or positive values; 1-peso forced minimum is removed as per request for free consultations
+        const finalPrice = (!priceValue || priceValue < 0) ? 0 : priceValue;
 
         try {
             const payload = {
@@ -588,14 +588,19 @@ function AdminAppointments() {
                                                 <td>₱{Number(appointment.price).toLocaleString()}</td>
                                                 <td className="actions-cell">
                                                     {appointment.status === 'pending' && (
-                                                        <>
-                                                            <button className="action-btn view-btn" style={{backgroundColor: '#10b981', marginRight: '5px'}} onClick={() => handleStatusUpdate(appointment.id, 'confirmed')}>
-                                                                Approve
-                                                            </button>
-                                                            <button className="action-btn delete-btn" style={{marginRight: '5px'}} onClick={() => handleStatusUpdate(appointment.id, 'cancelled')}>
-                                                                Reject
-                                                            </button>
-                                                        </>
+                                                        <button className="action-btn delete-btn" style={{marginRight: '5px'}} onClick={() => handleStatusUpdate(appointment.id, 'cancelled')}>
+                                                            Reject
+                                                        </button>
+                                                    )}
+                                                    {appointment.serviceType === 'Consultation' && appointment.status !== 'completed' && appointment.status !== 'cancelled' && (
+                                                        <button 
+                                                            className="action-btn view-btn" 
+                                                            style={{backgroundColor: '#8b5cf6', marginRight: '5px'}}
+                                                            onClick={() => handleStatusUpdate(appointment.id, 'completed')}
+                                                            title="Mark Consultation as Done"
+                                                        >
+                                                            <Check size={14} /> Done
+                                                        </button>
                                                     )}
                                                     <button className="action-btn edit-btn" onClick={() => handleEdit(appointment)}>
                                                         Edit
