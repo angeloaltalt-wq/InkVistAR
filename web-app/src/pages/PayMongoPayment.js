@@ -4,21 +4,22 @@ import axios from 'axios';
 import { API_URL } from '../config';
 
 const PayMongoPayment = () => {
-    const [status, setStatus] = useState('selection'); // selection, initializing, ready, processing, failed
-    const [paymentType, setPaymentType] = useState('deposit');
-    const [checkoutUrl, setCheckoutUrl] = useState(null);
-    const navigate = useNavigate();
     const location = useLocation();
-    const { appointmentId, price, type } = location.state || { appointmentId: null, price: 0, type: null };
+    const navigate = useNavigate();
+    const stateData = location.state || { appointmentId: null, price: 0, type: null, remainingBalance: 0 };
+    const { appointmentId, price, type } = stateData;
+
+    const [status, setStatus] = useState(type ? 'initializing' : 'selection'); // selection, initializing, ready, processing, failed
+    const [paymentType, setPaymentType] = useState(type || 'deposit');
+    const [checkoutUrl, setCheckoutUrl] = useState(null);
 
     const depositPrice = Math.max(100, Math.round(price * 0.3));
 
     useEffect(() => {
-        if (type === 'balance') {
-            setPaymentType('balance');
-            initializeSession('balance');
+        if (type) {
+            initializeSession(type);
         }
-    }, [type]);
+    }, [type, appointmentId]);
 
     const initializeSession = async (overrideType) => {
         const finalType = (typeof overrideType === 'string') ? overrideType : paymentType;

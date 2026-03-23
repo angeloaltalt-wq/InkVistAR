@@ -252,7 +252,8 @@ function CustomerBookings(){
                                         style={{ width: '100%', marginTop: '20px', padding: '12px', borderRadius: '10px', backgroundColor: '#3b82f6', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}
                                         onClick={() => {
                                             setIsModalOpen(false);
-                                            handlePay(selectedApt, selectedApt.payment_status === 'downpayment_paid' ? 'balance' : 'deposit');
+                                            const hasPaidAny = modalTransactions.some(t => t.status === 'paid');
+                                            handlePay(selectedApt, hasPaidAny ? 'balance' : 'deposit');
                                         }}
                                     >
                                         <CreditCard size={18} /> Pay {selectedApt.payment_status === 'downpayment_paid' ? 'Remaining Balance' : 'Deposit Now'}
