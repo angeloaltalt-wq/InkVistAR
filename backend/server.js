@@ -2081,8 +2081,16 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
   }
 
   try {
-    // 1) Pull appointment to get authoritative price
-    db.query('SELECT id, price, customer_id, artist_id, status, design_title FROM appointments WHERE id = ? AND is_deleted = 0', [appointmentId], async (err, results) => {
+    // 1) Pull appointment to get authoritative price AND total already paid
+    const checkoutQuery = `
+      SELECT 
+        ap.id, ap.price, ap.customer_id, ap.artist_id, ap.status, ap.design_title,
+        (SELECT COALESCE(SUM(amount), 0) FROM payments p WHERE p.appointment_id = ap.id AND p.status = 'paid') as total_paid_centavos
+      FROM appointments ap
+      WHERE ap.id = ? AND ap.is_deleted = 0
+    `;
+
+    db.query(checkoutQuery, [appointmentId], async (err, results) => {
       if (err) {
         console.error('❌ DB error loading appointment for checkout:', err.message);
         return res.status(500).json({ success: false, message: 'Database error' });
@@ -2093,7 +2101,6 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
       }
 
       const appointment = results[0];
-      // Prefer authoritative DB price; fall back to provided price if DB missing
       let priceNumber = Number(appointment.price);
       if ((!priceNumber || priceNumber <= 0) && providedPrice) {
         priceNumber = Number(providedPrice);
@@ -2108,30 +2115,21 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
         ? `Tattoo Service - Balance payment (Appt #${appointmentId})`
         : (appointment.design_title || 'Tattoo Service') + (paymentType === 'deposit' ? ' (Deposit)' : '');
 
-      let finalPrice = priceNumber || 0;
       if (paymentType === 'deposit') {
-          finalPrice = Math.max(100, Math.round(finalPrice * 0.3)); // 30% deposit, min 100 pesos for PayMongo
-          proceedWithSession(Math.round(finalPrice * 100), itemName, description);
+          const depositPesos = Math.max(100, Math.round(priceNumber * 0.3));
+          proceedWithSession(Math.round(depositPesos * 100), itemName, description);
       } else if (paymentType === 'balance') {
-          // Calculate remaining balance by checking previous payments
-          db.query('SELECT SUM(amount) as totalPaid FROM payments WHERE appointment_id = ? AND status = "paid"', [appointmentId], (sumErr, sumResults) => {
-              if (sumErr) {
-                  console.error('❌ Error calculating balance:', sumErr.message);
-                  return res.status(500).json({ success: false, message: 'Balance calculation error' });
-              }
-              const totalPaidCentavos = sumResults[0].totalPaid || 0;
-              const totalAmountCentavos = Math.round(priceNumber * 100);
-              const remainingCentavos = totalAmountCentavos - totalPaidCentavos;
-              
-              if (remainingCentavos <= 0) {
-                  return res.status(400).json({ success: false, message: 'This appointment is already fully paid.' });
-              }
+          const totalPaidCentavos = Number(appointment.total_paid_centavos) || 0;
+          const totalAmountCentavos = Math.round(priceNumber * 100);
+          const remainingCentavos = totalAmountCentavos - totalPaidCentavos;
+          
+          if (remainingCentavos <= 0) {
+              return res.status(400).json({ success: false, message: 'This appointment is already fully paid.' });
+          }
 
-              // Proceed with PayMongo session for the remaining amount
-              proceedWithSession(remainingCentavos, 'Balance Payment', `Final balance payment for Appointment #${appointmentId}`);
-          });
+          proceedWithSession(remainingCentavos, 'Balance Payment', `Final balance payment for Appointment #${appointmentId}`);
       } else {
-          proceedWithSession(Math.round(finalPrice * 100), itemName, description);
+          proceedWithSession(Math.round(priceNumber * 100), itemName, description);
       }
 
       async function proceedWithSession(sessionAmount, sessionName, sessionDesc) {
@@ -3088,7 +3086,8 @@ app.get('/api/admin/appointments', (req, res) => {
       c.name as client_name,
       c.email as client_email,
       a.name as artist_name,
-      ar.hourly_rate
+      ar.hourly_rate,
+      (SELECT COALESCE(SUM(amount), 0) FROM payments p WHERE p.appointment_id = ap.id AND p.status = 'paid') / 100 as total_paid
     FROM appointments ap
     JOIN users c ON ap.customer_id = c.id
     JOIN users a ON ap.artist_id = a.id

@@ -89,7 +89,8 @@ function AdminAppointments() {
                     time: apt.start_time,
                     status: apt.status,
                     notes: apt.notes,
-                    price: apt.price || 0
+                    price: apt.price || 0,
+                    totalPaid: apt.total_paid || 0
                 }));
                 setAppointments(mappedAppointments);
                 setFilteredAppointments(mappedAppointments);
@@ -564,6 +565,7 @@ function AdminAppointments() {
                                         <th>Date</th>
                                         <th>Time</th>
                                         <th>Status</th>
+                                        <th>Payment</th>
                                         <th>Price</th>
                                         <th>Actions</th>
                                     </tr>
@@ -584,6 +586,19 @@ function AdminAppointments() {
                                                     <span className={`badge status-${getStatusColor(appointment.status || 'pending')}`}>
                                                         {appointment.status}
                                                     </span>
+                                                </td>
+                                                <td>
+                                                    {appointment.price > 0 ? (
+                                                        appointment.totalPaid >= appointment.price ? (
+                                                            <span className="badge status-confirmed" style={{ backgroundColor: '#ecfdf5', color: '#059669', border: '1px solid #10b981' }}>Fully Paid</span>
+                                                        ) : appointment.totalPaid > 0 ? (
+                                                            <span className="badge" style={{ backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #3b82f6' }}>Balance: ₱{(appointment.price - appointment.totalPaid).toLocaleString()}</span>
+                                                        ) : (
+                                                            <span className="badge" style={{ backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #ef4444' }}>Unpaid</span>
+                                                        )
+                                                    ) : (
+                                                        <span className="badge" style={{ backgroundColor: '#f9fafb', color: '#6b7280', border: '1px solid #e5e7eb' }}>No Charge</span>
+                                                    )}
                                                 </td>
                                                 <td>₱{Number(appointment.price).toLocaleString()}</td>
                                                 <td className="actions-cell">
@@ -638,8 +653,25 @@ function AdminAppointments() {
             {appointmentModal.mounted && (
                 <div className={`modal-overlay ${appointmentModal.visible ? 'open' : ''}`} onClick={closeModal}>
                     <div className="modal-content" style={{ maxWidth: '800px', width: '95%', overflowX: 'hidden', boxSizing: 'border-box' }} onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h2>{selectedAppointment ? 'Edit Appointment' : 'New Appointment'}</h2>
+                        <div className="modal-header" style={{ paddingBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                                <h2 style={{ margin: 0 }}>{selectedAppointment ? `Edit Appointment #${selectedAppointment.id}` : 'New Appointment'}</h2>
+                                {selectedAppointment && (
+                                    <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                        <span className={`badge status-${getStatusColor(selectedAppointment.status)}`}>{selectedAppointment.status}</span>
+                                        {selectedAppointment.price > 0 && (
+                                            <span className="badge" style={{ 
+                                                backgroundColor: selectedAppointment.totalPaid >= selectedAppointment.price ? '#ecfdf5' : '#eff6ff', 
+                                                color: selectedAppointment.totalPaid >= selectedAppointment.price ? '#059669' : '#1d4ed8',
+                                                border: `1px solid ${selectedAppointment.totalPaid >= selectedAppointment.price ? '#10b981' : '#3b82f6'}`
+                                            }}>
+                                                Paid: ₱{selectedAppointment.totalPaid.toLocaleString()} / ₱{selectedAppointment.price.toLocaleString()}
+                                                {selectedAppointment.totalPaid < selectedAppointment.price && ` (Balance: ₱${(selectedAppointment.price - selectedAppointment.totalPaid).toLocaleString()})`}
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                             <button className="close-btn" onClick={closeModal}>×</button>
                         </div>
                         <div className="modal-body">
