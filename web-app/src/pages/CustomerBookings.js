@@ -140,7 +140,7 @@ function CustomerBookings(){
                                         <tr key={a.id}>
                                             <td style={{ fontWeight: '600', color: '#64748b' }}>#{a.id}</td>
                                             <td>{a.artist_name}</td>
-                                            <td>{a.design_title}</td>
+                                            <td>{a.service_type || 'Tattoo'}</td>
                                             <td>{new Date(a.appointment_date).toLocaleDateString()}</td>
                                             <td>{a.start_time}</td>
                                             <td><span className={`status-badge ${a.status.toLowerCase()}`}>{a.status}</span></td>
@@ -163,7 +163,7 @@ function CustomerBookings(){
                                                         </span>
                                                     ) : a.payment_status === 'downpayment_paid' ? (
                                                         <span className="status-badge confirmed" style={{ backgroundColor: '#eff6ff', color: '#1d4ed8', display: 'flex', alignItems: 'center', gap: '3px', border: '1px solid #bfdbfe' }}>
-                                                            <CheckCircle size={12}/> Balance: ₱{(Number(a.price) - Number(a.total_paid || 0)).toLocaleString()}
+                                                            <CheckCircle size={12}/> Remaining Balance
                                                         </span>
                                                     ) : (
                                                         <span style={{color: '#9ca3af', fontSize: '0.9rem'}}>-</span>
