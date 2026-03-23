@@ -11,17 +11,12 @@ const BookingConfirmation = () => {
     const [verificationStatus, setVerificationStatus] = useState('verifying'); // verifying, success, timeout, failed, idle
 
     useEffect(() => {
-        let id = null;
-        if (location.state?.appointmentId) {
-            id = location.state.appointmentId;
-        } else {
-            const params = new URLSearchParams(location.search);
-            id = params.get('appointmentId');
-        }
+        const params = new URLSearchParams(location.search);
+        const id = location.state?.appointmentId || params.get('appointmentId');
+        const type = location.state?.paymentType || params.get('paymentType');
 
         if (id) {
             setAppointmentId(id);
-            const type = params.get('paymentType');
             setExpectedType(type);
             verifyPayment(id, type);
         } else {
