@@ -111,7 +111,7 @@ function AdminUsers() {
             email: user.email,
             phone: user.phone || '',
             user_type: user.user_type,
-            status: user.status || 'active',
+            status: user.is_deleted ? 'inactive' : 'active',
             password: ''
         });
         openModal();
@@ -159,7 +159,9 @@ function AdminUsers() {
                 await Axios.put(`${API_URL}/api/admin/users/${selectedUser.id}`, {
                     name: formData.name,
                     email: formData.email,
-                    type: formData.user_type
+                    type: formData.user_type,
+                    phone: formData.phone,
+                    status: formData.status
                 });
                 alert('User updated successfully');
             } else {
@@ -172,7 +174,9 @@ function AdminUsers() {
                     name: formData.name,
                     email: formData.email,
                     password: formData.password,
-                    type: formData.user_type
+                    type: formData.user_type,
+                    phone: formData.phone,
+                    status: formData.status
                 });
                 alert('User added successfully');
             }
@@ -317,7 +321,7 @@ function AdminUsers() {
                                             </td>
                                             <td>
                                                 <span className={`badge status-${user.is_deleted ? 'inactive' : 'active'}`}>
-                                                    {user.is_deleted ? 'Deactivated' : 'Active'}
+                                                    {user.is_deleted ? 'Inactive' : 'Active'}
                                                 </span>
                                             </td>
                                             <td className="actions-cell">
@@ -445,13 +449,37 @@ function AdminUsers() {
                                 </select>
                             </div>
                         </div>
-                        <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={closeModal}>
-                                Cancel
-                            </button>
-                            <button className="btn btn-primary" onClick={handleSave}>
-                                {selectedUser ? 'Update User' : 'Add User'}
-                            </button>
+                        <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
+                            <div>
+                                {selectedUser && selectedUser.email !== 'admin@inkvistar.com' && (
+                                    <button 
+                                        className="btn btn-delete" 
+                                        style={{ 
+                                            backgroundColor: '#dc2626', 
+                                            color: 'white',
+                                            padding: '10px 20px',
+                                            borderRadius: '6px',
+                                            fontWeight: '600',
+                                            border: 'none',
+                                            cursor: 'pointer'
+                                        }}
+                                        onClick={() => {
+                                            handlePermanentDelete(selectedUser.id);
+                                            closeModal();
+                                        }}
+                                    >
+                                        Delete Permanently
+                                    </button>
+                                )}
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button className="btn btn-secondary" onClick={closeModal}>
+                                    Cancel
+                                </button>
+                                <button className="btn btn-primary" onClick={handleSave}>
+                                    {selectedUser ? 'Update User' : 'Add User'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

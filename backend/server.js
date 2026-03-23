@@ -95,8 +95,19 @@ db.connect(err => {
       )
     `;
     db.query(usersTableQuery, (err) => {
-      if (err) console.error('⚠️ Error checking users table:', err.message);
-      else console.log('👤 Users table ready');
+      if (err) {
+        console.error('⚠️ Error checking users table:', err.message);
+      } else {
+        // MIGRATION: Add 'phone' column if it doesn't exist
+        db.query("SHOW COLUMNS FROM users LIKE 'phone'", (err, results) => {
+          if (!err && results.length === 0) {
+            console.log('🔄 Migrating users: Adding phone column...');
+            db.query("ALTER TABLE users ADD COLUMN phone VARCHAR(20) NULL AFTER email");
+          }
+        });
+        
+        console.log('👤 Users table ready');
+      }
     });
 
     // Create Artists Table if not exists
@@ -2623,7 +2634,7 @@ app.get('/api/admin/dashboard', (req, res) => {
 // Admin: Get All Users
 app.get('/api/admin/users', (req, res) => {
   const { search, status } = req.query;
-  let query = 'SELECT id, name, email, user_type, is_verified, is_deleted FROM users WHERE 1=1';
+  let query = 'SELECT id, name, email, phone, user_type, is_verified, is_deleted FROM users WHERE 1=1';
   let params = [];
 
   if (status === 'deleted') {
@@ -2647,13 +2658,14 @@ app.get('/api/admin/users', (req, res) => {
 
 // Admin: Create User
 app.post('/api/admin/users', async (req, res) => {
-  const { name, email, password, type } = req.body;
-  try {
-    const password_hash = await bcrypt.hash(password, 10);
-    const query = 'INSERT INTO users (name, email, password_hash, user_type, is_verified) VALUES (?, ?, ?, ?, 1)';
+    const { name, email, password, type, phone, status } = req.body;
+    try {
+        const password_hash = await bcrypt.hash(password, 10);
+        const isDeleted = (status === 'inactive' || status === 'suspended') ? 1 : 0;
+        const query = 'INSERT INTO users (name, email, password_hash, user_type, phone, is_deleted, is_verified) VALUES (?, ?, ?, ?, ?, ?, 1)';
 
-    db.query(query, [name, email, password_hash, type], (err, result) => {
-      if (err) return res.status(500).json({ success: false, message: err.message });
+        db.query(query, [name, email, password_hash, type, phone, isDeleted], (err, result) => {
+            if (err) return res.status(500).json({ success: false, message: err.message });
 
       // If artist, create profile
       if (type === 'artist') {
@@ -2671,10 +2683,15 @@ app.post('/api/admin/users', async (req, res) => {
 // Admin: Update User
 app.put('/api/admin/users/:id', (req, res) => {
   const { id } = req.params;
-  const { name, email, type } = req.body;
+  const { name, email, type, phone, status } = req.body;
 
-  const query = 'UPDATE users SET name = ?, email = ?, user_type = ? WHERE id = ?';
-  db.query(query, [name, email, type, id], (err) => {
+  // Map status to is_deleted if necessary
+  // If status is 'inactive' or 'suspended', we mark as is_deleted = 1 for now 
+  // unless we want to add a real status column.
+  const isDeleted = (status === 'inactive' || status === 'suspended') ? 1 : 0;
+
+  const query = 'UPDATE users SET name = ?, email = ?, user_type = ?, phone = ?, is_deleted = ? WHERE id = ?';
+  db.query(query, [name, email, type, phone, isDeleted, id], (err) => {
     if (err) return res.status(500).json({ success: false, message: err.message });
     logAction(null, 'UPDATE_USER', `Updated user ${id} (${email})`, req.ip);
     res.json({ success: true, message: 'User updated successfully' });
