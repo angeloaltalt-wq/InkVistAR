@@ -13,7 +13,7 @@ import {
     Clock,
     AlertCircle
 } from 'lucide-react';
-import '../styles/CustomerBookings.css'; // Reusing some table styles
+import './PortalStyles.css'; // Reusing some table styles
 
 function CustomerTransactions() {
     const [transactions, setTransactions] = useState([]);
