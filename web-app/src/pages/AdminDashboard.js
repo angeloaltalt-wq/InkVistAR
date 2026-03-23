@@ -81,8 +81,8 @@ function AdminDashboard() {
                 
                 let appointments = appointmentsResponse.data.success ? appointmentsResponse.data.data : [];
                 
-                // Sort by date (Latest first)
-                appointments.sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
+                // Sort by date (Soonest/Next first)
+                appointments.sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
 
                 // Calculate stats
                 const totalUsers = users.length;
