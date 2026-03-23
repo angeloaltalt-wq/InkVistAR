@@ -21,6 +21,8 @@ function AdminAppointments() {
     const [searchTerm, setSearchTerm] = useState('');
     const [clientSearch, setClientSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [serviceFilter, setServiceFilter] = useState('all');
+    const [quickFilter, setQuickFilter] = useState('all'); // 'upcoming', 'latest', 'all'
     const [dateFilter, setDateFilter] = useState('');
     const [sortBy, setSortBy] = useState('date');
     const [selectedAppointment, setSelectedAppointment] = useState(null);
@@ -32,6 +34,7 @@ function AdminAppointments() {
         clientId: '',
         artistId: '',
         serviceType: '',
+        designTitle: '',
         date: '',
         time: '',
         status: 'confirmed',
@@ -80,7 +83,8 @@ function AdminAppointments() {
                     clientId: apt.customer_id,
                     artistName: apt.artist_name,
                     artistId: apt.artist_id,
-                    serviceType: apt.design_title || 'Tattoo',
+                    serviceType: apt.service_type || (apt.design_title?.includes(':') ? apt.design_title.split(':')[0] : (apt.notes?.toLowerCase().includes('consultation') ? 'Consultation' : 'Tattoo Session')),
+                    designTitle: apt.design_title?.includes(':') ? apt.design_title.split(':')[1]?.trim() : apt.design_title,
                     date: apt.appointment_date ? (apt.appointment_date.includes('T') ? apt.appointment_date.split('T')[0] : apt.appointment_date.substring(0, 10)) : '',
                     time: apt.start_time,
                     status: apt.status,
@@ -99,7 +103,7 @@ function AdminAppointments() {
 
     useEffect(() => {
         filterAndSortAppointments();
-    }, [appointments, searchTerm, statusFilter, dateFilter, sortBy]);
+    }, [appointments, searchTerm, statusFilter, serviceFilter, quickFilter, dateFilter, sortBy]);
 
     const filterAndSortAppointments = () => {
         let filtered = appointments.filter(apt => {
@@ -109,16 +113,25 @@ function AdminAppointments() {
                 apt.serviceType.toLowerCase().includes(searchTerm.toLowerCase());
             
             const matchesStatus = statusFilter === 'all' || apt.status === statusFilter;
+            const matchesService = serviceFilter === 'all' || apt.serviceType === serviceFilter;
             const matchesDate = !dateFilter || apt.date === dateFilter;
             
-            return matchesSearch && matchesStatus && matchesDate;
+            let matchesQuick = true;
+            if (quickFilter === 'upcoming') {
+                const today = new Date().toISOString().split('T')[0];
+                matchesQuick = apt.date >= today && apt.status !== 'cancelled' && apt.status !== 'completed';
+            }
+            
+            return matchesSearch && matchesStatus && matchesService && matchesDate && matchesQuick;
         });
 
         // Reset pagination on filter change
         setCurrentPage(1);
 
         // Sort
-        if (sortBy === 'date') {
+        if (quickFilter === 'latest') {
+            filtered.sort((a, b) => b.id - a.id);
+        } else if (sortBy === 'date') {
             filtered.sort((a, b) => new Date(a.date + ' ' + a.time) - new Date(b.date + ' ' + b.time));
         } else if (sortBy === 'client') {
             filtered.sort((a, b) => a.clientName.localeCompare(b.clientName));
@@ -180,18 +193,18 @@ function AdminAppointments() {
 
     const handleEdit = (appointment) => {
         setSelectedAppointment(appointment);
-        const client = clients.find(c => c.name === appointment.clientName);
         setFormData({
-            clientId: client?.id || '',
-            artistId: artists.find(a => a.name === appointment.artistName)?.id || '',
+            clientId: appointment.clientId,
+            artistId: appointment.artistId,
             serviceType: appointment.serviceType,
+            designTitle: appointment.designTitle,
             date: appointment.date,
             time: appointment.time,
             status: appointment.status,
             notes: appointment.notes,
             price: appointment.price
         });
-        setClientSearch(client?.name || '');
+        setClientSearch(appointment.clientName);
         openModal();
     };
 
@@ -238,7 +251,8 @@ function AdminAppointments() {
             const payload = {
                 customerId: formData.clientId,
                 artistId: formData.artistId,
-                designTitle: formData.serviceType,
+                serviceType: formData.serviceType,
+                designTitle: formData.designTitle,
                 date: formData.date,
                 startTime: formData.time,
                 status: formData.status,
@@ -412,26 +426,65 @@ function AdminAppointments() {
                 </div>
             ) : (
                 <>
-                    <div className="premium-filter-bar">
-                        <div className="premium-search-box">
-                            <Search size={18} className="text-muted" />
-                            <input
-                                type="text"
-                                placeholder="Search appointments..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+                    <div className="premium-filter-bar" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '1.5rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                            <div className="premium-search-box" style={{ flex: 1, minWidth: '300px' }}>
+                                <Search size={18} className="text-muted" />
+                                <input
+                                    type="text"
+                                    placeholder="Search appointments..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="quick-filters" style={{ 
+                                display: 'flex', 
+                                background: 'rgba(255,255,255,0.5)', 
+                                padding: '4px', 
+                                borderRadius: '12px', 
+                                border: '1px solid #e2e8f0',
+                                gap: '4px'
+                            }}>
+                                {[ 
+                                    { id: 'all', label: 'All', icon: <Filter size={14} /> },
+                                    { id: 'upcoming', label: 'Upcoming', icon: <Plus size={14} /> },
+                                    { id: 'latest', label: 'Latest Added', icon: <Plus size={14} style={{ transform: 'rotate(45deg)' }} /> }
+                                ].map(filter => (
+                                    <button
+                                        key={filter.id}
+                                        onClick={() => setQuickFilter(filter.id)}
+                                        className={`badge ${quickFilter === filter.id ? 'status-confirmed' : ''}`}
+                                        style={{ 
+                                            border: 'none', 
+                                            cursor: 'pointer', 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            gap: '6px', 
+                                            padding: '8px 16px',
+                                            background: quickFilter === filter.id ? '' : 'transparent',
+                                            color: quickFilter === filter.id ? '' : '#64748b',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        {filter.icon}
+                                        {filter.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
-                        <div className="premium-filters-group">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600' }}>
+                        <div className="premium-filters-group" style={{ justifyContent: 'flex-start', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600', marginRight: '0.5rem' }}>
                                 <Filter size={16} />
-                                <span>Filter by:</span>
+                                <span>Refine:</span>
                             </div>
+                            
                             <select 
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
                                 className="premium-select-v2"
+                                style={{ minWidth: '140px' }}
                             >
                                 <option value="all">All Status</option>
                                 <option value="confirmed">Confirmed</option>
@@ -439,6 +492,20 @@ function AdminAppointments() {
                                 <option value="pending">Pending</option>
                                 <option value="completed">Completed</option>
                                 <option value="cancelled">Cancelled</option>
+                            </select>
+
+                            <select 
+                                value={serviceFilter}
+                                onChange={(e) => setServiceFilter(e.target.value)}
+                                className="premium-select-v2"
+                                style={{ minWidth: '160px' }}
+                            >
+                                <option value="all">All Services</option>
+                                <option value="Tattoo Session">Tattoo Session</option>
+                                <option value="Consultation">Consultation</option>
+                                <option value="Piercing">Piercing</option>
+                                <option value="Follow-up">Follow-up</option>
+                                <option value="Touch-up">Touch-up</option>
                             </select>
 
                             <input 
@@ -668,6 +735,18 @@ function AdminAppointments() {
                                     <option value="Touch-up">Touch-up</option>
                                     <option value="Aftercare Check">Aftercare Check</option>
                                 </select>
+                            </div>
+
+                            <div className="form-group" style={{ marginTop: '15px' }}>
+                                <label>Design Title / Idea</label>
+                                <input 
+                                    type="text"
+                                    value={formData.designTitle}
+                                    onChange={(e) => setFormData({...formData, designTitle: e.target.value})}
+                                    className="premium-input-v2"
+                                    placeholder="e.g. Traditional Dragon, Floral Sleeve, etc."
+                                    style={{ width: '100%' }}
+                                />
                             </div>
 
                             <div className="form-row">

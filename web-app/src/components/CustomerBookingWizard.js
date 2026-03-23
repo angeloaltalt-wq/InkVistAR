@@ -125,8 +125,9 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                 date: formData.date,
                 startTime: formData.time,
                 endTime: formData.time,
-                designTitle: `CONSULTATION: ${formData.designTitle}`,
-                notes: `Client: ${formData.name}\nEmail: ${formData.email}\nPhone: ${formData.phone}\n\nNotes: ${formData.notes}`,
+                serviceType: 'Consultation',
+                designTitle: formData.designTitle,
+                notes: `CLIENT INFORMATION\nName: ${formData.name}\nEmail: ${formData.email}\nPhone: ${formData.phone}\n\nDESIGN DETAILS\nIdea: ${formData.designTitle}\nNotes: ${formData.notes || 'No additional notes'}`,
                 status: 'pending',
                 price: 0 // Free consultation
             });

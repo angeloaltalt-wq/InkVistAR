@@ -454,6 +454,15 @@ db.connect(err => {
             });
           }
         });
+
+        // MIGRATION: Add 'service_type' column if it doesn't exist
+        db.query("SHOW COLUMNS FROM appointments LIKE 'service_type'", (err, results) => {
+          if (!err && results.length === 0) {
+            console.log('🔄 Migrating appointments: Adding service_type column...');
+            db.query("ALTER TABLE appointments ADD COLUMN service_type VARCHAR(50) NULL AFTER end_time");
+            console.log('✅ Added service_type column to appointments');
+          }
+        });
       }
     });
 
@@ -2983,6 +2992,7 @@ app.get('/api/admin/appointments', (req, res) => {
       ap.start_time,
       ap.end_time,
       ap.status,
+      ap.service_type,
       ap.design_title,
       ap.notes,
       ap.reference_image,
@@ -3007,15 +3017,26 @@ app.get('/api/admin/appointments', (req, res) => {
 
 // Admin: Create Appointment (Walk-in / Manual Booking)
 app.post('/api/admin/appointments', (req, res) => {
-  const { customerId, artistId, date, startTime, endTime, designTitle, notes, status, price } = req.body;
+  const { customerId, artistId, date, startTime, endTime, serviceType, designTitle, notes, status, price } = req.body;
 
   const query = `
     INSERT INTO appointments 
-    (customer_id, artist_id, appointment_date, start_time, end_time, design_title, notes, status, price)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (customer_id, artist_id, appointment_date, start_time, end_time, service_type, design_title, notes, status, price)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
-  db.query(query, [customerId, artistId, date, startTime, endTime || startTime, designTitle, notes, status || 'scheduled', (price !== undefined) ? price : 0], (err, result) => {
+  db.query(query, [
+    customerId, 
+    artistId, 
+    date, 
+    startTime, 
+    endTime || startTime, 
+    serviceType || 'Tattoo Session', 
+    designTitle || '', 
+    notes, 
+    status || 'scheduled', 
+    (price !== undefined) ? price : 0
+  ], (err, result) => {
     if (err) {
       console.error('❌ Error creating appointment:', err);
       return res.status(500).json({ success: false, message: err.message });
@@ -3028,7 +3049,7 @@ app.post('/api/admin/appointments', (req, res) => {
 // Admin: Update Appointment (Status or Reschedule)
 app.put('/api/admin/appointments/:id', (req, res) => {
   const { id } = req.params;
-  const { status, date, startTime, endTime, artistId, designTitle, notes, price } = req.body;
+  const { status, date, startTime, endTime, artistId, serviceType, designTitle, notes, price } = req.body;
 
   let query = 'UPDATE appointments SET ';
   const params = [];
@@ -3053,6 +3074,10 @@ app.put('/api/admin/appointments/:id', (req, res) => {
   if (artistId) {
     updates.push('artist_id = ?');
     params.push(artistId);
+  }
+  if (serviceType) {
+    updates.push('service_type = ?');
+    params.push(serviceType);
   }
   if (designTitle) {
     updates.push('design_title = ?');
