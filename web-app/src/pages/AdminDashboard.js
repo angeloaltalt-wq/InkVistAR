@@ -246,6 +246,8 @@ function AdminDashboard() {
     const auditTotalPages = Math.ceil(filteredLogs.length / itemsPerPage);
     const displayedLogs = filteredLogs.slice((auditPage - 1) * itemsPerPage, auditPage * itemsPerPage);
 
+    const today = new Date().setHours(0, 0, 0, 0);
+
     // Filter and paginate appointments
     const filteredAppointments = appointments
         .filter(apt => {
@@ -253,7 +255,12 @@ function AdminDashboard() {
                 (apt.client_name || '').toLowerCase().includes(appointmentSearch.toLowerCase()) ||
                 (apt.artist_name || '').toLowerCase().includes(appointmentSearch.toLowerCase());
             const matchesStatus = statusFilter === 'all' || apt.status.toLowerCase() === statusFilter.toLowerCase();
-            return matchesSearch && matchesStatus;
+            
+            // Filter out past appointments (yesterday and earlier)
+            const aptDate = new Date(apt.appointment_date).setHours(0, 0, 0, 0);
+            const isUpcoming = aptDate >= today;
+            
+            return matchesSearch && matchesStatus && isUpcoming;
         })
         .sort((a, b) => {
             if (sortType === 'upcoming') {
