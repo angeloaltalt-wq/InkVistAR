@@ -124,6 +124,12 @@ function AdminSideNav() {
             icon: Settings,
             path: '/admin/settings',
             description: 'System settings'
+        },
+        {
+            label: 'Notifications',
+            icon: Bell,
+            path: '/admin/notifications',
+            description: 'System alerts & updates'
         }
     ];
 

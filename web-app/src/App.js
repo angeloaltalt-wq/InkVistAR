@@ -41,6 +41,7 @@ import CustomerBookingCreate from './pages/CustomerBookingCreate';
 import PaymentSimulation from './pages/PaymentSimulation';
 import BookingConfirmation from './pages/BookingConfirmation';
 import TryOn from './pages/TryOn';
+import AdminNotifications from './pages/AdminNotifications';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
     const user = JSON.parse(localStorage.getItem('user'));
@@ -154,6 +155,7 @@ function App() {
           <Route path="/admin/inventory" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><AdminInventory /></ProtectedRoute>} />
           <Route path="/admin/analytics" element={<ProtectedRoute allowedRoles={['admin']}><AdminAnalytics /></ProtectedRoute>} />
           <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['admin']}><AdminSettings /></ProtectedRoute>} />
+          <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={['admin']}><AdminNotifications /></ProtectedRoute>} />
         </Routes>
       </Router>
     </div>

@@ -53,6 +53,11 @@ function AdminDashboard() {
     const [appointmentPage, setAppointmentPage] = useState(1);
     const appointmentsPerPage = 10;
 
+    // Modal States
+    const [selectedAppointment, setSelectedAppointment] = useState(null);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: '', appointmentId: null });
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -74,7 +79,10 @@ function AdminDashboard() {
                 const users = usersResponse.data.users.filter(u => !u.is_deleted);
                 setUsers(users);
                 
-                const appointments = appointmentsResponse.data.success ? appointmentsResponse.data.data : [];
+                let appointments = appointmentsResponse.data.success ? appointmentsResponse.data.data : [];
+                
+                // Sort by date (Latest first)
+                appointments.sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
 
                 // Calculate stats
                 const totalUsers = users.length;
@@ -200,15 +208,27 @@ function AdminDashboard() {
         }
     };
 
-    const handleStatusUpdate = async (id, status) => {
-        if (!window.confirm(`Are you sure you want to ${status} this appointment?`)) return;
+    const handleStatusUpdate = async () => {
+        const { type, appointmentId } = confirmModal;
         try {
-            await Axios.put(`${API_URL}/api/appointments/${id}/status`, { status });
+            await Axios.put(`${API_URL}/api/appointments/${appointmentId}/status`, { 
+                status: type === 'approve' ? 'confirmed' : 'cancelled' 
+            });
+            setConfirmModal({ ...confirmModal, isOpen: false });
             fetchDashboardData();
         } catch (error) {
             alert('Failed to update status.');
             console.error(error);
         }
+    };
+
+    const openDetails = (apt) => {
+        setSelectedAppointment(apt);
+        setIsDetailsModalOpen(true);
+    };
+
+    const openConfirm = (id, type) => {
+        setConfirmModal({ isOpen: true, type, appointmentId: id });
     };
 
     const handleLogout = () => {
@@ -246,12 +266,9 @@ function AdminDashboard() {
                             <Search size={18} />
                             <input type="text" placeholder="Search anything..." />
                         </div>
-                        <button className="notification-bell">
+                        <button onClick={() => navigate('/admin/notifications')} className="notification-bell">
                             <Bell size={20} />
                             {alerts.length > 0 && <span className="notification-dot" />}
-                        </button>
-                        <button onClick={handleLogout} className="top-logout-btn">
-                            Logout
                         </button>
                     </div>
                 </header>
@@ -372,11 +389,11 @@ function AdminDashboard() {
                                                             <div className="table-actions-v2">
                                                                 {appointment.status === 'pending' && (
                                                                     <>
-                                                                        <button className="icon-btn-v2 check" onClick={() => handleStatusUpdate(appointment.id, 'confirmed')} title="Approve"><CheckCircle size={18} /></button>
-                                                                        <button className="icon-btn-v2 cross" onClick={() => handleStatusUpdate(appointment.id, 'cancelled')} title="Reject"><AlertTriangle size={18} /></button>
+                                                                        <button className="icon-btn-v2 check" onClick={() => openConfirm(appointment.id, 'approve')} title="Approve"><CheckCircle size={18} /></button>
+                                                                        <button className="icon-btn-v2 cross" onClick={() => openConfirm(appointment.id, 'reject')} title="Reject"><AlertTriangle size={18} /></button>
                                                                     </>
                                                                 )}
-                                                                <button className="icon-btn-v2 info" title="Details"><Activity size={18} /></button>
+                                                                <button className="icon-btn-v2 info" onClick={() => openDetails(appointment)} title="Details"><Activity size={18} /></button>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -469,6 +486,88 @@ function AdminDashboard() {
                             </section>
                         </div>
                     </main>
+                )}
+
+                {/* --- APPOINTMENT DETAILS MODAL --- */}
+                {isDetailsModalOpen && selectedAppointment && (
+                    <div className="admin-modal-overlay">
+                        <div className="glass-card admin-modal-v2">
+                            <div className="modal-header-v2">
+                                <div className="header-title">
+                                    <CalendarDays size={22} className="text-blue" />
+                                    <h2>Appointment Specification</h2>
+                                </div>
+                                <button className="modal-close-v2" onClick={() => setIsDetailsModalOpen(false)}>&times;</button>
+                            </div>
+                            <div className="modal-body-v2">
+                                <div className="detail-grid-v2">
+                                    <div className="detail-item-v2">
+                                        <label>Client Identity</label>
+                                        <p>{selectedAppointment.client_name}</p>
+                                    </div>
+                                    <div className="detail-item-v2">
+                                        <label>Email Address</label>
+                                        <p>{selectedAppointment.client_email || 'N/A'}</p>
+                                    </div>
+                                    <div className="detail-item-v2">
+                                        <label>Artist Professional</label>
+                                        <p>{selectedAppointment.artist_name}</p>
+                                    </div>
+                                    <div className="detail-item-v2">
+                                        <label>Execution Schedule</label>
+                                        <p>{new Date(selectedAppointment.appointment_date).toLocaleDateString()} at {selectedAppointment.start_time}</p>
+                                    </div>
+                                    <div className="detail-item-v2 full-width">
+                                        <label>The Vision / Description</label>
+                                        <p className="description-box">{selectedAppointment.description || "No vision documented for this request."}</p>
+                                    </div>
+                                    <div className="detail-item-v2">
+                                        <label>Current Status</label>
+                                        <span className={`badge-v2 ${selectedAppointment.status.toLowerCase()}`}>
+                                            {selectedAppointment.status}
+                                        </span>
+                                    </div>
+                                    <div className="detail-item-v2">
+                                        <label>Professional Fee</label>
+                                        <p className="price-tag">₱{selectedAppointment.price || '0.00'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="modal-footer-v2">
+                                <button className="btn-secondary-v2" onClick={() => setIsDetailsModalOpen(false)}>Close Inspector</button>
+                                {selectedAppointment.status === 'pending' && (
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <button className="btn-reject-v2" onClick={() => { setIsDetailsModalOpen(false); openConfirm(selectedAppointment.id, 'reject'); }}>Reject</button>
+                                        <button className="btn-approve-v2" onClick={() => { setIsDetailsModalOpen(false); openConfirm(selectedAppointment.id, 'approve'); }}>Approve</button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* --- CONFIRMATION MODAL --- */}
+                {confirmModal.isOpen && (
+                    <div className="admin-modal-overlay">
+                        <div className="glass-card admin-modal-v2 confirmation-modal">
+                            <div className="modal-header-v2">
+                                <div className="header-title">
+                                    <AlertTriangle size={22} className={confirmModal.type === 'approve' ? 'text-green' : 'text-red'} />
+                                    <h2>Management Confirmation</h2>
+                                </div>
+                            </div>
+                            <div className="modal-body-v2">
+                                <p>Are you certain you wish to <strong>{confirmModal.type}</strong> this appointment request?</p>
+                                <p className="subtitle">This action will be documented in the audit stream and notifications will be dispatched.</p>
+                            </div>
+                            <div className="modal-footer-v2">
+                                <button className="btn-secondary-v2" onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}>Cancel</button>
+                                <button className={confirmModal.type === 'approve' ? 'btn-approve-v2' : 'btn-reject-v2'} onClick={handleStatusUpdate}>
+                                    Verify {confirmModal.type}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 )}
             </div>
         </div>
