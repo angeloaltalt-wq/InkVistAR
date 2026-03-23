@@ -592,7 +592,7 @@ function AdminAppointments() {
                                                             Reject
                                                         </button>
                                                     )}
-                                                    {appointment.serviceType === 'Consultation' && appointment.status !== 'completed' && appointment.status !== 'cancelled' && (
+                                                    {appointment.serviceType?.toLowerCase() === 'consultation' && appointment.status?.toLowerCase() !== 'completed' && appointment.status?.toLowerCase() !== 'cancelled' && (
                                                         <button 
                                                             className="action-btn view-btn" 
                                                             style={{backgroundColor: '#8b5cf6', marginRight: '5px'}}

@@ -2204,19 +2204,20 @@ app.get('/api/appointments/:id/payment-status', async (req, res) => {
 
   try {
     // 1. Check DB first
-    db.query('SELECT payment_status FROM appointments WHERE id = ?', [appointmentId], async (err, results) => {
+    db.query('SELECT payment_status, status FROM appointments WHERE id = ?', [appointmentId], async (err, results) => {
       if (err || results.length === 0) return res.status(404).json({ success: false, message: 'Not found' });
 
-      let currentStatus = results[0].payment_status;
+      let currentPaymentStatus = results[0].payment_status;
+      let currentAptStatus = results[0].status;
 
-      if (currentStatus === 'paid') {
+      if (currentPaymentStatus === 'paid') {
         return res.json({ success: true, payment_status: 'paid' });
       }
 
       // 2. If not paid, check if we have an active checkout session
       db.query('SELECT session_id FROM payments WHERE appointment_id = ? ORDER BY created_at DESC LIMIT 1', [appointmentId], async (pErr, pResults) => {
         if (pErr || pResults.length === 0 || !pResults[0].session_id) {
-          return res.json({ success: true, payment_status: currentStatus });
+          return res.json({ success: true, payment_status: currentPaymentStatus });
         }
 
         const sessionId = pResults[0].session_id;
@@ -2243,7 +2244,7 @@ app.get('/api/appointments/:id/payment-status', async (req, res) => {
             // Update DB so future polls are faster
             const paymentType = pmData?.data?.attributes?.metadata?.paymentType || 'full';
             const newPaymentStatus = paymentType === 'deposit' ? 'downpayment_paid' : 'paid';
-            const newAptStatus = (appointment.status === 'pending' || appointment.status === 'confirmed') ? 'confirmed' : appointment.status;
+            const newAptStatus = (currentAptStatus?.toLowerCase() === 'pending') ? 'confirmed' : currentAptStatus;
 
             db.query("UPDATE appointments SET payment_status = ?, status = ? WHERE id = ?", [newPaymentStatus, newAptStatus, appointmentId], (updErr) => {
               if (updErr) console.error(`❌ Failed to update appointments status to paid for ${appointmentId}:`, updErr.message);
@@ -2262,7 +2263,7 @@ app.get('/api/appointments/:id/payment-status', async (req, res) => {
           console.error('❌ Polling PayMongo API error:', pollErr.message);
         }
 
-        res.json({ success: true, payment_status: currentStatus });
+        res.json({ success: true, payment_status: currentPaymentStatus });
       });
     });
   } catch (error) {
@@ -2345,7 +2346,7 @@ app.post('/api/payments/webhook', (req, res) => {
     db.query('SELECT status, customer_id, artist_id FROM appointments WHERE id = ?', [appointmentId], (fetchErr, rows) => {
       if (!fetchErr && rows.length) {
         const appt = rows[0];
-        const newAptStatus = (appt.status === 'pending') ? 'confirmed' : appt.status;
+        const newAptStatus = (appt.status?.toLowerCase() === 'pending') ? 'confirmed' : appt.status;
 
         db.query("UPDATE appointments SET payment_status = ?, status = ? WHERE id = ?", [newPaymentStatus, newAptStatus, appointmentId], (updateErr) => {
           if (updateErr) {
