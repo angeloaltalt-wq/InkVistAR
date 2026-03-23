@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL } from '../config';
+import { CheckCircle, Clock, AlertCircle, ArrowRight, Home } from 'lucide-react';
 
 const BookingConfirmation = () => {
     const location = useLocation();
@@ -9,12 +10,10 @@ const BookingConfirmation = () => {
     const [verificationStatus, setVerificationStatus] = useState('verifying'); // verifying, success, timeout, failed, idle
 
     useEffect(() => {
-        // 1. Try to get ID from navigation state (internal navigation)
         let id = null;
         if (location.state?.appointmentId) {
             id = location.state.appointmentId;
         } else {
-            // 2. Fallback to URL Query Params (PayMongo redirect)
             const params = new URLSearchParams(location.search);
             id = params.get('appointmentId');
         }
@@ -39,7 +38,7 @@ const BookingConfirmation = () => {
                     setVerificationStatus('success');
                 } else if (attempts < maxAttempts) {
                     attempts++;
-                    setTimeout(poll, 3000); // Poll every 3 seconds
+                    setTimeout(poll, 3000); 
                 } else {
                     setVerificationStatus('timeout');
                 }
@@ -52,85 +51,172 @@ const BookingConfirmation = () => {
         poll();
     };
 
-    // Inline styles to match the app's theme without relying on external CSS classes
-    const containerStyle = {
-        textAlign: 'center',
-        padding: '60px 20px',
-        maxWidth: '600px',
-        margin: '0 auto',
-        fontFamily: 'Inter, sans-serif'
-    };
-
-    const buttonStyle = {
-        display: 'inline-block',
-        backgroundColor: '#0f172a',
-        color: 'white',
-        padding: '12px 24px',
-        borderRadius: '8px',
-        textDecoration: 'none',
-        fontWeight: 'bold',
-        marginTop: '20px',
-        marginRight: '10px'
-    };
-
-    const secondaryButtonStyle = {
-        ...buttonStyle,
-        backgroundColor: '#f1f5f9',
-        color: '#475569'
+    const styles = {
+        pageWrapper: {
+            background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            position: 'relative',
+            overflow: 'hidden',
+        },
+        blob1: {
+            position: 'absolute',
+            top: '-10%',
+            right: '-10%',
+            width: '400px',
+            height: '400px',
+            background: 'rgba(59, 130, 246, 0.1)',
+            borderRadius: '50%',
+            filter: 'blur(100px)',
+            animation: 'blobFloat 20s infinite alternate',
+        },
+        blob2: {
+            position: 'absolute',
+            bottom: '-10%',
+            left: '-10%',
+            width: '400px',
+            height: '400px',
+            background: 'rgba(16, 185, 129, 0.1)',
+            borderRadius: '50%',
+            filter: 'blur(100px)',
+            animation: 'blobFloat 25s infinite alternate-reverse',
+        },
+        card: {
+            background: 'rgba(255, 255, 255, 0.7)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            borderRadius: '32px',
+            padding: '48px 32px',
+            width: '100%',
+            maxWidth: '520px',
+            textAlign: 'center',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.1)',
+            zIndex: 1,
+            animation: 'cardIn 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+        },
+        iconWrapper: {
+            width: '80px',
+            height: '80px',
+            borderRadius: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 24px auto',
+            animation: 'iconBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        },
+        idBadge: {
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '0.9rem',
+            fontWeight: '600',
+            color: '#64748b',
+            background: '#ffffff',
+            padding: '8px 16px',
+            borderRadius: '99px',
+            border: '1px solid #e2e8f0',
+            marginBottom: '32px',
+        },
+        actions: {
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+        },
+        primaryBtn: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            padding: '16px 32px',
+            background: '#0f172a',
+            color: 'white',
+            borderRadius: '16px',
+            textDecoration: 'none',
+            fontWeight: '600',
+            transition: 'all 0.2s',
+            boxShadow: '0 4px 12px rgba(15, 23, 42, 0.15)',
+        },
+        secondaryBtn: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            padding: '16px 32px',
+            background: 'transparent',
+            color: '#475569',
+            borderRadius: '16px',
+            textDecoration: 'none',
+            fontWeight: '600',
+            transition: 'all 0.2s',
+            border: '1px solid #e2e8f0',
+        }
     };
 
     return (
-        <div style={containerStyle}>
-            {verificationStatus === 'verifying' ? (
-                <div style={{ padding: '40px 0' }}>
-                    <div className="spinner" style={{ margin: '0 auto 20px auto', width: '50px', height: '50px', border: '5px solid #f3f3f3', borderTop: '5px solid #3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                    <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-                    <h2 style={{ color: '#1e293b' }}>Verifying Payment...</h2>
-                    <p style={{ color: '#64748b' }}>Please wait while we confirm your transaction with PayMongo.</p>
-                </div>
-            ) : (verificationStatus === 'timeout' || verificationStatus === 'failed') ? (
-                <div style={{ padding: '40px 0' }}>
-                    <div style={{ color: '#f59e0b', marginBottom: '20px' }}>
-                        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="8" x2="12" y2="12"></line>
-                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                        </svg>
-                    </div>
-                    <h2 style={{ color: '#1e293b' }}>Still Verifying...</h2>
-                    <p style={{ color: '#64748b' }}>We haven't received confirmation from PayMongo yet. Don't worry, your booking is safe. Please check back in a few minutes.</p>
-                </div>
-            ) : (
-                <>
-                    <div style={{ color: '#10b981', marginBottom: '20px' }}>
-                        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                        </svg>
-                    </div>
-                    
-                    <h2 style={{ fontSize: '2rem', marginBottom: '10px', color: '#1f2937' }}>Booking Confirmed!</h2>
-                    
-                    <p style={{ color: '#6b7280', marginBottom: '30px', fontSize: '1.1rem' }}>
-                        Your payment was successful and your appointment has been confirmed.
-                    </p>
-                </>
-            )}
+        <div style={styles.pageWrapper}>
+            <div style={styles.blob1}></div>
+            <div style={styles.blob2}></div>
             
-            {appointmentId && (
-                <div style={{ background: '#f8fafc', padding: '15px 30px', borderRadius: '12px', display: 'inline-block', marginBottom: '30px', border: '1px solid #e2e8f0' }}>
-                    <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Appointment ID</p>
-                    <p style={{ margin: '5px 0 0 0', fontWeight: 'bold', fontSize: '1.5rem', color: '#1e293b' }}>#{appointmentId}</p>
-                </div>
-            )}
+            <style>{`
+                @keyframes blobFloat { from { transform: translate(0,0); } to { transform: translate(40px, 40px); } }
+                @keyframes cardIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes iconBounce { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                .btn-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.1) !important; filter: brightness(1.1); }
+                .btn-secondary-hover:hover { background: #f8fafc !important; border-color: #cbd5e1 !important; }
+            `}</style>
 
-            <div>
-                <Link to="/customer/bookings" style={buttonStyle}>
-                    View My Bookings
-                </Link>
-                <Link to="/" style={secondaryButtonStyle}>
-                    Back to Home
-                </Link>
+            <div style={styles.card}>
+                {verificationStatus === 'verifying' ? (
+                    <>
+                        <div style={{ ...styles.iconWrapper, background: '#eff6ff', color: '#3b82f6' }}>
+                            <div style={{ width: '40px', height: '40px', border: '3px solid #bfdbfe', borderTop: '3px solid #3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                        </div>
+                        <h2 style={{ fontSize: '1.75rem', color: '#0f172a', marginBottom: '12px' }}>Verifying Payment</h2>
+                        <p style={{ color: '#64748b', lineHeight: '1.6', marginBottom: '32px' }}>
+                            We're just confirming your transaction with PayMongo. Hang tight!
+                        </p>
+                    </>
+                ) : (verificationStatus === 'timeout' || verificationStatus === 'failed') ? (
+                    <>
+                        <div style={{ ...styles.iconWrapper, background: '#fffbeb', color: '#f59e0b' }}>
+                            <Clock size={40} />
+                        </div>
+                        <h2 style={{ fontSize: '1.75rem', color: '#0f172a', marginBottom: '12px' }}>Still Verifying</h2>
+                        <p style={{ color: '#64748b', lineHeight: '1.6', marginBottom: '32px' }}>
+                            Confirmation is taking longer than expected. Don't worry, your booking is safe. Please check back later.
+                        </p>
+                    </>
+                ) : (
+                    <>
+                        <div style={{ ...styles.iconWrapper, background: '#ecfdf5', color: '#10b981' }}>
+                            <CheckCircle size={40} />
+                        </div>
+                        <h2 style={{ fontSize: '2rem', color: '#0f172a', marginBottom: '12px' }}>Booking Confirmed!</h2>
+                        <p style={{ color: '#64748b', lineHeight: '1.6', marginBottom: '32px' }}>
+                            Awesome! Your payment was successful and your slot is now reserved. See you soon!
+                        </p>
+                    </>
+                )}
+
+                {appointmentId && (
+                    <div style={styles.idBadge}>
+                        <span style={{ color: '#94a3b8' }}>ID</span>
+                        <span>#{appointmentId}</span>
+                    </div>
+                )}
+
+                <div style={styles.actions}>
+                    <Link to="/customer/bookings" className="btn-hover" style={styles.primaryBtn}>
+                        Manage My Bookings <ArrowRight size={18} />
+                    </Link>
+                    <Link to="/" className="btn-secondary-hover" style={styles.secondaryBtn}>
+                        <Home size={18} /> Back to Home
+                    </Link>
+                </div>
             </div>
         </div>
     );
