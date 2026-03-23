@@ -21,7 +21,7 @@ const PayMongoPayment = () => {
     }, [type]);
 
     const initializeSession = async (overrideType) => {
-        const finalType = overrideType || paymentType;
+        const finalType = (typeof overrideType === 'string') ? overrideType : paymentType;
         if (!appointmentId) {
             alert('Error: No appointment ID found. Cannot proceed with payment.');
             navigate('/customer/bookings');
@@ -127,7 +127,7 @@ const PayMongoPayment = () => {
                         {optionCard('full', 'Pay Full Amount', price, 'Pay the total amount now to skip the balance later.')}
                         
                         <button 
-                            onClick={initializeSession} 
+                            onClick={() => initializeSession()} 
                             style={{ ...btnBase, backgroundColor: '#0f172a', color: 'white', marginTop: '12px' }}
                         >
                             Continue to Secure Payment
