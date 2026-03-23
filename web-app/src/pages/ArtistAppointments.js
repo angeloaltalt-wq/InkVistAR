@@ -163,8 +163,8 @@ function ArtistAppointments(){
                                                             overflow: 'hidden',
                                                             textOverflow: 'ellipsis',
                                                             cursor: 'pointer'
-                                                        }} title={`${apt.start_time} - ${apt.client_name}`}>
-                                                            {apt.start_time.slice(0,5)} {apt.client_name}
+                                                        }} title={`${apt.start_time || 'N/A'} - ${apt.client_name}`}>
+                                                            {(apt.start_time || '').slice(0,5)} {apt.client_name}
                                                         </div>
                                                     ))}
                                                 </div>

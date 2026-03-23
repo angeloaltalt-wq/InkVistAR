@@ -382,8 +382,8 @@ function AdminAppointments() {
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
                                             cursor: 'pointer'
-                                        }} title={`${apt.time} - ${apt.clientName} (${apt.artistName})`} onClick={() => handleEdit(apt)}>
-                                            {apt.time.slice(0,5)} {apt.clientName}
+                                        }} title={`${apt.time || 'N/A'} - ${apt.clientName} (${apt.artistName})`} onClick={() => handleEdit(apt)}>
+                                            {(apt.time || '').slice(0,5)} {apt.clientName}
                                         </div>
                                     ))}
                                 </div>
