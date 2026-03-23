@@ -565,7 +565,7 @@ function AdminAppointments() {
             {/* Modal */}
             {appointmentModal.mounted && (
                 <div className={`modal-overlay ${appointmentModal.visible ? 'open' : ''}`} onClick={closeModal}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-content" style={{ maxWidth: '800px', width: '95%' }} onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2>{selectedAppointment ? 'Edit Appointment' : 'New Appointment'}</h2>
                             <button className="close-btn" onClick={closeModal}>×</button>
@@ -733,13 +733,29 @@ function AdminAppointments() {
                                 </button>
                             </div>
                         </div>
-                        <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={closeModal}>
-                                Cancel
-                            </button>
-                            <button className="btn btn-primary" onClick={handleSave}>
-                                Save Appointment
-                            </button>
+                        <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
+                            <div className="footer-left">
+                                {selectedAppointment && (
+                                    <button 
+                                        className="btn btn-secondary" 
+                                        style={{ backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' }}
+                                        onClick={() => {
+                                            handleDelete(selectedAppointment.id);
+                                            closeModal();
+                                        }}
+                                    >
+                                        Delete Appointment
+                                    </button>
+                                )}
+                            </div>
+                            <div className="footer-right" style={{ display: 'flex', gap: '1rem' }}>
+                                <button className="btn btn-secondary" onClick={closeModal}>
+                                    Cancel
+                                </button>
+                                <button className="btn btn-primary" onClick={handleSave}>
+                                    Save Appointment
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
