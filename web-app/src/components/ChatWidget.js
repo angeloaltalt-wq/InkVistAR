@@ -129,7 +129,6 @@ export default function ChatWidget({ room = 'public_room', currentUser = 'Guest'
   return (
     <>
       <div className={`chat-widget-container ${isOpen ? 'open' : ''}`}>
-        <div className="chat-window" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div className="chat-header">
             <div className="chat-header-info">
               <span className="chat-title">{isHumanMode ? 'Live Chat support' : 'Tattoo AI Assistant'}</span>
@@ -214,7 +213,6 @@ export default function ChatWidget({ room = 'public_room', currentUser = 'Guest'
                 <Send size={18} color="white" />
             </button>
           </form>
-        </div>
       </div>
 
       <button className="chat-fab" onClick={() => setIsOpen(!isOpen)}>

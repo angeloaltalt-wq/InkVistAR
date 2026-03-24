@@ -36,8 +36,19 @@ function AdminChat() {
             <AdminSideNav />
             <div className="admin-chat-layout">
                 <div className="appointment-list-container">
-                    <h2 className="chat-list-header">Consultations</h2>
-                    {loading ? <div className="loader">Loading...</div> : (
+                    <h2 className="chat-list-header">Live Chats & Consultations</h2>
+                    
+                    {/* General Inquiries (Landing Page Chat) */}
+                    <div 
+                        className={`appointment-item ${selectedAppointment?.id === 'public_room' ? 'selected' : ''}`}
+                        onClick={() => setSelectedAppointment({ id: 'public_room', client_name: 'General Inquiries (Landing Page)', service_type: 'Public Chat', created_at: new Date() })}
+                        style={{ borderBottom: '2px solid #e1e7ef', background: selectedAppointment?.id === 'public_room' ? '#f8fafc' : 'white' }}
+                    >
+                        <div className="appointment-item-name">General Inquiries</div>
+                        <div className="appointment-item-service" style={{ color: '#10b981' }}>Landing Page Chat</div>
+                    </div>
+
+                    {loading ? <div className="loader" style={{ marginTop: '1rem' }}>Loading...</div> : (
                         <ul className="appointment-list">
                             {appointments.map(apt => (
                                 <li 
@@ -58,12 +69,12 @@ function AdminChat() {
                         <div className="chat-widget-wrapper">
                             <ChatWidget 
                                 room={selectedAppointment.id} 
-                                currentUser={`admin_${user.id}`} 
+                                currentUser={`Admin`} 
                             />
                         </div>
                     ) : (
                         <div className="no-chat-selected">
-                            <h3>Select a consultation to start chatting.</h3>
+                            <h3>Select a chat or consultation to start messaging.</h3>
                         </div>
                     )}
                 </div>
