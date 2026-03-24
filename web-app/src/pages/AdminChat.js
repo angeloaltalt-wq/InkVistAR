@@ -1,18 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Axios from 'axios';
 import AdminSideNav from '../components/AdminSideNav';
 import ChatWidget from '../components/ChatWidget';
 import { API_URL } from '../config';
+import { io } from 'socket.io-client';
 import './AdminChat.css';
 
 function AdminChat() {
     const [appointments, setAppointments] = useState([]);
+    const [liveSessions, setLiveSessions] = useState([]);
     const [selectedAppointment, setSelectedAppointment] = useState(null);
     const [loading, setLoading] = useState(true);
-    const user = JSON.parse(localStorage.getItem('user'));
+    const selectedRef = useRef(null);
+    selectedRef.current = selectedAppointment;
 
     useEffect(() => {
         fetchAppointments();
+
+        const socket = io(API_URL);
+        socket.emit('join_admin_tracking');
+
+        socket.on('support_sessions_update', (sessions) => {
+            const sorted = [...sessions].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+            setLiveSessions(sorted);
+
+            // If the selected active session was closed, deselect it
+            const sel = selectedRef.current;
+            if (sel?.isLiveChat && !sessions.find(s => s.id === sel.id)) {
+                setSelectedAppointment(null);
+            }
+        });
+
+        return () => socket.disconnect();
     }, []);
 
     const fetchAppointments = async () => {
@@ -37,16 +56,34 @@ function AdminChat() {
             <div className="admin-page page-container-enter" style={{ padding: '20px', display: 'flex', flexDirection: 'column' }}>
                 <div className="admin-chat-layout" style={{ borderRadius: '15px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', flex: 1 }}>
                 <div className="appointment-list-container">
-                    <h2 className="chat-list-header">Live Chats & Consultations</h2>
+                    <h2 className="chat-list-header">Chats & Consultations</h2>
                     
-                    {/* General Inquiries (Landing Page Chat) */}
-                    <div 
-                        className={`appointment-item ${selectedAppointment?.id === 'public_room' ? 'selected' : ''}`}
-                        onClick={() => setSelectedAppointment({ id: 'public_room', client_name: 'General Inquiries (Landing Page)', service_type: 'Public Chat', created_at: new Date() })}
-                        style={{ borderBottom: '2px solid #e1e7ef', background: selectedAppointment?.id === 'public_room' ? '#f8fafc' : 'white' }}
-                    >
-                        <div className="appointment-item-name">General Inquiries</div>
-                        <div className="appointment-item-service" style={{ color: '#10b981' }}>Landing Page Chat</div>
+                    {/* Dynamic Live Sessions */}
+                    {liveSessions.length > 0 && (
+                        <div style={{ padding: '10px 20px', backgroundColor: '#f8fafc', fontSize: '0.8rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            Active Web Chats ({liveSessions.length})
+                        </div>
+                    )}
+                    {liveSessions.map(session => (
+                        <div 
+                            key={session.id}
+                            className={`appointment-item ${selectedAppointment?.id === session.id ? 'selected' : ''}`}
+                            onClick={() => setSelectedAppointment({ id: session.id, client_name: session.name, service_type: 'Live Web Chat', isLiveChat: true })}
+                            style={{ borderLeft: '4px solid #10b981', background: selectedAppointment?.id === session.id ? '#f0fdf4' : 'white', cursor: 'pointer' }}
+                        >
+                            <div className="appointment-item-name" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span>{session.name}</span>
+                                <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600 }}>Active</span>
+                            </div>
+                            <div className="appointment-item-service" style={{ color: '#64748b', fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {session.lastMessage}
+                            </div>
+                            <div className="appointment-item-date" style={{ marginTop: '4px' }}>{new Date(session.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                        </div>
+                    ))}
+
+                    <div style={{ padding: '10px 20px', backgroundColor: '#f8fafc', fontSize: '0.8rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: liveSessions.length ? '0' : '10px' }}>
+                        Scheduled Appointments
                     </div>
 
                     {loading ? <div className="loader" style={{ marginTop: '1rem' }}>Loading...</div> : (

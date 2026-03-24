@@ -7,10 +7,27 @@ import './ChatWidget.css';
 // Establish socket connection outside the component
 const socket = io(API_URL);
 
-export default function ChatWidget({ room = 'public_room', currentUser = 'Guest', isAdminMode = false }) {
+export default function ChatWidget({ room = null, currentUser = 'Guest', isAdminMode = false }) {
   // Initialize state from sessionStorage or defaults
   const [isOpen, setIsOpen] = useState(isAdminMode ? true : false);
   
+  // Operating Hours Check: Shop is open 1 PM (13) to 8 PM (20)
+  const currentHour = new Date().getHours();
+  const isShopOpen = currentHour >= 13 && currentHour < 20;
+
+  // Track unique session ID for customers
+  const [sessionId] = useState(() => {
+    if (isAdminMode && room) return room;
+    const savedId = sessionStorage.getItem('chat_sessionId');
+    if (savedId) return savedId;
+    const newId = 'guest_' + Math.random().toString(36).substr(2, 9);
+    sessionStorage.setItem('chat_sessionId', newId);
+    return newId;
+  });
+
+  // Ensure AdminMode uses the passed room prop, Guests use their unique session
+  const activeRoom = isAdminMode ? room : sessionId;
+
   const [isHumanMode, setIsHumanMode] = useState(() => {
     if (isAdminMode) return true;
     const saved = sessionStorage.getItem('chat_isHumanMode');
@@ -63,23 +80,42 @@ export default function ChatWidget({ room = 'public_room', currentUser = 'Guest'
 
   // Socket.io Setup for Live Chat
   useEffect(() => {
-    socket.emit('join_room', room);
+    socket.emit('join_room', activeRoom);
 
-    socket.on('receive_message', (data) => {
-      if (data.room === room) {
-        setHumanMessages(prev => [...prev, { 
-            id: Date.now() + Math.random(), 
-            sender: data.sender, 
-            text: data.text,
-            timestamp: new Date()
-        }]);
-      }
-    });
+    // If switching to human mode for the first time as a guest, tell the admin dashboard
+    if (isHumanMode && !isAdminMode && humanMessages.length <= 1) {
+        socket.emit('start_support_session', { room: activeRoom, name: 'Guest User' });
+    }
+
+    const receiveMessageHandler = (data) => {
+      // For Admins, we don't want to hear messages strictly meant for other rooms 
+      if (data.room !== activeRoom) return;
+
+      setHumanMessages(prev => [...prev, { 
+          id: Date.now() + Math.random(), 
+          sender: data.sender, 
+          text: data.text,
+          timestamp: new Date()
+      }]);
+    };
+
+    const sessionClosedHandler = () => {
+        if (!isAdminMode) {
+            setIsHumanMode(false);
+            setHumanMessages([{ id: 'system-reset', sender: 'system', text: "Live chat ended by the agent. Returning to AI assistant.", timestamp: new Date() }]);
+            sessionStorage.removeItem('chat_isHumanMode');
+            sessionStorage.setItem('chat_humanMessages', JSON.stringify([{ id: 'system-reset', sender: 'system', text: "Live chat ended by the agent. Returning to AI assistant.", timestamp: new Date() }]));
+        }
+    };
+
+    socket.on('receive_message', receiveMessageHandler);
+    socket.on('session_closed', sessionClosedHandler);
 
     return () => {
-      socket.off('receive_message');
+      socket.off('receive_message', receiveMessageHandler);
+      socket.off('session_closed', sessionClosedHandler);
     };
-  }, [room]);
+  }, [activeRoom, isHumanMode, isAdminMode, humanMessages.length]);
 
   const handleSend = async (e) => {
     if (e) e.preventDefault();
@@ -91,7 +127,7 @@ export default function ChatWidget({ room = 'public_room', currentUser = 'Guest'
     if (isHumanMode) {
       // Send to Live Chat
       const messageData = {
-        room: room,
+        room: activeRoom,
         sender: currentUser,
         text: messageText,
       };
@@ -166,16 +202,34 @@ export default function ChatWidget({ room = 'public_room', currentUser = 'Guest'
               <span className="chat-subtitle">{isHumanMode ? 'Talking to an artist' : 'Always here to help'}</span>
             </div>
             <div className="chat-header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {isHumanMode && (
+                  <button
+                      onClick={() => socket.emit('end_support_session', activeRoom)}
+                      title="End Conversation"
+                      style={{ 
+                          background: 'rgba(239, 68, 68, 0.8)',
+                          border: 'none', borderRadius: '50%', width: '32px', height: '32px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          cursor: 'pointer', color: 'white'
+                      }}
+                  >
+                      <X size={18} />
+                  </button>
+                )}
                 {!isAdminMode && (
                   <button 
                       className={`human-toggle-btn ${isHumanMode ? 'active' : ''}`}
-                      onClick={() => setIsHumanMode(!isHumanMode)}
-                      title={isHumanMode ? "Switch to AI" : "Talk to a person"}
+                      onClick={() => {
+                          if (!isHumanMode && !isShopOpen) return;
+                          setIsHumanMode(!isHumanMode);
+                      }}
+                      title={!isShopOpen ? "Live agents are currently offline (Hours: 1 PM - 8 PM)" : isHumanMode ? "Switch to AI" : "Talk to a person"}
                       style={{ 
                           background: isHumanMode ? 'rgba(255,255,255,0.2)' : 'transparent',
                           border: 'none', borderRadius: '50%', width: '32px', height: '32px',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          cursor: 'pointer', color: 'white'
+                          cursor: !isShopOpen ? 'not-allowed' : 'pointer', color: 'white',
+                          opacity: (!isHumanMode && !isShopOpen) ? 0.3 : 1
                       }}
                   >
                       {isHumanMode ? <UserSquare size={18} /> : <Bot size={18} />}

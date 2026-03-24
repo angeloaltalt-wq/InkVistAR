@@ -3625,20 +3625,71 @@ app.use((err, req, res, next) => {
 });
 
 // ========== SOCKET.IO REAL-TIME CHAT ==========
+const activeSupportSessions = {};
+
 io.on('connection', (socket) => {
     console.log('✅ A user connected to chat:', socket.id);
 
-    // Join a room based on a unique identifier (e.g., appointmentId or combination of user IDs)
+    // Join a room based on a unique identifier
     socket.on('join_room', (room) => {
         socket.join(room);
         console.log(`User ${socket.id} joined room: ${room}`);
     });
 
+    // Customer initiates a live support session
+    socket.on('start_support_session', (data) => {
+        const { room, name } = data;
+        if (!activeSupportSessions[room]) {
+            activeSupportSessions[room] = {
+                id: room,
+                name: name || 'Guest Visitor',
+                lastMessage: 'Started a live chat.',
+                timestamp: new Date(),
+                messages: []
+            };
+            // Broadcast new session to all admins listening to 'admin_room'
+            io.to('admin_room').emit('support_sessions_update', Object.values(activeSupportSessions));
+        }
+    });
+
+    // Admin joins the global admin tracking room to get session lists
+    socket.on('join_admin_tracking', () => {
+        socket.join('admin_room');
+        // Instantly send current sessions to the newly connected admin
+        socket.emit('support_sessions_update', Object.values(activeSupportSessions));
+    });
+
     // Listen for new messages
     socket.on('send_message', (data) => {
         console.log('Message received:', data);
+        
+        // Save message memory to active sessions log
+        if (activeSupportSessions[data.room]) {
+            activeSupportSessions[data.room].messages.push({
+                sender: data.sender,
+                text: data.text,
+                timestamp: new Date()
+            });
+            activeSupportSessions[data.room].lastMessage = data.text;
+            activeSupportSessions[data.room].timestamp = new Date();
+            
+            // Broadcast the fresh stats to all admins
+            io.to('admin_room').emit('support_sessions_update', Object.values(activeSupportSessions));
+        }
+
         // Broadcast the message to the other user in the room
         socket.to(data.room).emit('receive_message', data);
+    });
+
+    // End support session (from either customer or admin)
+    socket.on('end_support_session', (room) => {
+        if (activeSupportSessions[room]) {
+            delete activeSupportSessions[room];
+            // Tell the room it was closed
+            io.to(room).emit('session_closed');
+            // Tell the admins
+            io.to('admin_room').emit('support_sessions_update', Object.values(activeSupportSessions));
+        }
     });
 
     // Handle disconnection
