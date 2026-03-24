@@ -32,10 +32,10 @@ function AdminChat() {
     };
 
     return (
-        <div className="admin-dashboard">
+        <div className="admin-page-with-sidenav">
             <AdminSideNav />
-            <div className="admin-main-content" style={{ padding: 0 }}>
-                <div className="admin-chat-layout">
+            <div className="admin-page page-container-enter" style={{ padding: '20px', display: 'flex', flexDirection: 'column' }}>
+                <div className="admin-chat-layout" style={{ borderRadius: '15px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', flex: 1 }}>
                 <div className="appointment-list-container">
                     <h2 className="chat-list-header">Live Chats & Consultations</h2>
                     
