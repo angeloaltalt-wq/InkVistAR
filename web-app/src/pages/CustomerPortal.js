@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar, Heart, Award, Users, Clock, LogOut } from 'lucide-react';
 import './PortalStyles.css';
 import CustomerSideNav from '../components/CustomerSideNav';
+import ChatWidget from '../components/ChatWidget';
 import { API_URL } from '../config';
 
 function CustomerPortal() {
@@ -19,6 +20,7 @@ function CustomerPortal() {
     const [appointments, setAppointments] = useState([]);
     const [artists, setArtists] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [activeAppointment, setActiveAppointment] = useState(null);
     const user = JSON.parse(localStorage.getItem('user'));
     const customerId = user ? user.id : null;
 
@@ -52,6 +54,13 @@ function CustomerPortal() {
                     status: apt.status.charAt(0).toUpperCase() + apt.status.slice(1)
                 }));
                 setAppointments(mappedAppointments);
+
+                const now = new Date();
+                const firstActiveAppointment = dashboardAppointments.find(apt => {
+                    const appointmentDateTime = new Date(`${apt.appointment_date}T${apt.start_time}`);
+                    return now >= appointmentDateTime;
+                });
+                setActiveAppointment(firstActiveAppointment);
             }
 
             // Fetch all artists
@@ -213,6 +222,12 @@ function CustomerPortal() {
                 )}
             </div>
             </div>
+            {activeAppointment && (
+                <ChatWidget 
+                    room={activeAppointment.id} 
+                    currentUser={`customer_${customerId}`} 
+                />
+            )}
         </div>
     );
 }

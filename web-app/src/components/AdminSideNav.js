@@ -5,6 +5,7 @@ import {
     LogOut,
     Users,
     Calendar,
+    MessageSquare,
     Package,
     BarChart3,
     Settings,
@@ -101,6 +102,12 @@ function AdminSideNav() {
             icon: Calendar,
             path: '/admin/appointments',
             description: 'View appointments'
+        },
+        {
+            label: 'Chat',
+            icon: MessageSquare,
+            path: '/admin/chat',
+            description: 'Chat with customers'
         },
         {
             label: 'Inventory',

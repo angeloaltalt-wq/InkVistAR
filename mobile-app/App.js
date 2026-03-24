@@ -20,6 +20,7 @@ import { CustomerProfilePage } from './screens/CustomerProfilePage.jsx';
 import { CustomerARPage } from './screens/CustomerARPage.jsx';
 import { CustomerChatbotPage } from './screens/CustomerChatbotPage.jsx';
 import { CustomerAppointments } from './screens/CustomerAppointments.jsx';
+import ChatScreen from './screens/ChatScreen.jsx';
 
 // Import artist pages
 import { ArtistProfile } from './screens/ArtistProfile.jsx';
@@ -393,9 +394,7 @@ export default function App() {
       <Tab.Screen name="AR">
         {(props) => <SimpleARPreview {...props} selectedDesign={{ name: 'Sample', type: 'Preview' }} onBack={() => props.navigation.navigate('Home')} />}
       </Tab.Screen>
-      <Tab.Screen name="Chat">
-        {(props) => <SimpleChatbot {...props} onBack={() => props.navigation.navigate('Home')} />}
-      </Tab.Screen>
+      <Tab.Screen name="Chat" component={ChatScreen} initialParams={{ room: 'test_room', currentUser: `customer_${user.id}` }}/>
       <Tab.Screen name="Appointments">
         {(props) => <CustomerAppointments {...props} customerId={user.id} onBack={() => props.navigation.navigate('Home')} onBookNew={() => props.navigation.navigate('booking-create')} />}
       </Tab.Screen>

@@ -1,28 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { 
-    Users, 
-    Calendar, 
-    DollarSign, 
-    Palette, 
-    Settings, 
-    Package, 
-    BarChart3, 
-    AlertTriangle, 
-    Bell, 
-    Clock, 
-    CheckCircle, 
-    FileText, 
-    Search, 
-    ChevronLeft, 
-    ChevronRight,
-    TrendingUp,
-    ArrowUpRight,
-    Activity,
-    CalendarDays,
-    Filter
-} from 'lucide-react';
+import { Users, Calendar, DollarSign, Palette, Settings, Package, BarChart3, AlertTriangle, Bell, Clock, CheckCircle, FileText, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import './AdminDashboard.css';
 import AdminSideNav from '../components/AdminSideNav';
 import { API_URL } from '../config';
@@ -53,13 +32,6 @@ function AdminDashboard() {
     const [appointmentSearch, setAppointmentSearch] = useState('');
     const [appointmentPage, setAppointmentPage] = useState(1);
     const appointmentsPerPage = 10;
-    const [sortType, setSortType] = useState('upcoming');
-    const [statusFilter, setStatusFilter] = useState('all');
-
-    // Modal States
-    const [selectedAppointment, setSelectedAppointment] = useState(null);
-    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-    const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: '', appointmentId: null });
 
     const navigate = useNavigate();
 
@@ -82,10 +54,7 @@ function AdminDashboard() {
                 const users = usersResponse.data.users.filter(u => !u.is_deleted);
                 setUsers(users);
                 
-                let appointments = appointmentsResponse.data.success ? appointmentsResponse.data.data : [];
-                
-                // Sort by date (Soonest/Next first)
-                appointments.sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
+                const appointments = appointmentsResponse.data.success ? appointmentsResponse.data.data : [];
 
                 // Calculate stats
                 const totalUsers = users.length;
@@ -123,7 +92,7 @@ function AdminDashboard() {
 
                     // Revenue Calculation
                     if (apt.status === 'completed') {
-                        const price = 1500; // Fixed default price
+                        const price = Number(apt.hourly_rate) || 150; // Fallback price
                         totalRev += price;
                         if (aptDateStr === todayStr) dailyRev += price;
                         const aptDate = new Date(aptDateStr);
@@ -136,8 +105,7 @@ function AdminDashboard() {
                 setRevenueData({ daily: dailyRev, monthly: monthlyRev });
                 setChartData(Object.keys(last7Days).map(date => ({
                     day: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
-                    count: last7Days[date],
-                    fullDate: date
+                    count: last7Days[date]
                 })));
 
                 setStats({
@@ -187,7 +155,7 @@ function AdminDashboard() {
                     });
                 }
 
-                // 2. Pending Appointments Alert
+                // 2. TESTING the Appointments Alert
                 const pendingAppointments = appointments.filter(apt => apt.status === 'pending');
                 if (pendingAppointments.length > 0) {
                     generatedAlerts.push({
@@ -211,13 +179,10 @@ function AdminDashboard() {
         }
     };
 
-    const handleStatusUpdate = async () => {
-        const { type, appointmentId } = confirmModal;
+    const handleStatusUpdate = async (id, status) => {
+        if (!window.confirm(`Are you sure you want to ${status} this appointment?`)) return;
         try {
-            await Axios.put(`${API_URL}/api/appointments/${appointmentId}/status`, { 
-                status: type === 'approve' ? 'confirmed' : 'cancelled' 
-            });
-            setConfirmModal({ ...confirmModal, isOpen: false });
+            await Axios.put(`${API_URL}/api/appointments/${id}/status`, { status });
             fetchDashboardData();
         } catch (error) {
             alert('Failed to update status.');
@@ -225,17 +190,12 @@ function AdminDashboard() {
         }
     };
 
-    const openDetails = (apt) => {
-        setSelectedAppointment(apt);
-        setIsDetailsModalOpen(true);
-    };
-
-    const openConfirm = (id, type) => {
-        setConfirmModal({ isOpen: true, type, appointmentId: id });
-    };
-
     const handleLogout = () => {
         navigate('/admin/dashboard');
+    };
+
+    const handleNavigate = (path) => {
+        navigate(path);
     };
 
     // Filter and paginate logs
@@ -247,391 +207,312 @@ function AdminDashboard() {
     const auditTotalPages = Math.ceil(filteredLogs.length / itemsPerPage);
     const displayedLogs = filteredLogs.slice((auditPage - 1) * itemsPerPage, auditPage * itemsPerPage);
 
-    const today = new Date().setHours(0, 0, 0, 0);
-
     // Filter and paginate appointments
-    const filteredAppointments = appointments
-        .filter(apt => {
-            const matchesSearch = 
-                (apt.client_name || '').toLowerCase().includes(appointmentSearch.toLowerCase()) ||
-                (apt.artist_name || '').toLowerCase().includes(appointmentSearch.toLowerCase());
-            const matchesStatus = statusFilter === 'all' || apt.status.toLowerCase() === statusFilter.toLowerCase();
-            
-            // Filter out past appointments (yesterday and earlier)
-            const aptDate = new Date(apt.appointment_date).setHours(0, 0, 0, 0);
-            const isUpcoming = aptDate >= today;
-            
-            return matchesSearch && matchesStatus && isUpcoming;
-        })
-        .sort((a, b) => {
-            if (sortType === 'upcoming') {
-                return new Date(a.appointment_date) - new Date(b.appointment_date);
-            }
-            // latest_added sorting (newest first)
-            return b.id - a.id; // Using ID as proxy for latest added if created_at is not parsed correctly
-        });
-
+    const filteredAppointments = appointments.filter(apt =>
+        (apt.client_name || '').toLowerCase().includes(appointmentSearch.toLowerCase()) ||
+        (apt.artist_name || '').toLowerCase().includes(appointmentSearch.toLowerCase())
+    );
     const appointmentTotalPages = Math.ceil(filteredAppointments.length / appointmentsPerPage);
     const displayedAppointments = filteredAppointments.slice((appointmentPage - 1) * appointmentsPerPage, appointmentPage * appointmentsPerPage);
 
     return (
         <div className="admin-page-with-sidenav">
             <AdminSideNav />
-            <div className="admin-page admin-dashboard-container">
-                <header className="dashboard-top-nav">
-                    <div className="top-nav-left">
-                        <h1>Dashboard Overview</h1>
-                        <p className="subtitle">Welcome back, Administrator</p>
-                    </div>
-                    <div className="top-nav-right">
-                        <div className="header-search">
-                            <Search size={18} />
-                            <input type="text" placeholder="Search anything..." />
-                        </div>
-                        <button onClick={() => navigate('/admin/notifications')} className="notification-bell">
-                            <Bell size={20} />
-                            {alerts.length > 0 && <span className="notification-dot" />}
-                        </button>
-                    </div>
+            <div className="admin-page admin-dashboard page-container-enter">
+                <header className="dashboard-header">
+                    <h1>Admin Dashboard</h1>
+                    <button onClick={handleLogout} className="logout-btn">Logout</button>
                 </header>
 
                 {loading ? (
-                    <div className="dashboard-loader-container">
-                        <div className="premium-loader"></div>
-                        <p>Synchronizing Real-time Data...</p>
+                    <div className="dashboard-loading" style={{ height: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', color: '#6b7280' }}>
+                        Loading dashboard...
                     </div>
                 ) : (
-                    <main className="dashboard-main-content">
-                        {/* Summary Cards */}
-                        <section className="stats-section">
-                            {[
-                                { label: 'Total Users', value: stats.totalUsers, icon: Users, color: 'blue', trend: '+12%' },
-                                { label: 'Appointments', value: stats.totalAppointments, icon: CalendarDays, color: 'purple', trend: '+8%' },
-                                { label: 'Monthly Revenue', value: `₱${revenueData.monthly.toLocaleString()}`, icon: DollarSign, color: 'green', trend: `+₱${revenueData.daily.toLocaleString()} Today` },
-                                { label: 'Active Artists', value: stats.activeArtists, icon: Palette, color: 'orange', trend: 'Stable' }
-                            ].map((stat, i) => (
-                                <div key={i} className="glass-card stat-card-v2">
-                                    <div className={`stat-icon-wrapper ${stat.color}`}>
-                                        <stat.icon size={24} />
-                                    </div>
-                                    <div className="stat-content">
-                                        <span className="stat-label-v2">{stat.label}</span>
-                                        <h2 className="stat-value-v2">{stat.value}</h2>
-                                        <div className="stat-trend-v2">
-                                            <TrendingUp size={14} />
-                                            <span>{stat.trend}</span>
-                                        </div>
-                                    </div>
+                    <div className="dashboard-content">
+                        {/* Stats Grid */}
+                        <div className="stats-grid">
+                            <div className="stat-card">
+                                <div className="stat-icon users">
+                                    <Users className="icon" size={32} />
                                 </div>
-                            ))}
-                        </section>
-
-                        <div className="dashboard-layout-grid">
-                            {/* Analytics & Activity */}
-                            <section className="layout-column main-column">
-                                <div className="glass-card chart-container-v2">
-                                    <div className="card-header-v2">
-                                        <div className="header-title">
-                                            <Activity size={20} />
-                                            <h2>Weekly Appointment Trends</h2>
-                                        </div>
-                                        <button className="view-more-btn">
-                                            View Detailed Analytics <ArrowUpRight size={16} />
-                                        </button>
-                                    </div>
-                                    <div className="premium-chart">
-                                        {chartData.map((item, index) => (
-                                            <div key={index} className="modern-bar-group">
-                                                <div className="bar-rail">
-                                                    <div 
-                                                        className="bar-fill" 
-                                                        style={{ height: `${Math.min(item.count * 15, 100)}%` }}
-                                                        data-value={item.count}
-                                                    >
-                                                        <span className="bar-tooltip">{item.count}</span>
-                                                    </div>
-                                                </div>
-                                                <span className="bar-label">{item.day}</span>
-                                            </div>
-                                        ))}
-                                    </div>
+                                <div className="stat-info">
+                                    <p className="stat-label">Total Users</p>
+                                    <p className="stat-value">{stats.totalUsers}</p>
                                 </div>
+                            </div>
 
-                                <div className="glass-card table-card-v2">
-                                    <div className="card-header-v2">
-                                        <div className="header-title">
-                                            <CalendarDays size={20} />
-                                            <h2>Upcoming Appointments</h2>
-                                        </div>
-                                        <div className="premium-filter-bar">
-                                            <div className="premium-filters-group">
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600' }}>
-                                                    <Filter size={16} />
-                                                    <span>Sort by:</span>
-                                                </div>
-                                                <div className="filter-group-v2">
-                                                    <input 
-                                                        type="radio" 
-                                                        id="sort-upcoming" 
-                                                        name="sortType" 
-                                                        className="filter-radio-btn" 
-                                                        checked={sortType === 'upcoming'} 
-                                                        onChange={() => setSortType('upcoming')}
-                                                    />
-                                                    <label htmlFor="sort-upcoming" className="filter-label-v2">Upcoming</label>
-                                                    
-                                                    <input 
-                                                        type="radio" 
-                                                        id="sort-latest" 
-                                                        name="sortType" 
-                                                        className="filter-radio-btn" 
-                                                        checked={sortType === 'latest_added'} 
-                                                        onChange={() => setSortType('latest_added')}
-                                                    />
-                                                    <label htmlFor="sort-latest" className="filter-label-v2">Latest Added</label>
-                                                </div>
+                            <div className="stat-card">
+                                <div className="stat-icon appointments">
+                                    <Calendar className="icon" size={32} />
+                                </div>
+                                <div className="stat-info">
+                                    <p className="stat-label">Total Appointments</p>
+                                    <p className="stat-value">{stats.totalAppointments}</p>
+                                </div>
+                            </div>
 
-                                                <select 
-                                                    className="premium-select-v2" 
-                                                    value={statusFilter} 
-                                                    onChange={(e) => setStatusFilter(e.target.value)}
-                                                >
-                                                    <option value="all">All Status</option>
-                                                    <option value="pending">Pending</option>
-                                                    <option value="confirmed">Confirmed</option>
-                                                    <option value="completed">Completed</option>
-                                                    <option value="cancelled">Cancelled</option>
-                                                </select>
+                            <div className="stat-card">
+                                <div className="stat-icon revenue">
+                                    <DollarSign className="icon" size={32} />
+                                </div>
+                                <div className="stat-info">
+                                    <p className="stat-label">Revenue (Month)</p>
+                                    <p className="stat-value">₱{revenueData.monthly.toLocaleString()}</p>
+                                    <small style={{ color: '#10b981', fontSize: '0.8rem' }}>
+                                        +₱{revenueData.daily.toLocaleString()} today
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div className="stat-card">
+                                <div className="stat-icon artists">
+                                    <Palette className="icon" size={32} />
+                                </div>
+                                <div className="stat-info">
+                                    <p className="stat-label">Active Artists</p>
+                                    <p className="stat-value">{stats.activeArtists}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="dashboard-grid-row">
+                            {/* Weekly Activity Chart */}
+                            <div className="data-card chart-card">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
+                                    <BarChart3 size={20} />
+                                    <h2 style={{ margin: 0 }}>Weekly Appointments</h2>
+                                </div>
+                                <div className="chart-container">
+                                    {chartData.map((item, index) => (
+                                        <div key={index} className="chart-bar-group">
+                                            <div className="chart-bar-wrapper">
+                                                <div 
+                                                    className="chart-bar" 
+                                                    style={{ height: `${Math.min(item.count * 15, 100)}%` }}
+                                                    title={`${item.count} appointments`}
+                                                ></div>
                                             </div>
-
-                                            <div className="premium-search-box">
-                                                <Search size={16} className="text-muted" />
-                                                <input 
-                                                    type="text" 
-                                                    placeholder="Filter by name..." 
-                                                    value={appointmentSearch}
-                                                    onChange={(e) => { setAppointmentSearch(e.target.value); setAppointmentPage(1); }}
-                                                />
-                                            </div>
+                                            <span className="chart-label">{item.day}</span>
                                         </div>
-                                    </div>
-                                    <div className="modern-table-wrapper">
-                                        <table className="premium-table">
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Artist Availability */}
+                            <div className="data-card">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
+                                    <Palette size={20} />
+                                    <h2 style={{ margin: 0 }}>Artist Status (Today)</h2>
+                                </div>
+                                <div className="artist-status-list">
+                                    {artistStatus.length > 0 ? artistStatus.map(artist => (
+                                        <div key={artist.id} className="artist-status-item">
+                                            <span className="artist-name">{artist.name}</span>
+                                            <span className={`status-badge ${artist.status.toLowerCase() === 'available' ? 'completed' : 'scheduled'}`}>
+                                                {artist.status}
+                                            </span>
+                                        </div>
+                                    )) : <p className="no-data">No artists found</p>}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="dashboard-grid-row">
+                            {/* Today's Appointments */}
+                            <div className="data-card">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
+                                    <Clock size={20} />
+                                    <h2 style={{ margin: 0 }}>Today's Schedule</h2>
+                                </div>
+                                <div className="table-responsive">
+                                    {todaysAppointments.length > 0 ? (
+                                        <table className="admin-table">
                                             <thead>
                                                 <tr>
-                                                    <th>Client Details</th>
-                                                    <th>Assigned Artist</th>
-                                                    <th>Schedule</th>
+                                                    <th>Time</th>
+                                                    <th>Client</th>
+                                                    <th>Artist</th>
                                                     <th>Status</th>
-                                                    <th style={{ textAlign: 'right' }}>Management</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {displayedAppointments.length > 0 ? displayedAppointments.map((appointment) => (
-                                                    <tr key={appointment.id}>
-                                                        <td>
-                                                            <div className="client-cell">
-                                                                <div className="avatar-placeholder">{appointment.client_name?.charAt(0) || 'U'}</div>
-                                                                <span>{appointment.client_name}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td>{appointment.artist_name}</td>
-                                                        <td>
-                                                            <div className="date-time-cell">
-                                                                <div className="primary-date">{new Date(appointment.appointment_date).toLocaleDateString()}</div>
-                                                                <div className="secondary-time">{appointment.start_time}</div>
-                                                            </div>
-                                                        </td>
-                                                        <td>
-                                                            <span className={`badge-v2 ${appointment.status.toLowerCase()}`}>
-                                                                {appointment.status}
-                                                            </span>
-                                                        </td>
-                                                        <td>
-                                                            <div className="table-actions-v2">
-                                                                {appointment.status === 'pending' && (
-                                                                    <>
-                                                                        <button className="icon-btn-v2 check" onClick={() => openConfirm(appointment.id, 'approve')} title="Approve"><CheckCircle size={18} /></button>
-                                                                        <button className="icon-btn-v2 cross" onClick={() => openConfirm(appointment.id, 'reject')} title="Reject"><AlertTriangle size={18} /></button>
-                                                                    </>
-                                                                )}
-                                                                <button className="icon-btn-v2 info" onClick={() => openDetails(appointment)} title="Details"><Activity size={18} /></button>
-                                                            </div>
-                                                        </td>
+                                                {todaysAppointments.map(apt => (
+                                                    <tr key={apt.id}>
+                                                        <td>{apt.start_time}</td>
+                                                        <td>{apt.client_name || 'Unknown'}</td>
+                                                        <td>{apt.artist_name}</td>
+                                                        <td><span className={`status-badge ${apt.status}`}>{apt.status}</span></td>
                                                     </tr>
-                                                )) : (
-                                                    <tr><td colSpan="5" className="empty-state">No matching appointments discovered</td></tr>
-                                                )}
+                                                ))}
                                             </tbody>
                                         </table>
-                                    </div>
-                                    {appointmentTotalPages > 1 && (
-                                        <div className="pagination-v2">
-                                            <button disabled={appointmentPage === 1} onClick={() => setAppointmentPage(p => p - 1)}><ChevronLeft size={18} /></button>
-                                            <span>{appointmentPage} / {appointmentTotalPages}</span>
-                                            <button disabled={appointmentPage === appointmentTotalPages} onClick={() => setAppointmentPage(p => p + 1)}><ChevronRight size={18} /></button>
+                                    ) : <p className="no-data">No appointments for today.</p>}
+                                </div>
+                            </div>
+
+                            {/* Alerts Section */}
+                            <div className="data-card">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
+                                    <Bell size={20} />
+                                    <h2 style={{ margin: 0 }}>System Alerts</h2>
+                                </div>
+                                <div className="alerts-list">
+                                    {alerts.length > 0 ? alerts.map(alert => (
+                                        <div key={alert.id} className={`alert-item ${alert.severity}`}>
+                                            <AlertTriangle size={16} />
+                                            <span>{alert.message}</span>
                                         </div>
+                                    )) : (
+                                        <p className="no-data">No new alerts.</p>
                                     )}
                                 </div>
-                            </section>
+                            </div>
+                        </div>
 
-                            {/* Sidebar Column */}
-                            <section className="layout-column side-column">
-                                <div className="glass-card artist-status-card">
-                                    <div className="card-header-v2">
-                                        <div className="header-title">
-                                            <Palette size={18} />
-                                            <h2>Artist Occupancy</h2>
-                                        </div>
-                                    </div>
-                                    <div className="artist-occupancy-list">
-                                        {artistStatus.length > 0 ? artistStatus.map(artist => (
-                                            <div key={artist.id} className="occupancy-item">
-                                                <div className="occupancy-info">
-                                                    <span className="artist-name-v2">{artist.name}</span>
-                                                    <span className={`occupancy-dot ${artist.status.toLowerCase()}`}></span>
-                                                </div>
-                                                <span className={`occupancy-tag ${artist.status.toLowerCase()}`}>{artist.status}</span>
-                                            </div>
-                                        )) : <p className="no-data">No data available</p>}
-                                    </div>
+                        {/* Appointments Overview */}
+                        <div className="data-card">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                                <h2 style={{ margin: 0 }}>Appointments Overview</h2>
+                                <div style={{ position: 'relative', maxWidth: '200px' }}>
+                                    <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+                                    <input
+                                        type="text"
+                                        placeholder="Search appointments..."
+                                        value={appointmentSearch}
+                                        onChange={(e) => { setAppointmentSearch(e.target.value); setAppointmentPage(1); }}
+                                        style={{ width: '100%', padding: '6px 10px 6px 30px', borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '0.9rem' }}
+                                    />
                                 </div>
-
-                                <div className="glass-card alerts-card-v2">
-                                    <div className="card-header-v2">
-                                        <div className="header-title">
-                                            <AlertTriangle size={18} />
-                                            <h2>Priority Alerts</h2>
-                                        </div>
-                                    </div>
-                                    <div className="alerts-stack">
-                                        {alerts.length > 0 ? alerts.map(alert => (
-                                            <div key={alert.id} className={`priority-alert-item ${alert.severity}`}>
-                                                <div className="alert-content-v2">
-                                                    <p>{alert.message}</p>
-                                                    <span className="alert-type-v2">{alert.type} notification</span>
-                                                </div>
-                                            </div>
-                                        )) : (
-                                            <div className="all-clear">
-                                                <CheckCircle size={32} />
-                                                <p>All systems operational</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="glass-card logs-preview-card">
-                                    <div className="card-header-v2">
-                                        <div className="header-title">
-                                            <FileText size={18} />
-                                            <h2>Audit Stream</h2>
-                                        </div>
-                                    </div>
-                                    <div className="audit-stream">
-                                        {displayedLogs.map(log => (
-                                            <div key={log.id} className="audit-entry">
-                                                <div className="entry-marker"></div>
-                                                <div className="entry-content">
-                                                    <div className="entry-time">{new Date(log.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-                                                    <div className="entry-desc">
-                                                        <strong>{log.user_name || 'System'}</strong> {log.action}
+                            </div>
+                            <div className="table-responsive">
+                                <table className="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Client Name</th>
+                                            <th>Artist</th>
+                                            <th>Date</th>
+                                            <th>Time</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {displayedAppointments.length > 0 ? displayedAppointments.map((appointment) => (
+                                            <tr key={appointment.id}>
+                                                <td>{appointment.client_name}</td>
+                                                <td>{appointment.artist_name}</td>
+                                                <td>{new Date(appointment.appointment_date).toLocaleDateString()}</td>
+                                                <td>{appointment.start_time}</td>
+                                                <td>
+                                                    <span className={`status-badge ${appointment.status.toLowerCase()}`}>
+                                                        {appointment.status}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div className="actions-cell">
+                                                        {appointment.status === 'pending' && (
+                                                            <>
+                                                                <button className="action-btn approve-btn" onClick={() => handleStatusUpdate(appointment.id, 'confirmed')}>Approve</button>
+                                                                <button className="action-btn reject-btn" onClick={() => handleStatusUpdate(appointment.id, 'cancelled')}>Reject</button>
+                                                            </>
+                                                        )}
+                                                        <button className="action-btn details-btn">Details</button>
                                                     </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <button className="full-logs-btn" onClick={() => navigate('/admin/analytics')}>
-                                        View All Audit Logs
-                                    </button>
-                                </div>
-                            </section>
-                        </div>
-                    </main>
-                )}
+                                                </td>
+                                            </tr>
+                                        )) : (
+                                            <tr><td colSpan="6" className="no-data" style={{textAlign: 'center', padding: '1rem'}}>No appointments found</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
 
-                {/* --- APPOINTMENT DETAILS MODAL --- */}
-                {isDetailsModalOpen && selectedAppointment && (
-                    <div className="admin-modal-overlay">
-                        <div className="glass-card admin-modal-v2">
-                            <div className="modal-header-v2">
-                                <div className="header-title">
-                                    <CalendarDays size={22} className="text-blue" />
-                                    <h2>Appointment Specification</h2>
+                            {appointmentTotalPages > 1 && (
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '1rem', gap: '10px' }}>
+                                    <button
+                                        className="btn btn-secondary"
+                                        disabled={appointmentPage === 1}
+                                        onClick={() => setAppointmentPage(p => p - 1)}
+                                        style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+                                    ><ChevronLeft size={16} /></button>
+                                    <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Page {appointmentPage} of {appointmentTotalPages}</span>
+                                    <button
+                                        className="btn btn-secondary"
+                                        disabled={appointmentPage === appointmentTotalPages}
+                                        onClick={() => setAppointmentPage(p => p + 1)}
+                                        style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+                                    ><ChevronRight size={16} /></button>
                                 </div>
-                                <button className="modal-close-v2" onClick={() => setIsDetailsModalOpen(false)}>&times;</button>
-                            </div>
-                            <div className="modal-body-v2">
-                                <div className="detail-grid-v2">
-                                    <div className="detail-item-v2">
-                                        <label>Client Identity</label>
-                                        <p>{selectedAppointment.client_name}</p>
-                                    </div>
-                                    <div className="detail-item-v2">
-                                        <label>Email Address</label>
-                                        <p>{selectedAppointment.client_email || 'N/A'}</p>
-                                    </div>
-                                    <div className="detail-item-v2">
-                                        <label>Artist Professional</label>
-                                        <p>{selectedAppointment.artist_name}</p>
-                                    </div>
-                                    <div className="detail-item-v2">
-                                        <label>Appointment Type</label>
-                                        <p>{selectedAppointment.design_title || 'General Session'}</p>
-                                    </div>
-                                    <div className="detail-item-v2">
-                                        <label>Execution Schedule</label>
-                                        <p>{new Date(selectedAppointment.appointment_date).toLocaleDateString()} at {selectedAppointment.start_time}</p>
-                                    </div>
-                                    <div className="detail-item-v2 full-width">
-                                        <label>The Vision / Description</label>
-                                        <p className="description-box">{selectedAppointment.notes || "No specific vision documented for this request."}</p>
-                                    </div>
-                                    <div className="detail-item-v2">
-                                        <label>Current Status</label>
-                                        <span className={`badge-v2 ${selectedAppointment.status.toLowerCase()}`}>
-                                            {selectedAppointment.status}
-                                        </span>
-                                    </div>
-                                    <div className="detail-item-v2">
-                                        <label>Professional Fee</label>
-                                        <p className="price-tag">₱{selectedAppointment.price || '0.00'}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="modal-footer-v2">
-                                <button className="btn-secondary-v2" onClick={() => setIsDetailsModalOpen(false)}>Close Inspector</button>
-                                {selectedAppointment.status === 'pending' && (
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                        <button className="btn-reject-v2" onClick={() => { setIsDetailsModalOpen(false); openConfirm(selectedAppointment.id, 'reject'); }}>Reject</button>
-                                        <button className="btn-approve-v2" onClick={() => { setIsDetailsModalOpen(false); openConfirm(selectedAppointment.id, 'approve'); }}>Approve</button>
-                                    </div>
-                                )}
-                            </div>
+                            )}
                         </div>
-                    </div>
-                )}
 
-                {/* --- CONFIRMATION MODAL --- */}
-                {confirmModal.isOpen && (
-                    <div className="admin-modal-overlay">
-                        <div className="glass-card admin-modal-v2 confirmation-modal">
-                            <div className="modal-header-v2">
-                                <div className="header-title">
-                                    <AlertTriangle size={22} className={confirmModal.type === 'approve' ? 'text-green' : 'text-red'} />
-                                    <h2>Management Confirmation</h2>
+                        {/* System Audit Logs */}
+                        <div className="data-card">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <FileText size={20} />
+                                    <h2 style={{ margin: 0 }}>System Audit Logs</h2>
+                                </div>
+                                <div style={{ position: 'relative', maxWidth: '200px' }}>
+                                    <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Search logs..." 
+                                        value={auditSearch}
+                                        onChange={(e) => { setAuditSearch(e.target.value); setAuditPage(1); }}
+                                        style={{ width: '100%', padding: '6px 10px 6px 30px', borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '0.9rem' }}
+                                    />
                                 </div>
                             </div>
-                            <div className="modal-body-v2">
-                                <p>Are you certain you wish to <strong>{confirmModal.type}</strong> this appointment request?</p>
-                                <p className="subtitle">This action will be documented in the audit stream and notifications will be dispatched.</p>
+                            <div className="table-responsive">
+                                <table className="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>User</th>
+                                            <th>Action</th>
+                                            <th>Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {displayedLogs.length > 0 ? displayedLogs.map((log) => (
+                                            <tr key={log.id}>
+                                                <td>{new Date(log.created_at).toLocaleString()}</td>
+                                                <td>
+                                                    <div style={{fontWeight: '500'}}>{log.user_name || 'System'}</div>
+                                                    <div style={{fontSize: '0.8rem', color: '#64748b'}}>{log.user_email}</div>
+                                                </td>
+                                                <td><span className="status-badge scheduled" style={{fontSize: '0.75rem'}}>{log.action}</span></td>
+                                                <td>
+                                                    <div>{log.details}</div>
+                                                    {log.ip_address && <div style={{fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px'}}>IP: {log.ip_address}</div>}
+                                                </td>
+                                            </tr>
+                                        )) : (
+                                            <tr><td colSpan="4" className="no-data" style={{textAlign: 'center', padding: '1rem'}}>No logs found</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
-                            <div className="modal-footer-v2">
-                                <button className="btn-secondary-v2" onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}>Cancel</button>
-                                <button className={confirmModal.type === 'approve' ? 'btn-approve-v2' : 'btn-reject-v2'} onClick={handleStatusUpdate}>
-                                    Verify {confirmModal.type}
-                                </button>
-                            </div>
+                            
+                            {auditTotalPages > 1 && (
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '1rem', gap: '10px' }}>
+                                    <button
+                                        className="btn btn-secondary"
+                                        disabled={auditPage === 1}
+                                        onClick={() => setAuditPage(p => p - 1)}
+                                        style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+                                    ><ChevronLeft size={16} /></button>
+                                    <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Page {auditPage} of {auditTotalPages}</span>
+                                    <button
+                                        className="btn btn-secondary"
+                                        disabled={auditPage === auditTotalPages}
+                                        onClick={() => setAuditPage(p => p + 1)}
+                                        style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+                                    ><ChevronRight size={16} /></button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}

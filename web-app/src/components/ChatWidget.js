@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Axios from 'axios';
-import { MessageSquare, X, Send, Bot } from 'lucide-react';
+import io from 'socket.io-client';
+import { MessageSquare, X, Send, User } from 'lucide-react';
 import { API_URL } from '../config';
 import './ChatWidget.css';
 
-const ChatWidget = () => {
+// Establish socket connection outside the component to avoid re-connections on re-renders
+const socket = io(API_URL);
+
+const ChatWidget = ({ room = 'test_room', currentUser = 'user1' }) => { // room and user are now props
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState([
-        { sender: 'bot', text: "Hi there! I'm InkVistAR's AI assistant. How can I help you with your tattoo questions today?" }
+        { sender: 'system', text: "Connected to chat." }
     ]);
     const [inputValue, setInputValue] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -21,6 +23,25 @@ const ChatWidget = () => {
         scrollToBottom();
     }, [messages]);
 
+    useEffect(() => {
+        // Join the chat room
+        socket.emit('join_room', room);
+
+        // Listen for incoming messages
+        socket.on('receive_message', (data) => {
+            // Make sure the message is for this room
+            if (data.room === room) {
+                 setMessages(prev => [...prev, { sender: data.sender, text: data.text }]);
+            }
+        });
+
+        // Clean up on component unmount
+        return () => {
+            socket.off('receive_message');
+        };
+    }, [room]);
+
+
     const toggleChat = () => {
         setIsOpen(!isOpen);
     };
@@ -28,29 +49,20 @@ const ChatWidget = () => {
     const handleSendMessage = async (e) => {
         e.preventDefault();
         const userMessage = inputValue.trim();
-        if (!userMessage || isLoading) return;
+        if (!userMessage) return;
 
-        const newMessages = [...messages, { sender: 'user', text: userMessage }];
-        setMessages(newMessages);
+        const messageData = {
+            room: room,
+            sender: currentUser,
+            text: userMessage,
+        };
+
+        // Send message to server
+        socket.emit('send_message', messageData);
+
+        // Add message to our own UI
+        setMessages(prev => [...prev, { sender: currentUser, text: userMessage }]);
         setInputValue('');
-        setIsLoading(true);
-
-        try {
-            const response = await Axios.post(`${API_URL}/api/chat`, {
-                message: userMessage
-            });
-            
-            if (response.data.success) {
-                setMessages(prev => [...prev, { sender: 'bot', text: response.data.response }]);
-            } else {
-                setMessages(prev => [...prev, { sender: 'bot', text: "Sorry, I'm having trouble connecting. Please try again later." }]);
-            }
-        } catch (error) {
-            console.error("Chatbot error:", error);
-            setMessages(prev => [...prev, { sender: 'bot', text: "Sorry, an error occurred. Please try again." }]);
-        } finally {
-            setIsLoading(false);
-        }
     };
 
     return (
@@ -58,8 +70,8 @@ const ChatWidget = () => {
             <div className={`chat-widget-container ${isOpen ? 'open' : ''}`}>
                 <div className="chat-header">
                     <div className="chat-header-title">
-                        <Bot size={24} />
-                        <span>AI Assistant</span>
+                        <User size={24} />
+                        <span>Live Chat</span>
                     </div>
                     <button onClick={toggleChat} className="chat-close-btn">
                         <X size={20} />
@@ -67,17 +79,10 @@ const ChatWidget = () => {
                 </div>
                 <div className="chat-body">
                     {messages.map((msg, index) => (
-                        <div key={index} className={`chat-message ${msg.sender}`}>
+                        <div key={index} className={`chat-message ${msg.sender === currentUser ? 'user' : 'other'}`}>
                             <div className="message-bubble">{msg.text}</div>
                         </div>
                     ))}
-                    {isLoading && (
-                        <div className="chat-message bot">
-                            <div className="message-bubble typing-indicator">
-                                <span></span><span></span><span></span>
-                            </div>
-                        </div>
-                    )}
                     <div ref={messagesEndRef} />
                 </div>
                 <form onSubmit={handleSendMessage} className="chat-footer">
@@ -85,11 +90,10 @@ const ChatWidget = () => {
                         type="text"
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
-                        placeholder="Ask about styles, pricing..."
+                        placeholder="Type a message..."
                         className="chat-input"
-                        disabled={isLoading}
                     />
-                    <button type="submit" className="chat-send-btn" disabled={isLoading}>
+                    <button type="submit" className="chat-send-btn">
                         <Send size={18} />
                     </button>
                 </form>
