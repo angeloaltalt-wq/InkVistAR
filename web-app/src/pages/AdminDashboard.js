@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { Users, Calendar, DollarSign, Palette, Settings, Package, BarChart3, AlertTriangle, Bell, Clock, CheckCircle, FileText, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Users, Calendar, DollarSign, Palette, Settings, Package, BarChart3, AlertTriangle, Bell, Clock, CheckCircle, FileText, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import './AdminDashboard.css';
 import AdminSideNav from '../components/AdminSideNav';
 import { API_URL } from '../config';
@@ -30,8 +30,11 @@ function AdminDashboard() {
 
     // Appointments Pagination State
     const [appointmentSearch, setAppointmentSearch] = useState('');
+    const [appointmentFilter, setAppointmentFilter] = useState('upcoming'); // 'upcoming', 'latest', 'all'
     const [appointmentPage, setAppointmentPage] = useState(1);
     const appointmentsPerPage = 10;
+    const [selectedAppointment, setSelectedAppointment] = useState(null);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
     const navigate = useNavigate();
 
@@ -208,10 +211,31 @@ function AdminDashboard() {
     const displayedLogs = filteredLogs.slice((auditPage - 1) * itemsPerPage, auditPage * itemsPerPage);
 
     // Filter and paginate appointments
-    const filteredAppointments = appointments.filter(apt =>
-        (apt.client_name || '').toLowerCase().includes(appointmentSearch.toLowerCase()) ||
-        (apt.artist_name || '').toLowerCase().includes(appointmentSearch.toLowerCase())
-    );
+    const filteredAppointments = appointments.filter(apt => {
+        const matchesSearch = 
+            (apt.client_name || '').toLowerCase().includes(appointmentSearch.toLowerCase()) ||
+            (apt.artist_name || '').toLowerCase().includes(appointmentSearch.toLowerCase());
+        
+        if (!matchesSearch) return false;
+
+        if (appointmentFilter === 'upcoming') {
+            const today = new Date().toISOString().split('T')[0];
+            const aptDate = typeof apt.appointment_date === 'string' 
+                ? apt.appointment_date.split('T')[0] 
+                : new Date(apt.appointment_date).toISOString().split('T')[0];
+            
+            return aptDate >= today && apt.status !== 'cancelled' && apt.status !== 'completed';
+        }
+        return true;
+    });
+
+    // Sorting
+    if (appointmentFilter === 'latest') {
+        filteredAppointments.sort((a, b) => b.id - a.id);
+    } else {
+        filteredAppointments.sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
+    }
+
     const appointmentTotalPages = Math.ceil(filteredAppointments.length / appointmentsPerPage);
     const displayedAppointments = filteredAppointments.slice((appointmentPage - 1) * appointmentsPerPage, appointmentPage * appointmentsPerPage);
 
@@ -363,7 +387,21 @@ function AdminDashboard() {
                                             <Calendar size={20} />
                                             <h2>Appointments Overview</h2>
                                         </div>
-                                        <div className="card-actions">
+                                        <div className="card-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                            <div className="filter-pill-group">
+                                                <button 
+                                                    className={`filter-pill ${appointmentFilter === 'upcoming' ? 'active' : ''}`}
+                                                    onClick={() => { setAppointmentFilter('upcoming'); setAppointmentPage(1); }}
+                                                >Upcoming</button>
+                                                <button 
+                                                    className={`filter-pill ${appointmentFilter === 'latest' ? 'active' : ''}`}
+                                                    onClick={() => { setAppointmentFilter('latest'); setAppointmentPage(1); }}
+                                                >Latest Added</button>
+                                                <button 
+                                                    className={`filter-pill ${appointmentFilter === 'all' ? 'active' : ''}`}
+                                                    onClick={() => { setAppointmentFilter('all'); setAppointmentPage(1); }}
+                                                >All</button>
+                                            </div>
                                             <div className="header-search" style={{ height: '36px', width: '200px' }}>
                                                 <Search size={14} />
                                                 <input
@@ -413,7 +451,11 @@ function AdminDashboard() {
                                                                         </button>
                                                                     </>
                                                                 )}
-                                                                <button className="icon-btn-v2" title="Details">
+                                                                <button 
+                                                                    className="icon-btn-v2" 
+                                                                    title="Details"
+                                                                    onClick={() => { setSelectedAppointment(appointment); setIsDetailModalOpen(true); }}
+                                                                >
                                                                     <FileText size={16} />
                                                                 </button>
                                                             </div>
@@ -523,6 +565,73 @@ function AdminDashboard() {
                     </div>
                 )}
             </div>
+
+            {/* Appointment Detail Modal */}
+            {isDetailModalOpen && selectedAppointment && (
+                <div className="dashboard-modal-overlay" onClick={() => setIsDetailModalOpen(false)}>
+                    <div className="dashboard-modal-content" onClick={e => e.stopPropagation()}>
+                        <div className="dashboard-modal-header">
+                            <h2>Appointment Details</h2>
+                            <button className="modal-close-btn" onClick={() => setIsDetailModalOpen(false)}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="dashboard-modal-body">
+                            <div className="detail-grid">
+                                <div className="detail-item">
+                                    <span className="detail-label">Client Name</span>
+                                    <span className="detail-value">{selectedAppointment.client_name}</span>
+                                </div>
+                                <div className="detail-item">
+                                    <span className="detail-label">Artist Name</span>
+                                    <span className="detail-value">{selectedAppointment.artist_name}</span>
+                                </div>
+                                <div className="detail-item">
+                                    <span className="detail-label">Date</span>
+                                    <span className="detail-value">{new Date(selectedAppointment.appointment_date).toLocaleDateString()}</span>
+                                </div>
+                                <div className="detail-item">
+                                    <span className="detail-label">Start Time</span>
+                                    <span className="detail-value">{selectedAppointment.start_time}</span>
+                                </div>
+                                <div className="detail-item">
+                                    <span className="detail-label">Status</span>
+                                    <span className={`detail-value badge-v2 ${selectedAppointment.status.toLowerCase()}`}>
+                                        {selectedAppointment.status}
+                                    </span>
+                                </div>
+                                <div className="detail-item">
+                                    <span className="detail-label">Service Type</span>
+                                    <span className="detail-value">{selectedAppointment.service_type || 'Tattoo Session'}</span>
+                                </div>
+                                {selectedAppointment.notes && (
+                                    <div className="detail-item" style={{ gridColumn: 'span 2' }}>
+                                        <span className="detail-label">Client Notes</span>
+                                        <span className="detail-value" style={{ fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>
+                                            {selectedAppointment.notes}
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="detail-item">
+                                    <span className="detail-label">Total Price</span>
+                                    <span className="detail-value">₱{Number(selectedAppointment.price || 0).toLocaleString()}</span>
+                                </div>
+                                <div className="detail-item">
+                                    <span className="detail-label">Paid Amount</span>
+                                    <span className="detail-value" style={{ color: '#10b981' }}>
+                                        ₱{Number(selectedAppointment.total_paid || 0).toLocaleString()}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="dashboard-modal-footer">
+                            <button className="logout-btn" onClick={() => setIsDetailModalOpen(false)} style={{ background: '#f1f5f9', color: '#64748b' }}>
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

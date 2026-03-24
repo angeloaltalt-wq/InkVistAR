@@ -115,7 +115,123 @@
     border-radius: 50%;
 }
 
-/* --- ADMIN MODAL V2 STYLES --- */
+/* Filter Pills */
+.filter-pill-group {
+    display: flex;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.5);
+    padding: 0.25rem;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.filter-pill {
+    padding: 0.4rem 1rem;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: var(--transition);
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.filter-pill.active {
+    background: white;
+    color: #6366f1;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* --- ADMIN DASHBOARD MODAL STYLES --- */
+.dashboard-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    animation: fadeIn 0.3s ease;
+}
+
+.dashboard-modal-content {
+    background: white;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 600px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: modalSlide 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.dashboard-modal-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dashboard-modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.dashboard-modal-body {
+    padding: 2rem;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.detail-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.detail-value {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-main);
+}
+
+.dashboard-modal-footer {
+    padding: 1.5rem 2rem;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: flex-end;
+}
+
+@keyframes modalSlide {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Old styles to replace if needed... */
 .admin-modal-overlay {
     position: fixed;
     top: 0;
