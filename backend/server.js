@@ -549,6 +549,34 @@ db.connect(err => {
     `;
     db.query(auditLogsTableQuery, (err) => { if (err) console.error('⚠️ Error checking audit_logs table:', err.message); else console.log('📜 Audit Logs table ready'); });
 
+    // Create Service Kits Table
+    const serviceKitsTableQuery = `
+      CREATE TABLE IF NOT EXISTS service_kits (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        service_type VARCHAR(255) NOT NULL,
+        inventory_id INT NOT NULL,
+        default_quantity INT NOT NULL DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (inventory_id) REFERENCES inventory(id) ON DELETE CASCADE
+      )
+    `;
+    db.query(serviceKitsTableQuery, (err) => { if (err) console.error('⚠️ Error checking service_kits table:', err.message); else console.log('🎒 Service Kits table ready'); });
+
+    // Create Session Materials Table
+    const sessionMaterialsTableQuery = `
+      CREATE TABLE IF NOT EXISTS session_materials (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        appointment_id INT NOT NULL,
+        inventory_id INT NOT NULL,
+        quantity INT NOT NULL DEFAULT 1,
+        status ENUM('hold', 'consumed', 'released') DEFAULT 'hold',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE CASCADE,
+        FOREIGN KEY (inventory_id) REFERENCES inventory(id) ON DELETE CASCADE
+      )
+    `;
+    db.query(sessionMaterialsTableQuery, (err) => { if (err) console.error('⚠️ Error checking session_materials table:', err.message); else console.log('💉 Session Materials table ready'); });
+
   }
 });
 
@@ -1999,25 +2027,152 @@ app.get('/api/gallery/art-of-the-day', (req, res) => {
   });
 });
 
+// ========== SERVICE KITS & SESSION MATERIALS ==========
+
+// Get service kits grouped by service type
+app.get('/api/admin/service-kits', (req, res) => {
+  const query = `
+    SELECT sk.id, sk.service_type, sk.default_quantity, i.id as inventory_id, i.name as item_name, i.unit, i.current_stock 
+    FROM service_kits sk 
+    JOIN inventory i ON sk.inventory_id = i.id
+    ORDER BY sk.service_type, i.name
+  `;
+  db.query(query, (err, results) => {
+    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+    
+    // Group by service type
+    const kits = {};
+    results.forEach(row => {
+      if (!kits[row.service_type]) kits[row.service_type] = [];
+      kits[row.service_type].push(row);
+    });
+    
+    res.json({ success: true, data: kits });
+  });
+});
+
+// Add/Update a service kit
+app.post('/api/admin/service-kits', (req, res) => {
+  const { service_type, materials } = req.body; // materials: [{inventory_id, default_quantity}]
+  if (!service_type || !materials || !Array.isArray(materials)) {
+    return res.status(400).json({ success: false, message: 'Invalid data' });
+  }
+
+  // Clear existing kit for this service to rebuild it
+  db.query('DELETE FROM service_kits WHERE service_type = ?', [service_type], (err) => {
+    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+
+    if (materials.length === 0) return res.json({ success: true, message: 'Kit cleared' });
+
+    const values = materials.map(m => [service_type, m.inventory_id, m.default_quantity]);
+    db.query('INSERT INTO service_kits (service_type, inventory_id, default_quantity) VALUES ?', [values], (insertErr) => {
+      if (insertErr) return res.status(500).json({ success: false, message: 'Error saving kit' });
+      res.json({ success: true, message: 'Kit updated' });
+    });
+  });
+});
+
+// Get session materials for a specific appointment
+app.get('/api/appointments/:id/materials', (req, res) => {
+  const { id } = req.params;
+  const query = `
+    SELECT sm.id, sm.inventory_id, sm.quantity, sm.status, i.name as item_name, i.unit, i.cost 
+    FROM session_materials sm 
+    JOIN inventory i ON sm.inventory_id = i.id 
+    WHERE sm.appointment_id = ?
+  `;
+  db.query(query, [id], (err, results) => {
+    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+    
+    // Calculate total cost
+    const totalCost = results.reduce((sum, item) => sum + (item.quantity * item.cost), 0);
+    
+    res.json({ success: true, materials: results, totalCost });
+  });
+});
+
+// Quick Add a material to a session
+app.post('/api/appointments/:id/materials', (req, res) => {
+  const { id } = req.params;
+  const { inventory_id, quantity } = req.body;
+  
+  // Deduct from inventory immediately and add to session_materials as hold
+  db.query('UPDATE inventory SET current_stock = current_stock - ? WHERE id = ? AND current_stock >= ?', 
+    [quantity, inventory_id, quantity], (err, result) => {
+      
+    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+    if (result.affectedRows === 0) return res.status(400).json({ success: false, message: 'Insufficient stock or invalid item' });
+
+    db.query('INSERT INTO session_materials (appointment_id, inventory_id, quantity, status) VALUES (?, ?, ?, "hold")', 
+      [id, inventory_id, quantity], (insErr) => {
+        if (insErr) {
+          // Rollback stock
+          db.query('UPDATE inventory SET current_stock = current_stock + ? WHERE id = ?', [quantity, inventory_id]);
+          return res.status(500).json({ success: false, message: 'Failed to record material usage' });
+        }
+        res.json({ success: true, message: 'Material added to session' });
+    });
+  });
+});
+
+// Update appointment status (Modified with Inventory Logic)
 // Update appointment status
 app.put('/api/appointments/:id/status', (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
+  const { status, price } = req.body;
 
-  // Fetch appointment first to get user IDs for notification
+  // Fetch appointment first to get user IDs and service_type for inventory logic
   db.query('SELECT * FROM appointments WHERE id = ?', [id], (err, results) => {
-    if (err) {
-      console.error('❌ Error fetching appointment for status update:', err);
-      return res.status(500).json({ success: false, message: 'Database error' });
-    }
-
-    if (results.length === 0) {
-      return res.status(404).json({ success: false, message: 'Appointment not found' });
+    if (err || results.length === 0) {
+      return res.status(err ? 500 : 404).json({ success: false, message: err ? 'Database error' : 'Appointment not found' });
     }
 
     const appointment = results[0];
-    const { price } = req.body;
 
+    // INVENTORY LOGIC
+    if (status === 'in_progress' && appointment.status !== 'in_progress') {
+      // 1. Session Started: Load kit and HOLD inventory
+      const serviceType = appointment.service_type || 'General Session';
+      
+      db.query('SELECT inventory_id, default_quantity FROM service_kits WHERE service_type = ?', [serviceType], (kitErr, kitItems) => {
+        if (!kitErr && kitItems.length > 0) {
+          kitItems.forEach(item => {
+            // Deduct stock
+            db.query('UPDATE inventory SET current_stock = current_stock - ? WHERE id = ? AND current_stock >= ?', 
+              [item.default_quantity, item.inventory_id, item.default_quantity], (updErr, updRes) => {
+              if (!updErr && updRes.affectedRows > 0) {
+                // Record hold
+                db.query('INSERT INTO session_materials (appointment_id, inventory_id, quantity, status) VALUES (?, ?, ?, "hold")',
+                  [id, item.inventory_id, item.default_quantity]);
+              }
+            });
+          });
+        }
+      });
+    } else if (status === 'completed' && appointment.status === 'in_progress') {
+      // 2. Session Completed: Finalize tracking and log material transaction out
+      db.query('SELECT sm.id, sm.inventory_id, sm.quantity, i.cost, i.name FROM session_materials sm JOIN inventory i ON sm.inventory_id = i.id WHERE sm.appointment_id = ? AND sm.status = "hold"', [id], (matErr, mats) => {
+        if (!matErr && mats.length > 0) {
+          mats.forEach(mat => {
+            db.query('UPDATE session_materials SET status = "consumed" WHERE id = ?', [mat.id]);
+            db.query('INSERT INTO inventory_transactions (inventory_id, type, quantity, reason) VALUES (?, "out", ?, ?)', 
+              [mat.inventory_id, mat.quantity, `Consumed in session #${id}`]);
+          });
+        }
+      });
+    } else if (status === 'cancelled' && appointment.status === 'in_progress') {
+      // 3. Session Cancelled mid-way: Release hold and return to stock
+      db.query('SELECT id, inventory_id, quantity FROM session_materials WHERE appointment_id = ? AND status = "hold"', [id], (matErr, mats) => {
+        if (!matErr && mats.length > 0) {
+          mats.forEach(mat => {
+            db.query('UPDATE session_materials SET status = "released" WHERE id = ?', [mat.id]);
+            db.query('UPDATE inventory SET current_stock = current_stock + ? WHERE id = ?', [mat.quantity, mat.inventory_id]);
+          });
+        }
+      });
+    }
+
+    // UPDATE APPOINTMENT
     let updateQuery = 'UPDATE appointments SET status = ?';
     let queryParams = [status];
 
@@ -2025,15 +2180,11 @@ app.put('/api/appointments/:id/status', (req, res) => {
       updateQuery += ', price = ?';
       queryParams.push(price);
     }
-
     updateQuery += ' WHERE id = ?';
     queryParams.push(id);
 
     db.query(updateQuery, queryParams, (updateErr, result) => {
-      if (updateErr) {
-        console.error('Error updating appointment:', updateErr);
-        return res.status(500).json({ success: false, message: 'Database error' });
-      }
+      if (updateErr) return res.status(500).json({ success: false, message: 'Database error' });
 
       // Send Notifications
       if (status === 'confirmed') {

@@ -13,11 +13,65 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
   const [status, setStatus] = useState(appointment?.status || 'confirmed');
   const [sessionData, setSessionData] = useState({
     notes: appointment?.notes || '',
-    inkUsed: '',
-    needlesUsed: '',
     beforePhoto: null,
     afterPhoto: null
   });
+
+  const [sessionMaterials, setSessionMaterials] = useState([]);
+  const [sessionCost, setSessionCost] = useState(0);
+  const [inventoryItems, setInventoryItems] = useState([]);
+  const [addingMaterial, setAddingMaterial] = useState(false);
+
+  useEffect(() => {
+    fetchInventory();
+    if (status === 'in_progress') {
+      fetchSessionMaterials();
+    }
+  }, [appointment?.id, status]);
+
+  const fetchInventory = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/admin/inventory`);
+      const data = await response.json();
+      if (data.success && data.inventory) {
+        // Find top items or just grab the first few things like gloves, caps for quick add
+        setInventoryItems(data.inventory.filter(item => item.current_stock > 0));
+      }
+    } catch (e) { console.error('Error fetching inventory', e); }
+  };
+
+  const fetchSessionMaterials = async () => {
+    if (!appointment?.id) return;
+    try {
+      const response = await fetch(`${API_URL}/api/appointments/${appointment.id}/materials`);
+      const data = await response.json();
+      if (data.success) {
+        setSessionMaterials(data.materials || []);
+        setSessionCost(data.totalCost || 0);
+      }
+    } catch (e) { console.error('Error fetching materials', e); }
+  };
+
+  const handleQuickAdd = async (inventoryId, quantity = 1) => {
+    setAddingMaterial(true);
+    try {
+      const response = await fetch(`${API_URL}/api/appointments/${appointment.id}/materials`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inventory_id: inventoryId, quantity })
+      });
+      const data = await response.json();
+      if (data.success) {
+        fetchSessionMaterials();
+      } else {
+        Alert.alert('Error', data.message || 'Failed to add material. Check stock.');
+      }
+    } catch (e) {
+      Alert.alert('Error', 'Connection failed');
+    } finally {
+      setAddingMaterial(false);
+    }
+  };
 
   const pickImage = async (type) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -52,9 +106,17 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
       const data = await response.json();
       if (data.success) {
         setStatus(newStatus);
+        
         if (newStatus === 'completed') {
-          Alert.alert('Success', 'Session marked as completed!');
-          onComplete && onComplete();
+          // Alert artist of the cost of the session
+          Alert.alert(
+            'Session Completed',
+            `Session finished! Total material cost: ₱${sessionCost.toLocaleString()}.\nThis cost has been recorded.`,
+            [{ text: 'OK', onPress: () => { onComplete && onComplete(); } }]
+          );
+        } else if (newStatus === 'in_progress') {
+          // Give the backend a second to load the kit, then fetch materials
+          setTimeout(fetchSessionMaterials, 1000);
         }
       } else {
         Alert.alert('Error', 'Failed to update status');
@@ -71,8 +133,7 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
     if (!appointment?.id) return;
     setLoading(true);
     try {
-      const combinedNotes = `${sessionData.notes}\n\n[Supplies Log]\nInk: ${sessionData.inkUsed}\nNeedles: ${sessionData.needlesUsed}`;
-      
+      // Materials are tracked dynamically now, so just save notes
       const response = await fetch(`${API_URL}/api/appointments/${appointment.id}/details`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -185,34 +246,65 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
             </TouchableOpacity>
           </View>
 
-          {/* Notes & Supplies */}
-          <Text style={styles.sectionTitle}>Session Details</Text>
+          {/* Advanced Session Materials */}
+          {status === 'in_progress' && (
+            <>
+              <Text style={styles.sectionTitle}>Session Materials (Cost: ₱{sessionCost.toLocaleString()})</Text>
+              
+              {/* Used Materials List */}
+              <View style={styles.inputCard}>
+                {sessionMaterials.length === 0 ? (
+                  <Text style={{ color: '#6b7280', fontStyle: 'italic', marginBottom: 15 }}>No materials logged for this session.</Text>
+                ) : (
+                  <View style={{ marginBottom: 15 }}>
+                    {sessionMaterials.map((mat) => (
+                      <View key={mat.id} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' }}>
+                        <Text style={{ color: '#1f2937', fontWeight: '500' }}>{mat.item_name}</Text>
+                        <Text style={{ color: '#6b7280' }}>{mat.quantity} {mat.unit}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                
+                {/* Quick Add Buttons */}
+                <Text style={{ color: '#1f2937', fontWeight: 'bold', marginBottom: 10 }}>Quick Add Item (+1)</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
+                  {inventoryItems.slice(0, 8).map(item => (
+                    <TouchableOpacity 
+                      key={item.id}
+                      style={{ 
+                        backgroundColor: '#f3f4f6', 
+                        paddingHorizontal: 16, 
+                        paddingVertical: 10, 
+                        borderRadius: 20, 
+                        marginRight: 10,
+                        borderWidth: 1,
+                        borderColor: '#d1d5db'
+                      }}
+                      onPress={() => handleQuickAdd(item.id, 1)}
+                      disabled={addingMaterial}
+                    >
+                      <Text style={{ color: '#374151', fontSize: 13, fontWeight: '600' }}>{item.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  {inventoryItems.length === 0 && <Text style={{ color: '#9ca3af' }}>No stock available</Text>}
+                </ScrollView>
+                {addingMaterial && <ActivityIndicator size="small" color="#daa520" style={{ marginTop: 10 }} />}
+              </View>
+            </>
+          )}
+
+          {/* Notes */}
+          <Text style={styles.sectionTitle}>Session Notes</Text>
           <View style={styles.inputCard}>
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Session Notes</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
+                style={[styles.input, styles.textArea, { marginBottom: 0 }]}
                 placeholder="Record session details, skin reaction, etc..."
                 value={sessionData.notes}
                 onChangeText={(text) => setSessionData(prev => ({...prev, notes: text}))}
                 multiline
                 numberOfLines={4}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Supplies Log</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Ink (e.g. Dynamic Blk)"
-                value={sessionData.inkUsed}
-                onChangeText={(text) => setSessionData(prev => ({...prev, inkUsed: text}))}
-              />
-              <TextInput
-                style={[styles.input, { marginTop: 10 }]}
-                placeholder="Needles (e.g. 1209RL)"
-                value={sessionData.needlesUsed}
-                onChangeText={(text) => setSessionData(prev => ({...prev, needlesUsed: text}))}
               />
             </View>
 
@@ -226,7 +318,7 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
                 style={styles.saveButtonGradient}
               >
                 <Ionicons name="save-outline" size={20} color="white" />
-                <Text style={styles.saveButtonText}>Save Session Progress</Text>
+                <Text style={styles.saveButtonText}>Save Details</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
