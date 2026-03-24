@@ -69,7 +69,7 @@ function CustomerBookings(){
             return;
         }
         const remainingBalance = appointment.price - (appointment.total_paid || 0);
-        navigate(`/payment?appointmentId=${appointment.id}&price=${appointment.price}`, { 
+        navigate(`/pay-mongo?appointmentId=${appointment.id}&price=${appointment.price}`, { 
             state: { 
                 appointmentId: appointment.id, 
                 price: appointment.price,
