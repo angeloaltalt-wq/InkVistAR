@@ -42,6 +42,7 @@ function AdminStaff() {
     const [formData, setFormData] = useState({});
 
     // Portfolio Edit State
+    const [selectedWork, setSelectedWork] = useState(null);
     const [editWorkModal, setEditWorkModal] = useState({ mounted: false, visible: false });
     const [workFormData, setWorkFormData] = useState({
         title: '',
