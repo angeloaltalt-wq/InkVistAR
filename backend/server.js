@@ -2076,11 +2076,11 @@ app.post('/api/admin/service-kits', (req, res) => {
 // GET all appointments (Admin view)
 app.get('/api/admin/appointments', (req, res) => {
   const query = `
-    SELECT 
+    SELECT
       ap.id, ap.customer_id, ap.artist_id,
       ap.appointment_date, ap.start_time, ap.end_time,
       ap.design_title, ap.status, ap.payment_status,
-      ap.notes,
+      ap.notes, ap.before_photo, ap.after_photo,
       ap.price, ap.service_type,
       COALESCE(cu.name, 'Unknown Client') AS client_name,
       COALESCE(ar.name, 'Unknown Artist') AS artist_name,
