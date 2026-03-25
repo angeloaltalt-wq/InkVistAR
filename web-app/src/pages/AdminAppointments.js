@@ -3,14 +3,12 @@ import Axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Calendar, List, ChevronLeft, ChevronRight, Search, Filter, SlidersHorizontal, Plus, Check, X } from 'lucide-react';
 import AdminSideNav from '../components/AdminSideNav';
-import ManagerSideNav from '../components/ManagerSideNav';
 import './AdminAppointments.css';
 import { API_URL } from '../config';
 
 function AdminAppointments() {
     const navigate = useNavigate();
     const location = useLocation();
-    const isManagerView = location.pathname.startsWith('/manager');
     const [appointments, setAppointments] = useState([]);
     const [artists, setArtists] = useState([]);
     const [clients, setClients] = useState([]);
@@ -311,7 +309,7 @@ function AdminAppointments() {
 
     return (
         <div className="admin-page-with-sidenav">
-          {isManagerView ? <ManagerSideNav /> : <AdminSideNav />}
+            <AdminSideNav />
             <div className="admin-page page-container-enter">
             {/* Print Only Header */}
             <div className="print-only-header">

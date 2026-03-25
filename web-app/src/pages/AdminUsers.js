@@ -10,7 +10,6 @@ import { Search, Filter, SlidersHorizontal, UserPlus } from 'lucide-react';
 function AdminUsers() {
     const navigate = useNavigate();
     const location = useLocation();
-    const isManagerView = location.pathname.startsWith('/manager');
     const [users, setUsers] = useState([]);
     const [filteredUsers, setFilteredUsers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -223,7 +222,7 @@ function AdminUsers() {
 
     return (
         <div className="admin-page-with-sidenav">
-            {isManagerView ? <ManagerSideNav /> : <AdminSideNav />}
+            <AdminSideNav />
             <div className="admin-page page-container-enter">
             <header className="admin-header" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb', boxShadow: 'none' }}>
                 <h1>User Management</h1>

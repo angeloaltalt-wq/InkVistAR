@@ -7,7 +7,6 @@ import {
     Search, Filter, SlidersHorizontal 
 } from 'lucide-react';
 import AdminSideNav from '../components/AdminSideNav';
-import ManagerSideNav from '../components/ManagerSideNav';
 import ConfirmModal from '../components/ConfirmModal';
 import './AdminStaff.css';
 import { API_URL } from '../config';
@@ -15,7 +14,6 @@ import { API_URL } from '../config';
 function AdminStaff() {
     const navigate = useNavigate();
     const location = useLocation();
-    const isManagerView = location.pathname.startsWith('/manager');
     
     // Main List State
     const [staff, setStaff] = useState([]);
@@ -365,7 +363,7 @@ function AdminStaff() {
 
     return (
         <div className="admin-page-with-sidenav">
-          {isManagerView ? <ManagerSideNav /> : <AdminSideNav />}
+            <AdminSideNav />
             <div className="admin-page page-container-enter">
             <header className="admin-header" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb', boxShadow: 'none' }}>
                 <h1>Staff Management</h1>

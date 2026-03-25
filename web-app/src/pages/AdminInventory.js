@@ -4,7 +4,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, Edit2, Trash2, Package, History, ArrowUpCircle, ArrowDownCircle, X, RotateCcw, Printer, Download, Search, Filter, SlidersHorizontal } from 'lucide-react';
 import AdminSideNav from '../components/AdminSideNav';
 import './AdminInventory.css';
-import ManagerSideNav from '../components/ManagerSideNav';
 import ConfirmModal from '../components/ConfirmModal';
 import { API_URL } from '../config';
 
@@ -20,7 +19,6 @@ const INVENTORY_CATEGORIES = [
 function AdminInventory() {
     const navigate = useNavigate();
     const location = useLocation();
-    const isManagerView = location.pathname.startsWith('/manager');
     const [inventory, setInventory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filteredInventory, setFilteredInventory] = useState(inventory);
@@ -394,7 +392,7 @@ function AdminInventory() {
 
     return (
         <div className="admin-page-with-sidenav">
-            {isManagerView ? <ManagerSideNav /> : <AdminSideNav />}
+            <AdminSideNav />
             <div className="admin-page page-container-enter">
             {/* Print Only Header */}
             <div className="print-only-header">
