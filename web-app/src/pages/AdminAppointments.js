@@ -465,6 +465,33 @@ function AdminAppointments() {
                                         {filter.label}
                                     </button>
                                 ))}
+                                {(searchTerm || quickFilter !== 'all' || statusFilter !== 'all' || serviceFilter !== 'all' || dateFilter) && (
+                                    <button
+                                        onClick={() => {
+                                            setSearchTerm('');
+                                            setQuickFilter('all');
+                                            setStatusFilter('all');
+                                            setServiceFilter('all');
+                                            setDateFilter('');
+                                        }}
+                                        className="badge"
+                                        style={{ 
+                                            border: 'none', 
+                                            cursor: 'pointer', 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            gap: '6px', 
+                                            padding: '8px 16px',
+                                            background: 'transparent',
+                                            color: '#ef4444',
+                                            transition: 'all 0.2s',
+                                            fontWeight: '600'
+                                        }}
+                                    >
+                                        <X size={14} />
+                                        Clear Filters
+                                    </button>
+                                )}
                             </div>
                         </div>
 
