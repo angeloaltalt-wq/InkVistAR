@@ -19,6 +19,7 @@ function ArtistSessions() {
     const [sessionMaterials, setSessionMaterials] = useState([]);
     const [sessionCost, setSessionCost] = useState(0);
     const [inventoryItems, setInventoryItems] = useState([]);
+    const [serviceKits, setServiceKits] = useState({});
     const [addingMaterial, setAddingMaterial] = useState(false);
     const [inventorySearch, setInventorySearch] = useState('');
 
@@ -83,6 +84,7 @@ function ArtistSessions() {
     useEffect(() => {
         if (activeSession) {
             fetchInventory();
+            fetchServiceKits();
             if (activeSession.status === 'in_progress' || activeSession.status === 'completed') {
                 fetchSessionMaterials(activeSession.id);
             }
@@ -94,6 +96,15 @@ function ArtistSessions() {
             const res = await Axios.get(`${API_URL}/api/admin/inventory`);
             if (res.data.success && res.data.data) {
                 setInventoryItems(res.data.data.filter(item => item.current_stock > 0 && !item.is_deleted));
+            }
+        } catch (e) { console.error(e); }
+    };
+
+    const fetchServiceKits = async () => {
+        try {
+            const res = await Axios.get(`${API_URL}/api/admin/service-kits`);
+            if (res.data.success) {
+                setServiceKits(res.data.data || {});
             }
         } catch (e) { console.error(e); }
     };
@@ -138,6 +149,42 @@ function ArtistSessions() {
             }
         } catch (e) {
             showAlert("Connection Error", "Failed to connect to the server while adding material.", "danger");
+        } finally {
+            setAddingMaterial(false);
+        }
+    };
+
+    const handleQuickAddKit = async (kitItems) => {
+        if (!activeSession || !kitItems || kitItems.length === 0) return;
+        setAddingMaterial(true);
+        try {
+            let successCount = 0;
+            let failedItems = [];
+
+            for (const item of kitItems) {
+                const res = await Axios.post(`${API_URL}/api/appointments/${activeSession.id}/materials`, {
+                    inventory_id: item.inventory_id,
+                    quantity: item.default_quantity
+                });
+                if (res.data.success) {
+                    successCount++;
+                } else {
+                    failedItems.push(item.item_name);
+                }
+            }
+
+            if (successCount > 0) {
+                fetchSessionMaterials(activeSession.id);
+                if (failedItems.length === 0) {
+                    showAlert("Success", `Added ${successCount} items from kit!`, "success");
+                } else {
+                    showAlert("Partial Success", `Added ${successCount} items. Failed: ${failedItems.join(', ')}`, "warning");
+                }
+            } else {
+                showAlert("Error", "Failed to add kit items. Check inventory levels.", "danger");
+            }
+        } catch (e) {
+            showAlert("Connection Error", "Failed to connect to the server while adding kit.", "danger");
         } finally {
             setAddingMaterial(false);
         }
@@ -241,11 +288,18 @@ function ArtistSessions() {
         if (!activeSession) return;
         setIsSaving(true);
         try {
+            console.log('💾 Saving session details...');
+            console.log(`   - Appointment ID: ${activeSession.id}`);
+            console.log(`   - Notes: ${sessionData.notes ? sessionData.notes.substring(0, 50) + '...' : 'empty'}`);
+            console.log(`   - Before Photo: ${sessionData.beforePhoto ? 'YES (' + (sessionData.beforePhoto.length / 1024 / 1024).toFixed(2) + ' MB)' : 'NO'}`);
+            console.log(`   - After Photo: ${sessionData.afterPhoto ? 'YES (' + (sessionData.afterPhoto.length / 1024 / 1024).toFixed(2) + ' MB)' : 'NO'}`);
+
             const res = await Axios.put(`${API_URL}/api/appointments/${activeSession.id}/details`, {
                 notes: sessionData.notes,
                 beforePhoto: sessionData.beforePhoto,
                 afterPhoto: sessionData.afterPhoto
             });
+            console.log('✅ Response:', res.data);
             if (res.data.success) {
                 showAlert("Saved", "Session details saved successfully!", "success");
                 setActiveSession(null);
@@ -445,17 +499,42 @@ function ArtistSessions() {
                                             <div style={{ marginTop: '15px', borderTop: '1px dashed #cbd5e1', paddingTop: '10px' }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                                     <strong style={{ fontSize: '0.85rem', color: '#475569' }}>Add Supplies:</strong>
-                                                    <button
-                                                        onClick={openInventoryModal}
-                                                        disabled={addingMaterial}
-                                                        style={{
-                                                            padding: '6px 12px', borderRadius: '6px', background: '#3b82f6',
-                                                            border: 'none', fontSize: '0.8rem', cursor: addingMaterial ? 'not-allowed' : 'pointer',
-                                                            color: '#fff', display: 'flex', alignItems: 'center', gap: '6px'
-                                                        }}
-                                                    >
-                                                        <Package size={14} /> Add Item
-                                                    </button>
+                                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                        {Object.keys(serviceKits).length > 0 && (
+                                                            <select
+                                                                disabled={addingMaterial}
+                                                                onChange={(e) => {
+                                                                    if (e.target.value) {
+                                                                        handleQuickAddKit(serviceKits[e.target.value]);
+                                                                        e.target.value = '';
+                                                                    }
+                                                                }}
+                                                                style={{
+                                                                    padding: '6px 10px', borderRadius: '6px', border: '1px solid #e2e8f0',
+                                                                    fontSize: '0.8rem', cursor: addingMaterial ? 'not-allowed' : 'pointer',
+                                                                    background: '#fff'
+                                                                }}
+                                                            >
+                                                                <option value="">📦 Quick Kits</option>
+                                                                {Object.keys(serviceKits).map(kitName => (
+                                                                    <option key={kitName} value={kitName}>
+                                                                        {kitName} ({serviceKits[kitName].length} items)
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        )}
+                                                        <button
+                                                            onClick={openInventoryModal}
+                                                            disabled={addingMaterial}
+                                                            style={{
+                                                                padding: '6px 12px', borderRadius: '6px', background: '#3b82f6',
+                                                                border: 'none', fontSize: '0.8rem', cursor: addingMaterial ? 'not-allowed' : 'pointer',
+                                                                color: '#fff', display: 'flex', alignItems: 'center', gap: '6px'
+                                                            }}
+                                                        >
+                                                            <Package size={14} /> Add Item
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

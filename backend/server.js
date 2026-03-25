@@ -2440,15 +2440,20 @@ app.put('/api/appointments/:id/details', (req, res) => {
   const { id } = req.params;
   const { notes, beforePhoto, afterPhoto } = req.body;
 
+  console.log(`📝 Saving details for appointment ${id}`);
+  console.log(`   - Notes: ${notes ? notes.substring(0, 50) + '...' : 'empty'}`);
+  console.log(`   - Before Photo: ${beforePhoto ? beforePhoto.substring(0, 50) + '...' : 'none'}`);
+  console.log(`   - After Photo: ${afterPhoto ? afterPhoto.substring(0, 50) + '...' : 'none'}`);
+
   let query = 'UPDATE appointments SET notes = ?';
   let params = [notes];
 
-  if (beforePhoto !== undefined && beforePhoto !== null) {
+  if (beforePhoto !== undefined && beforePhoto !== null && beforePhoto.length > 0) {
     query += ', before_photo = ?';
     params.push(beforePhoto);
   }
 
-  if (afterPhoto !== undefined && afterPhoto !== null) {
+  if (afterPhoto !== undefined && afterPhoto !== null && afterPhoto.length > 0) {
     query += ', after_photo = ?';
     params.push(afterPhoto);
   }
@@ -2456,12 +2461,15 @@ app.put('/api/appointments/:id/details', (req, res) => {
   query += ' WHERE id = ?';
   params.push(id);
 
+  console.log(`🔍 Query: ${query.substring(0, 100)}...`);
+
   db.query(query, params, (err, result) => {
     if (err) {
       console.error('❌ Error updating appointment details:', err);
       return res.status(500).json({ success: false, message: 'Database error: ' + err.message });
     }
 
+    console.log(`✅ Updated appointment ${id}: ${result.affectedRows} rows affected`);
     res.json({ success: true, message: 'Details updated successfully' });
   });
 });
