@@ -2062,6 +2062,116 @@ app.post('/api/admin/service-kits', (req, res) => {
   });
 });
 
+// ========== ADMIN APPOINTMENTS CRUD ==========
+
+// GET all appointments (Admin view)
+app.get('/api/admin/appointments', (req, res) => {
+  const query = `
+    SELECT 
+      ap.id, ap.customer_id, ap.artist_id,
+      ap.appointment_date, ap.start_time, ap.end_time,
+      ap.design_title, ap.status, ap.payment_status,
+      ap.notes, ap.before_photo, ap.after_photo,
+      ap.price, ap.service_type,
+      cu.name AS client_name,
+      ar.name AS artist_name,
+      COALESCE((SELECT SUM(amount)/100 FROM payments p WHERE p.appointment_id = ap.id AND p.status = 'paid'), 0) AS total_paid
+    FROM appointments ap
+    JOIN users cu ON ap.customer_id = cu.id
+    JOIN users ar ON ap.artist_id = ar.id
+    WHERE ap.is_deleted = 0
+    ORDER BY ap.appointment_date DESC, ap.start_time DESC
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('❌ Error fetching admin appointments:', err);
+      return res.status(500).json({ success: false, message: 'Database error: ' + err.message });
+    }
+    res.json({ success: true, data: results });
+  });
+});
+
+// POST create a new appointment (Admin)
+app.post('/api/admin/appointments', (req, res) => {
+  const { customerId, artistId, serviceType, designTitle, date, startTime, status, notes, price } = req.body;
+
+  if (!customerId || !artistId || !date) {
+    return res.status(400).json({ success: false, message: 'customerId, artistId, and date are required.' });
+  }
+
+  const combinedTitle = serviceType && designTitle ? `${serviceType}: ${designTitle}` : (designTitle || serviceType || 'Appointment');
+  const finalStatus = status || 'confirmed';
+
+  const query = `
+    INSERT INTO appointments 
+      (customer_id, artist_id, appointment_date, start_time, design_title, service_type, status, notes, price, payment_status, is_deleted)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 0)
+  `;
+  db.query(query, [customerId, artistId, date, startTime || null, combinedTitle, serviceType || 'General Session', finalStatus, notes || '', price || 0], (err, result) => {
+    if (err) {
+      console.error('❌ Error creating admin appointment:', err);
+      return res.status(500).json({ success: false, message: 'Database error: ' + err.message });
+    }
+    createNotification(customerId, 'Appointment Scheduled', `Your appointment has been scheduled for ${date}.`, 'appointment_confirmed', result.insertId);
+    res.json({ success: true, message: 'Appointment created successfully', id: result.insertId });
+  });
+});
+
+// PUT update an appointment (Admin)
+app.put('/api/admin/appointments/:id', (req, res) => {
+  const { id } = req.params;
+  const { customerId, artistId, serviceType, designTitle, date, startTime, status, notes, price } = req.body;
+
+  const combinedTitle = serviceType && designTitle ? `${serviceType}: ${designTitle}` : (designTitle || serviceType || null);
+
+  let query = 'UPDATE appointments SET ';
+  const params = [];
+  const updates = [];
+
+  if (customerId !== undefined) { updates.push('customer_id = ?'); params.push(customerId); }
+  if (artistId !== undefined) { updates.push('artist_id = ?'); params.push(artistId); }
+  if (date !== undefined) { updates.push('appointment_date = ?'); params.push(date); }
+  if (startTime !== undefined) { updates.push('start_time = ?'); params.push(startTime); }
+  if (combinedTitle) { updates.push('design_title = ?'); params.push(combinedTitle); }
+  if (serviceType !== undefined) { updates.push('service_type = ?'); params.push(serviceType); }
+  if (status !== undefined) { updates.push('status = ?'); params.push(status); }
+  if (notes !== undefined) { updates.push('notes = ?'); params.push(notes); }
+  if (price !== undefined) { updates.push('price = ?'); params.push(price); }
+
+  if (updates.length === 0) {
+    return res.status(400).json({ success: false, message: 'No fields to update.' });
+  }
+
+  query += updates.join(', ') + ' WHERE id = ? AND is_deleted = 0';
+  params.push(id);
+
+  db.query(query, params, (err, result) => {
+    if (err) {
+      console.error('❌ Error updating admin appointment:', err);
+      return res.status(500).json({ success: false, message: 'Database error: ' + err.message });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Appointment not found.' });
+    }
+    res.json({ success: true, message: 'Appointment updated successfully' });
+  });
+});
+
+// DELETE (soft) an appointment (Admin)
+app.delete('/api/admin/appointments/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('UPDATE appointments SET is_deleted = 1 WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      console.error('❌ Error deleting appointment:', err);
+      return res.status(500).json({ success: false, message: 'Database error: ' + err.message });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Appointment not found.' });
+    }
+    res.json({ success: true, message: 'Appointment deleted successfully' });
+  });
+});
+
 // Get session materials for a specific appointment
 app.get('/api/appointments/:id/materials', (req, res) => {
   const { id } = req.params;
