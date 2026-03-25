@@ -111,9 +111,9 @@ function AdminAppointments() {
     const filterAndSortAppointments = () => {
         let filtered = appointments.filter(apt => {
             const matchesSearch =
-                apt.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                apt.artistName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                apt.serviceType.toLowerCase().includes(searchTerm.toLowerCase());
+                (apt.clientName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (apt.artistName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (apt.serviceType || '').toLowerCase().includes(searchTerm.toLowerCase());
             
             const matchesStatus = statusFilter === 'all' || apt.status === statusFilter;
             const matchesService = serviceFilter === 'all' || apt.serviceType === serviceFilter;

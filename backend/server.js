@@ -2073,13 +2073,13 @@ app.get('/api/admin/appointments', (req, res) => {
       ap.design_title, ap.status, ap.payment_status,
       ap.notes, ap.before_photo, ap.after_photo,
       ap.price, ap.service_type,
-      cu.name AS client_name,
-      ar.name AS artist_name,
+      COALESCE(cu.name, 'Unknown Client') AS client_name,
+      COALESCE(ar.name, 'Unknown Artist') AS artist_name,
       COALESCE((SELECT SUM(amount)/100 FROM payments p WHERE p.appointment_id = ap.id AND p.status = 'paid'), 0) AS total_paid
     FROM appointments ap
-    JOIN users cu ON ap.customer_id = cu.id
-    JOIN users ar ON ap.artist_id = ar.id
-    WHERE ap.is_deleted = 0
+    LEFT JOIN users cu ON ap.customer_id = cu.id
+    LEFT JOIN users ar ON ap.artist_id = ar.id
+    WHERE COALESCE(ap.is_deleted, 0) = 0
     ORDER BY ap.appointment_date DESC, ap.start_time DESC
   `;
   db.query(query, (err, results) => {
