@@ -70,26 +70,29 @@ app.use((req, res, next) => {
   next();
 });
 
-// MySQL Connection (from environment variables)
-const db = mysql.createConnection({
+// MySQL Connection Pool (from environment variables)
+const db = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASS || 'banana',
   database: process.env.DB_NAME || 'inkvistar',
   port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,
-  connectTimeout: 10000, // 10 second timeout
+  connectionLimit: 10,
+  waitForConnections: true,
+  queueLimit: 0,
   dateStrings: true // Force date columns to be returned as strings to prevent timezone shifts
 });
 
-// Connect to MySQL
-db.connect(err => {
+// Connect to MySQL via Pool
+db.getConnection((err, connection) => {
   if (err) {
     console.error('❌ MySQL Connection Error:', err.message);
     console.error('❌ Error code:', err.code);
     console.error('❌ Error SQL State:', err.sqlState);
   } else {
-    console.log('✅ MySQL Connected Successfully!');
-    console.log('📊 Database:', db.config.database);
+    console.log('✅ MySQL Connected Successfully via Pool!');
+    console.log('📊 Database:', process.env.DB_NAME || 'inkvistar');
+    connection.release();
 
     // Create Users Table if not exists (REQUIRED for all other tables)
     const usersTableQuery = `
