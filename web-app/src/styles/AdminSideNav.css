@@ -256,14 +256,15 @@ body.sidenav-collapsed .admin-page-with-sidenav .admin-page {
 /* Collapsed State */
 .admin-sidenav.collapsed {
     width: 80px;
-    overflow: visible;
+    overflow: hidden;
 }
 
 .admin-sidenav.collapsed .logo-text,
 .admin-sidenav.collapsed .menu-text,
 .admin-sidenav.collapsed .menu-label,
-.admin-sidenav.collapsed .dropdown-arrow {
-    display: none;
+.admin-sidenav.collapsed .dropdown-arrow,
+.admin-sidenav.collapsed .dropdown-menu {
+    display: none !important;
 }
 
 .admin-sidenav.collapsed .logo-container {

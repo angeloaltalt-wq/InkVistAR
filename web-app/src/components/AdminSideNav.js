@@ -50,6 +50,11 @@ function AdminSideNav() {
     const toggleCollapsed = () => {
         const next = !collapsed;
         setCollapsed(next);
+        // Automatically close dropdown when collapsing
+        if (next) {
+            setUserManagementOpen(false);
+            localStorage.setItem('userManagementOpen', 'false');
+        }
         localStorage.setItem('adminSidenavCollapsed', next ? 'true' : 'false');
     };
 
