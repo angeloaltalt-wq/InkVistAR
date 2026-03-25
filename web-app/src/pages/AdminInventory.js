@@ -538,20 +538,17 @@ function AdminInventory() {
                                         </td>
                                         <td className="actions-cell">
                                             {itemStatusFilter === 'active' ? (
-                                                <>
-                                                    <button className="action-btn" style={{backgroundColor: '#10b981'}} onClick={() => openTransactionModal(item, 'in')} title="Stock In">
+                                                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-start' }}>
+                                                    <button className="action-btn" style={{backgroundColor: '#10b981', margin: 0}} onClick={() => openTransactionModal(item, 'in')} title="Stock In">
                                                         <ArrowUpCircle size={16}/>
                                                     </button>
-                                                    <button className="action-btn" style={{backgroundColor: '#f59e0b'}} onClick={() => openTransactionModal(item, 'out')} title="Stock Out">
+                                                    <button className="action-btn" style={{backgroundColor: '#f59e0b', margin: 0}} onClick={() => openTransactionModal(item, 'out')} title="Stock Out">
                                                         <ArrowDownCircle size={16}/>
                                                     </button>
-                                                    <button className="action-btn edit-btn" onClick={() => handleEdit(item)} title="Edit">
+                                                    <button className="action-btn edit-btn" style={{margin: 0}} onClick={() => handleEdit(item)} title="Edit">
                                                         <Edit2 size={16}/>
                                                     </button>
-                                                    <button className="action-btn delete-btn" onClick={() => handleDelete(item.id)} title="Delete">
-                                                        <Trash2 size={16}/>
-                                                    </button>
-                                                </>
+                                                </div>
                                             ) : (
                                                 <>
                                                     <button className="action-btn view-btn" onClick={() => handleRestore(item.id)} style={{backgroundColor: '#10b981'}} title="Restore"><RotateCcw size={16}/></button>
@@ -656,48 +653,52 @@ function AdminInventory() {
                                     />
                                 </div>
                             </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Min Stock Threshold</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={formData.minStock}
-                                        onChange={(e) => setFormData({...formData, minStock: e.target.value})}
-                                        className="form-input"
-                                        placeholder="Alert when stock hits this level"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Max Stock Capacity</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={formData.maxStock}
-                                        onChange={(e) => setFormData({...formData, maxStock: e.target.value})}
-                                        className="form-input"
-                                        placeholder="Target maximum stock level"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Supplier</label>
-                                    <input
-                                        type="text"
-                                        value={formData.supplier}
-                                        onChange={(e) => setFormData({...formData, supplier: e.target.value})}
-                                        className="form-input"
-                                        placeholder="Name of supplier"
-                                    />
+                            
+                            <div style={{ marginTop: '20px', padding: '15px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                                <h4 style={{ margin: '0 0 10px 0', color: '#1e293b', fontSize: '0.95rem' }}>Stock Alert Preferences</h4>
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label style={{ color: '#ef4444', fontWeight: 'bold' }}>Low Stock Warning (Min)</label>
+                                        <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 5px 0' }}>Trigger an alert when stock equals or falls below this number.</p>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={formData.minStock}
+                                            onChange={(e) => setFormData({...formData, minStock: e.target.value})}
+                                            className="form-input"
+                                            placeholder="e.g. 5"
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label style={{ color: '#10b981', fontWeight: 'bold' }}>Target Capacity (Max)</label>
+                                        <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 5px 0' }}>The maximum amount of this item the studio should hold.</p>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={formData.maxStock}
+                                            onChange={(e) => setFormData({...formData, maxStock: e.target.value})}
+                                            className="form-input"
+                                            placeholder="e.g. 50"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div className="modal-footer">
-                            <button type="button" className="btn btn-secondary" onClick={() => closeModal(setAddEditModal)} disabled={isSaving}>
-                                Cancel
-                            </button>
-                            <button type="submit" className="btn btn-primary" disabled={isSaving}>
-                                {isSaving ? 'Saving...' : 'Save Item'}
-                            </button>
+                        <div className="modal-footer" style={{ display: 'flex', justifyContent: selectedItem ? 'space-between' : 'flex-end' }}>
+                            {selectedItem && (
+                                <button type="button" className="btn btn-secondary" style={{ background: '#fee2e2', color: '#dc2626', border: 'none' }} onClick={() => { closeModal(setAddEditModal); handleDelete(selectedItem.id); }} disabled={isSaving}>
+                                    <Trash2 size={16} style={{marginRight: '5px', verticalAlign: 'middle'}} />
+                                    Delete Item
+                                </button>
+                            )}
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button type="button" className="btn btn-secondary" onClick={() => closeModal(setAddEditModal)} disabled={isSaving}>
+                                    Cancel
+                                </button>
+                                <button type="submit" className="btn btn-primary" disabled={isSaving}>
+                                    {isSaving ? 'Saving...' : 'Save Item'}
+                                </button>
+                            </div>
                         </div>
                         </form>
                     </div>
