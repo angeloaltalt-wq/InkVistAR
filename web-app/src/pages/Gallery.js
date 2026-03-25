@@ -15,6 +15,8 @@ const Gallery = () => {
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [priceRange, setPriceRange] = useState({ min: 0, max: 20000 });
+  const [showPriceFilter, setShowPriceFilter] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
   // Parse query params for artist filter
@@ -79,6 +81,8 @@ const Gallery = () => {
     if (selectedArtist) {
       queryParams.append('artistId', selectedArtist.id);
     }
+    queryParams.append('minPrice', priceRange.min);
+    queryParams.append('maxPrice', priceRange.max);
     
     url += queryParams.toString();
     console.log(`[GALLERY] Fetching from URL: ${url}`);
@@ -95,12 +99,12 @@ const Gallery = () => {
         console.error('Error fetching works:', err);
         setLoading(false);
       });
-  }, [activeCategory, selectedArtist, location.search]);
+  }, [activeCategory, selectedArtist, location.search, priceRange]);
 
   // Reset page when category or artist changes
   useEffect(() => {
      setCurrentPage(1);
-  }, [activeCategory, selectedArtist]);
+  }, [activeCategory, selectedArtist, priceRange]);
 
   // Pagination logic
   const totalPages = Math.ceil(works.length / itemsPerPage);
@@ -163,6 +167,51 @@ const Gallery = () => {
                 {cat}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Price Slider Filter */}
+        <div className="price-filter-wrapper" style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
+          <div className="glass-price-container" style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            backdropFilter: 'blur(12px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+            padding: '20px 30px',
+            borderRadius: '20px',
+            width: '100%',
+            maxWidth: '500px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
+              <span style={{ color: '#DAA520', fontWeight: 'bold', fontSize: '0.8rem', letterSpacing: '1px' }}>ESTIMATED PRICE RANGE</span>
+              <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: '600' }}>
+                ₱{priceRange.min.toLocaleString()} - ₱{priceRange.max.toLocaleString()}{priceRange.max >= 20000 ? '+' : ''}
+              </span>
+            </div>
+            <div style={{ position: 'relative', height: '30px', display: 'flex', alignItems: 'center' }}>
+              <input
+                type="range"
+                min="0"
+                max="20000"
+                step="500"
+                value={priceRange.max}
+                onChange={(e) => setPriceRange({ ...priceRange, max: parseInt(e.target.value) })}
+                style={{
+                  width: '100%',
+                  accentColor: '#DAA520',
+                  cursor: 'pointer',
+                  background: 'rgba(218, 165, 32, 0.2)',
+                  height: '6px',
+                  borderRadius: '3px',
+                  appearance: 'none',
+                  outline: 'none'
+                }}
+              />
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem', marginTop: '10px', textAlign: 'center' }}>
+              Slide to filter designs based on artist's starting price estimates
+            </p>
           </div>
         </div>
       </header>

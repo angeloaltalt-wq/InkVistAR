@@ -1938,7 +1938,7 @@ app.get('/api/customer/:customerId/appointments', (req, res) => {
 // ========== GALLERY ENDPOINT ==========
 // Get public gallery works (for customer gallery screen)
 app.get('/api/gallery/works', (req, res) => {
-  const { search, category } = req.query;
+  const { search, category, minPrice, maxPrice } = req.query;
 
   let query = `
     SELECT pw.id, pw.title, pw.description, pw.image_url, pw.category, pw.price_estimate, pw.created_at,
@@ -1959,6 +1959,11 @@ app.get('/api/gallery/works', (req, res) => {
   if (category && category !== 'All') {
     query += ` AND pw.category = ?`;
     params.push(category);
+  }
+
+  if (minPrice !== undefined && maxPrice !== undefined) {
+    query += ` AND pw.price_estimate BETWEEN ? AND ?`;
+    params.push(Number(minPrice), Number(maxPrice));
   }
 
   if (req.query.artistId) {
@@ -2076,11 +2081,11 @@ app.post('/api/admin/service-kits', (req, res) => {
 // GET all appointments (Admin view)
 app.get('/api/admin/appointments', (req, res) => {
   const query = `
-    SELECT
+    SELECT 
       ap.id, ap.customer_id, ap.artist_id,
       ap.appointment_date, ap.start_time, ap.end_time,
       ap.design_title, ap.status, ap.payment_status,
-      ap.notes, ap.before_photo, ap.after_photo,
+      ap.notes,
       ap.price, ap.service_type,
       COALESCE(cu.name, 'Unknown Client') AS client_name,
       COALESCE(ar.name, 'Unknown Artist') AS artist_name,
