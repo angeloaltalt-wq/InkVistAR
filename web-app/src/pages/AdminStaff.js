@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import AdminSideNav from '../components/AdminSideNav';
 import ManagerSideNav from '../components/ManagerSideNav';
+import ConfirmModal from '../components/ConfirmModal';
 import './AdminStaff.css';
 import { API_URL } from '../config';
 
@@ -43,6 +44,7 @@ function AdminStaff() {
 
     // Modal state for animations
     const [artistManagerModal, setArtistManagerModal] = useState({ mounted: false, visible: false });
+    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
 
     useEffect(() => {
         fetchStaff();
@@ -161,18 +163,24 @@ function AdminStaff() {
         }
     };
 
-    const handleDeleteWork = async (workId) => {
-        if (window.confirm("Delete this portfolio item?")) {
-            try {
-                await Axios.delete(`${API_URL}/api/artist/portfolio/${workId}`);
-                setArtistDetails(prev => ({
-                    ...prev,
-                    portfolio: prev.portfolio.filter(w => w.id !== workId)
-                }));
-            } catch (error) {
-                console.error("Error deleting work:", error);
+    const handleDeleteWork = (workId) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Delete Portfolio Item',
+            message: 'Delete this portfolio item?',
+            onConfirm: async () => {
+                setConfirmDialog({ isOpen: false });
+                try {
+                    await Axios.delete(`${API_URL}/api/artist/portfolio/${workId}`);
+                    setArtistDetails(prev => ({
+                        ...prev,
+                        portfolio: prev.portfolio.filter(w => w.id !== workId)
+                    }));
+                } catch (error) {
+                    console.error("Error deleting work:", error);
+                }
             }
-        }
+        });
     };
 
     const handleBlockDate = async () => {
@@ -506,6 +514,11 @@ function AdminStaff() {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal 
+                {...confirmDialog} 
+                onCancel={() => setConfirmDialog({ isOpen: false })} 
+            />
             </div>
         </div>
     );

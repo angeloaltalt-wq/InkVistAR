@@ -3,12 +3,14 @@ import Axios from 'axios';
 import { MapPin, Clock, Users, Power, Trash2, Edit2, Plus, X, Search, Filter, SlidersHorizontal } from 'lucide-react';
 import AdminSideNav from '../components/AdminSideNav';
 import { API_URL } from '../config';
+import ConfirmModal from '../components/ConfirmModal';
 import './AdminUsers.css'; // Reusing styles
 
 function AdminStudio() {
     const [branches, setBranches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [branchModal, setBranchModal] = useState({ mounted: false, visible: false });
+    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
     const [formData, setFormData] = useState({
         name: '',
         address: '',
@@ -81,15 +83,21 @@ function AdminStudio() {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm("Are you sure you want to delete this branch?")) {
-            try {
-                await Axios.delete(`${API_URL}/api/admin/branches/${id}`);
-                fetchBranches();
-            } catch (error) {
-                console.error("Error deleting branch:", error);
+    const handleDelete = (id) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Delete Branch',
+            message: 'Are you sure you want to delete this branch?',
+            onConfirm: async () => {
+                setConfirmDialog({ isOpen: false });
+                try {
+                    await Axios.delete(`${API_URL}/api/admin/branches/${id}`);
+                    fetchBranches();
+                } catch (error) {
+                    console.error("Error deleting branch:", error);
+                }
             }
-        }
+        });
     };
 
     const handleRestore = async (id) => {
@@ -285,6 +293,11 @@ function AdminStudio() {
                         </div>
                     </div>
                 )}
+
+                <ConfirmModal 
+                    {...confirmDialog} 
+                    onCancel={() => setConfirmDialog({ isOpen: false })} 
+                />
             </div>
         </div>
     );

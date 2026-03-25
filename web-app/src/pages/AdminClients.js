@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
 import AdminSideNav from '../components/AdminSideNav';
 import { API_URL } from '../config';
+import ConfirmModal from '../components/ConfirmModal';
 import './AdminUsers.css';
 import { User, Calendar, FileText, Edit2, Trash2, Save, X, RotateCcw, Search, Filter, SlidersHorizontal } from 'lucide-react';
 
@@ -11,6 +12,7 @@ function AdminClients() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedClient, setSelectedClient] = useState(null);
     const [clientModal, setClientModal] = useState({ mounted: false, visible: false });
+    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
     const [activeTab, setActiveTab] = useState('profile');
 
     // Pagination state
@@ -112,13 +114,19 @@ function AdminClients() {
         }
     };
 
-    const handleDeactivateClient = async () => {
+    const handleDeactivateClient = () => {
         if (!selectedClient) return;
-        if (window.confirm(`Are you sure you want to deactivate ${selectedClient.name}?`)) {
-            await Axios.delete(`${API_URL}/api/admin/users/${selectedClient.id}`);
-            closeModal();
-            fetchClients();
-        }
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Deactivate Client',
+            message: `Are you sure you want to deactivate ${selectedClient.name}?`,
+            onConfirm: async () => {
+                setConfirmDialog({ isOpen: false });
+                await Axios.delete(`${API_URL}/api/admin/users/${selectedClient.id}`);
+                closeModal();
+                fetchClients();
+            }
+        });
     };
 
     const handleRestoreClient = async (id) => {
@@ -130,16 +138,22 @@ function AdminClients() {
         }
     };
 
-    const handlePermanentDelete = async (id) => {
-        if (window.confirm('This will PERMANENTLY delete the client. Continue?')) {
-            try {
-                await Axios.delete(`${API_URL}/api/admin/users/${id}/permanent`);
-                fetchClients();
-            } catch (error) {
-                console.error("Error deleting client:", error);
-                alert('Failed to delete client. They may have linked data.');
+    const handlePermanentDelete = (id) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Permanent Deletion',
+            message: 'This will PERMANENTLY delete the client. Continue?',
+            confirmText: 'Permanently Delete',
+            onConfirm: async () => {
+                setConfirmDialog({ isOpen: false });
+                try {
+                    await Axios.delete(`${API_URL}/api/admin/users/${id}/permanent`);
+                    fetchClients();
+                } catch (error) {
+                    console.error("Error deleting client:", error);
+                }
             }
-        }
+        });
     };
 
     return (
@@ -316,6 +330,11 @@ function AdminClients() {
                         </div>
                     </div>
                 )}
+
+                <ConfirmModal 
+                    {...confirmDialog} 
+                    onCancel={() => setConfirmDialog({ isOpen: false })} 
+                />
             </div>
         </div>
     );

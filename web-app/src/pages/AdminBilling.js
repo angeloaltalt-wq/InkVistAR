@@ -5,6 +5,7 @@ import AdminSideNav from '../components/AdminSideNav';
 import './AdminUsers.css';
 import './AdminSettings.css'; // Reusing form styles
 import './AdminBilling.css';
+import ConfirmModal from '../components/ConfirmModal';
 import { API_URL } from '../config';
 
 function AdminBilling() {
@@ -30,6 +31,7 @@ function AdminBilling() {
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
 
     // Modal animation handlers
     const openModal = (mode = 'create', invoice = null) => {
@@ -108,16 +110,21 @@ function AdminBilling() {
         }
     };
 
-    const handleDeleteInvoice = async (id) => {
-        if (window.confirm("Are you sure you want to delete this invoice?")) {
-            try {
-                await Axios.delete(`${API_URL}/api/admin/invoices/${id}`);
-                fetchData();
-            } catch (error) {
-                console.error("Error deleting invoice:", error);
-                alert("Failed to delete invoice: " + (error.response?.data?.message || error.message));
+    const handleDeleteInvoice = (id) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Delete Invoice',
+            message: 'Are you sure you want to delete this invoice?',
+            onConfirm: async () => {
+                setConfirmDialog({ isOpen: false });
+                try {
+                    await Axios.delete(`${API_URL}/api/admin/invoices/${id}`);
+                    fetchData();
+                } catch (error) {
+                    console.error("Error deleting invoice:", error);
+                }
             }
-        }
+        });
     };
 
     const saveConfig = async () => {
@@ -477,6 +484,11 @@ function AdminBilling() {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal 
+                {...confirmDialog} 
+                onCancel={() => setConfirmDialog({ isOpen: false })} 
+            />
         </div>
     );
 }

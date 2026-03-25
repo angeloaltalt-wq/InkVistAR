@@ -5,6 +5,7 @@ import { Plus, Edit2, Trash2, Package, History, ArrowUpCircle, ArrowDownCircle, 
 import AdminSideNav from '../components/AdminSideNav';
 import './AdminInventory.css';
 import ManagerSideNav from '../components/ManagerSideNav';
+import ConfirmModal from '../components/ConfirmModal';
 import { API_URL } from '../config';
 
 const INVENTORY_CATEGORIES = [
@@ -34,6 +35,7 @@ function AdminInventory() {
     
     // State for modals to handle animations
     const [addEditModal, setAddEditModal] = useState({ mounted: false, visible: false });
+    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
     const [transactionModal, setTransactionModal] = useState({ mounted: false, visible: false });
     const [historyModal, setHistoryModal] = useState({ mounted: false, visible: false });
     const [serviceKitsModal, setServiceKitsModal] = useState({ mounted: false, visible: false });
@@ -233,15 +235,21 @@ function AdminInventory() {
         openModal(setAddEditModal);
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Are you sure you want to delete this item?')) {
-            try {
-                await Axios.delete(`${API_URL}/api/admin/inventory/${id}`);
-                fetchInventory();
-            } catch (error) {
-                console.error("Error deleting item:", error);
+    const handleDelete = (id) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Delete Item',
+            message: 'Are you sure you want to delete this item? It will be moved to the deleted items view.',
+            onConfirm: async () => {
+                setConfirmDialog({ isOpen: false });
+                try {
+                    await Axios.delete(`${API_URL}/api/admin/inventory/${id}`);
+                    fetchInventory();
+                } catch (error) {
+                    console.error("Error deleting item:", error);
+                }
             }
-        }
+        });
     };
 
     const handleRestore = async (id) => {
@@ -253,15 +261,22 @@ function AdminInventory() {
         }
     };
 
-    const handlePermanentDelete = async (id) => {
-        if (window.confirm('This will PERMANENTLY delete the item. Continue?')) {
-            try {
-                await Axios.delete(`${API_URL}/api/admin/inventory/${id}/permanent`);
-                fetchInventory();
-            } catch (error) {
-                console.error("Error deleting item:", error);
+    const handlePermanentDelete = (id) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Delete Permanently',
+            message: 'This will PERMANENTLY delete the item. This action cannot be undone. Continue?',
+            confirmText: 'Permanently Delete',
+            onConfirm: async () => {
+                setConfirmDialog({ isOpen: false });
+                try {
+                    await Axios.delete(`${API_URL}/api/admin/inventory/${id}/permanent`);
+                    fetchInventory();
+                } catch (error) {
+                    console.error("Error deleting item:", error);
+                }
             }
-        }
+        });
     };
 
     const handleAddNew = () => {
@@ -895,6 +910,11 @@ function AdminInventory() {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal 
+                {...confirmDialog} 
+                onCancel={() => setConfirmDialog({ isOpen: false })} 
+            />
             </div>
         </div>
     );

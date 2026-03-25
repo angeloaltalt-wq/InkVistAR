@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AdminSideNav from '../components/AdminSideNav';
-import ManagerSideNav from '../components/ManagerSideNav';
 import './AdminUsers.css';
+import ConfirmModal from '../components/ConfirmModal';
 import { API_URL } from '../config';
 import { Search, Filter, SlidersHorizontal, UserPlus } from 'lucide-react';
 
@@ -26,6 +26,7 @@ function AdminUsers() {
 
     // Modal state for animations
     const [userModal, setUserModal] = useState({ mounted: false, visible: false });
+    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
 
     const [formData, setFormData] = useState({
         name: '',
@@ -118,39 +119,48 @@ function AdminUsers() {
         openModal();
     };
 
-    const handleDelete = async (userId) => {
-        if (window.confirm('Are you sure you want to deactivate this user?')) {
-            try {
-                await Axios.delete(`${API_URL}/api/admin/users/${userId}`);
-                setUsers(users.filter(u => u.id !== userId));
-                alert('User deactivated successfully');
-            } catch (error) {
-                console.error("Error deactivating user:", error);
-                alert('Failed to deactivate user');
+    const handleDelete = (userId) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Deactivate User',
+            message: 'Are you sure you want to deactivate this user?',
+            onConfirm: async () => {
+                setConfirmDialog({ isOpen: false });
+                try {
+                    await Axios.delete(`${API_URL}/api/admin/users/${userId}`);
+                    setUsers(users.filter(u => u.id !== userId));
+                } catch (error) {
+                    console.error("Error deactivating user:", error);
+                }
             }
-        }
+        });
     };
 
     const handleRestore = async (userId) => {
         try {
             await Axios.put(`${API_URL}/api/admin/users/${userId}/restore`);
             setUsers(users.filter(u => u.id !== userId));
-            alert('User restored successfully');
         } catch (error) {
             console.error("Error restoring user:", error);
         }
     };
 
-    const handlePermanentDelete = async (userId) => {
-        if (window.confirm('This will PERMANENTLY delete the user and cannot be undone. Continue?')) {
-            try {
-                await Axios.delete(`${API_URL}/api/admin/users/${userId}/permanent`);
-                setUsers(users.filter(u => u.id !== userId));
-            } catch (error) {
-                console.error("Error deleting user:", error);
-                alert('Failed to delete user. They may have linked data (appointments, etc).');
+    const handlePermanentDelete = (userId) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Permanent Deletion',
+            message: 'This will PERMANENTLY delete the user and cannot be undone. Continue?',
+            confirmText: 'Permanently Delete',
+            onConfirm: async () => {
+                setConfirmDialog({ isOpen: false });
+                try {
+                    await Axios.delete(`${API_URL}/api/admin/users/${userId}/permanent`);
+                    setUsers(users.filter(u => u.id !== userId));
+                } catch (error) {
+                    console.error("Error deleting user:", error);
+                }
             }
-        }
+        });
     };
 
     const handleSave = async () => {
@@ -490,6 +500,10 @@ function AdminUsers() {
                     </div>
                 </div>
             )}
+            <ConfirmModal 
+                {...confirmDialog} 
+                onCancel={() => setConfirmDialog({ isOpen: false })} 
+            />
             </div>
         </div>
     );

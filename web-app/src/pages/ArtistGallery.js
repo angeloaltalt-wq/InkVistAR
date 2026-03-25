@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
 import { Trash2, Plus, X, Eye, Lock, Globe, Edit } from 'lucide-react';
 import ArtistSideNav from '../components/ArtistSideNav';
+import ConfirmModal from '../components/ConfirmModal';
 import './PortalStyles.css';
 import { API_URL } from '../config';
 
@@ -14,6 +15,7 @@ function ArtistGallery() {
     // Modal states for animations
     const [addWorkModal, setAddWorkModal] = useState({ mounted: false, visible: false });
     const [viewWorkModal, setViewWorkModal] = useState({ mounted: false, visible: false });
+    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
 
     const [formData, setFormData] = useState({
         title: '',
@@ -141,16 +143,25 @@ function ArtistGallery() {
         }
     };
 
-    const handleDelete = async (id) => {
-        // e.stopPropagation is handled in the button onClick
-        if (window.confirm('Are you sure you want to delete this work?')) {
-            try {
-                await Axios.delete(`${API_URL}/api/artist/portfolio/${id}`);
-                setWorks(works.filter(w => w.id !== id));
-            } catch (error) {
-                console.error("Error deleting work:", error);
+    const handleDelete = (id) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Delete Portfolio Work',
+            message: 'Are you sure you want to delete this work?',
+            onConfirm: async () => {
+                setConfirmDialog({ isOpen: false });
+                try {
+                    await Axios.delete(`${API_URL}/api/artist/portfolio/${id}`);
+                    setWorks(works.filter(w => w.id !== id));
+                } catch (error) {
+                    console.error("Error deleting work:", error);
+                }
+                // Also close view mode if delete is triggered from there
+                if (viewWorkModal.mounted) {
+                    closeModal(setViewWorkModal);
+                }
             }
-        }
+        });
     };
 
     const toggleVisibility = async (work) => {
@@ -329,6 +340,11 @@ function ArtistGallery() {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal 
+                {...confirmDialog} 
+                onCancel={() => setConfirmDialog({ isOpen: false })} 
+            />
         </div>
     </div>
   );
