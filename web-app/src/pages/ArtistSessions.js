@@ -23,6 +23,7 @@ function ArtistSessions() {
 
     const [sessionModal, setSessionModal] = useState({ mounted: false, visible: false });
     const [isSaving, setIsSaving] = useState(false);
+    const [searchTermInventory, setSearchTermInventory] = useState('');
     const [confirmModal, setConfirmModal] = useState({
         isOpen: false,
         title: '',
@@ -81,7 +82,8 @@ function ArtistSessions() {
         try {
             const res = await Axios.get(`${API_URL}/api/admin/inventory`);
             if (res.data.success && res.data.inventory) {
-                setInventoryItems(res.data.inventory.filter(item => item.current_stock > 0));
+                // Show all items so artists can see what's available, even if stock is low
+                setInventoryItems(res.data.inventory);
             }
         } catch (e) { console.error(e); }
     };
@@ -193,13 +195,18 @@ function ArtistSessions() {
 
     const processStatusUpdate = async (newStatus) => {
         try {
-            // Auto-save details when starting the session so changes aren't lost
+            // Auto-save details when starting the session
             if (newStatus === 'in_progress') {
-                await Axios.put(`${API_URL}/api/appointments/${activeSession.id}/details`, {
-                    notes: sessionData.notes,
-                    beforePhoto: sessionData.beforePhoto,
-                    afterPhoto: sessionData.afterPhoto
-                });
+                try {
+                    await Axios.put(`${API_URL}/api/appointments/${activeSession.id}/details`, {
+                        notes: sessionData.notes,
+                        beforePhoto: sessionData.beforePhoto,
+                        afterPhoto: sessionData.afterPhoto
+                    });
+                } catch (saveErr) {
+                    console.warn("Auto-save failed during session start:", saveErr);
+                    // We continue anyway so the session can at least start
+                }
             }
 
             const res = await Axios.put(`${API_URL}/api/appointments/${activeSession.id}/status`, { status: newStatus });
@@ -429,20 +436,58 @@ function ArtistSessions() {
                                             </div>
                                             
                                             <div style={{marginTop: '15px', borderTop: '1px dashed #cbd5e1', paddingTop: '10px'}}>
+                                                <strong style={{display: 'block', fontSize: '0.85rem', marginBottom: '8px', color: '#475569'}}>Search Supplies:</strong>
+                                                <div style={{position: 'relative', marginBottom: '10px'}}>
+                                                    <input 
+                                                        type="text" 
+                                                        className="form-input" 
+                                                        placeholder="Search items..." 
+                                                        value={searchTermInventory}
+                                                        onChange={(e) => setSearchTermInventory(e.target.value)}
+                                                        style={{padding: '6px 10px', fontSize: '0.85rem'}}
+                                                    />
+                                                    {searchTermInventory && (
+                                                        <div style={{
+                                                            position: 'absolute', top: '100%', left: 0, right: 0, 
+                                                            zIndex: 100, background: 'white', border: '1px solid #e2e8f0', 
+                                                            maxHeight: '150px', overflowY: 'auto', borderRadius: '4px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                                                        }}>
+                                                            {inventoryItems
+                                                                .filter(item => item.name.toLowerCase().includes(searchTermInventory.toLowerCase()))
+                                                                .map(item => (
+                                                                    <div 
+                                                                        key={item.id} 
+                                                                        onClick={() => {
+                                                                            handleQuickAdd(item.id, 1);
+                                                                            setSearchTermInventory('');
+                                                                        }}
+                                                                        style={{padding: '8px 12px', cursor: 'pointer', fontSize: '0.85rem', borderBottom: '1px solid #f1f5f9'}}
+                                                                        onMouseOver={(e) => e.target.style.background = '#f8fafc'}
+                                                                        onMouseOut={(e) => e.target.style.background = 'white'}
+                                                                    >
+                                                                        {item.name} ({item.current_stock} remaining)
+                                                                    </div>
+                                                                ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+
                                                 <strong style={{display: 'block', fontSize: '0.85rem', marginBottom: '8px', color: '#475569'}}>Quick Add (+1):</strong>
                                                 <div style={{display: 'flex', gap: '5px', flexWrap: 'wrap'}}>
-                                                    {inventoryItems.slice(0, 5).map(item => (
+                                                    {inventoryItems.slice(0, 8).map(item => (
                                                         <button 
                                                             key={item.id}
                                                             disabled={addingMaterial}
                                                             onClick={() => handleQuickAdd(item.id, 1)}
                                                             style={{
-                                                                padding: '6px 10px', borderRadius: '15px', background: '#e2e8f0', 
+                                                                padding: '6px 12px', borderRadius: '15px', background: '#e2e8f0', 
                                                                 border: 'none', fontSize: '0.8rem', cursor: addingMaterial ? 'not-allowed' : 'pointer',
-                                                                color: '#333'
+                                                                color: '#333', transition: 'all 0.2s', fontWeight: '500'
                                                             }}
+                                                            onMouseOver={(e) => e.target.style.background = '#cbd5e1'}
+                                                            onMouseOut={(e) => e.target.style.background = '#e2e8f0'}
                                                         >
-                                                            {item.name.split(' ')[0]} {/* Show short name */}
+                                                            {item.name.length > 15 ? item.name.substring(0, 12) + '...' : item.name}
                                                         </button>
                                                     ))}
                                                 </div>
