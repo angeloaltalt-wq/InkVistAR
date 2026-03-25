@@ -40,7 +40,8 @@ function AdminAppointments() {
         status: 'confirmed',
         paymentStatus: 'unpaid',
         notes: '',
-        price: 0
+        price: 0,
+        manualPaidAmount: 0
     });
 
     // Modal animation handlers
@@ -94,7 +95,8 @@ function AdminAppointments() {
                     beforePhoto: apt.before_photo,
                     afterPhoto: apt.after_photo,
                     price: apt.price || 0,
-                    totalPaid: apt.total_paid || 0
+                    totalPaid: apt.total_paid || 0,
+                    manualPaidAmount: apt.manual_paid_amount || 0
                 }));
                 setAppointments(mappedAppointments);
                 setFilteredAppointments(mappedAppointments);
@@ -200,7 +202,8 @@ function AdminAppointments() {
             status: appointment.status,
             paymentStatus: appointment.paymentStatus,
             notes: appointment.notes,
-            price: appointment.price
+            price: appointment.price,
+            manualPaidAmount: appointment.manualPaidAmount || 0
         });
         setClientSearch(appointment.clientName);
         openModal();
@@ -226,7 +229,8 @@ function AdminAppointments() {
             status: 'pending',
             paymentStatus: 'unpaid',
             notes: '',
-            price: 0
+            price: 0,
+            manualPaidAmount: 0
         });
         setClientSearch('');
         openModal();
@@ -254,7 +258,8 @@ function AdminAppointments() {
                     status: formData.status,
                     paymentStatus: formData.paymentStatus,
                     notes: formData.notes,
-                    price: finalPrice
+                    price: finalPrice,
+                    manualPaidAmount: parseFloat(formData.manualPaidAmount) || 0
                 };
 
                 if (selectedAppointment) {
@@ -613,7 +618,11 @@ function AdminAppointments() {
                                                         </span>
                                                     </td>
                                                     <td>
-                                                        {appointment.price > 0 ? (
+                                                        {appointment.paymentStatus === 'paid' ? (
+                                                            <span className="badge status-confirmed" style={{ backgroundColor: '#ecfdf5', color: '#059669', border: '1px solid #10b981' }}>Fully Paid</span>
+                                                        ) : appointment.paymentStatus === 'downpayment_paid' ? (
+                                                            <span className="badge" style={{ backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #3b82f6' }}>Downpayment</span>
+                                                        ) : appointment.price > 0 ? (
                                                             appointment.totalPaid >= appointment.price ? (
                                                                 <span className="badge status-confirmed" style={{ backgroundColor: '#ecfdf5', color: '#059669', border: '1px solid #10b981' }}>Fully Paid</span>
                                                             ) : appointment.totalPaid > 0 ? (
@@ -877,16 +886,29 @@ function AdminAppointments() {
                                         />
                                     </div>
                                 </div>
-                                <div className="form-group">
-                                    <label>Price (₱)</label>
-                                    <input
-                                        type="number"
-                                        value={formData.price}
-                                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                        className="premium-select-v2"
-                                        style={{ width: '100%', backgroundImage: 'none' }}
-                                        placeholder="e.g. 35000"
-                                    />
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label>Total Price (₱)</label>
+                                        <input
+                                            type="number"
+                                            value={formData.price}
+                                            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                                            className="premium-select-v2"
+                                            style={{ width: '100%', backgroundImage: 'none' }}
+                                            placeholder="e.g. 35000"
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Paid Amount (Manual Adjustment) (₱)</label>
+                                        <input
+                                            type="number"
+                                            value={formData.manualPaidAmount}
+                                            onChange={(e) => setFormData({ ...formData, manualPaidAmount: e.target.value })}
+                                            className="premium-select-v2"
+                                            style={{ width: '100%', backgroundImage: 'none' }}
+                                            placeholder="e.g. 5000"
+                                        />
+                                    </div>
                                 </div>
                                 <div className="form-group">
                                     <label>Notes</label>

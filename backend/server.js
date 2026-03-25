@@ -460,6 +460,14 @@ db.getConnection((err, connection) => {
           }
         });
 
+        // MIGRATION: Add 'manual_paid_amount' column
+        db.query("SHOW COLUMNS FROM appointments LIKE 'manual_paid_amount'", (err, results) => {
+          if (!err && results.length === 0) {
+            console.log('🔄 Migrating appointments: Adding manual_paid_amount column...');
+            db.query("ALTER TABLE appointments ADD COLUMN manual_paid_amount DECIMAL(10, 2) DEFAULT 0.00 AFTER price");
+          }
+        });
+
         // MIGRATION: Ensure status is VARCHAR(50) to avoid truncation if it was ENUM
         db.query("ALTER TABLE appointments MODIFY COLUMN status VARCHAR(50) DEFAULT 'pending'", (err) => {
           if (!err) console.log('✅ Ensured appointments status is VARCHAR(50)');
@@ -2086,10 +2094,10 @@ app.get('/api/admin/appointments', (req, res) => {
       ap.appointment_date, ap.start_time, ap.end_time,
       ap.design_title, ap.status, ap.payment_status,
       ap.notes,
-      ap.price, ap.service_type,
+      ap.price, ap.service_type, ap.manual_paid_amount,
       COALESCE(cu.name, 'Unknown Client') AS client_name,
       COALESCE(ar.name, 'Unknown Artist') AS artist_name,
-      COALESCE((SELECT SUM(amount)/100 FROM payments p WHERE p.appointment_id = ap.id AND p.status = 'paid'), 0) AS total_paid
+      (COALESCE(ap.manual_paid_amount, 0) + COALESCE((SELECT SUM(amount)/100 FROM payments p WHERE p.appointment_id = ap.id AND p.status = 'paid'), 0)) AS total_paid
     FROM appointments ap
     LEFT JOIN users cu ON ap.customer_id = cu.id
     LEFT JOIN users ar ON ap.artist_id = ar.id
@@ -2107,7 +2115,7 @@ app.get('/api/admin/appointments', (req, res) => {
 
 // POST create a new appointment (Admin)
 app.post('/api/admin/appointments', (req, res) => {
-  const { customerId, artistId, serviceType, designTitle, date, startTime, status, notes, price } = req.body;
+  const { customerId, artistId, serviceType, designTitle, date, startTime, status, notes, price, manualPaidAmount } = req.body;
 
   if (!customerId || !artistId || !date) {
     return res.status(400).json({ success: false, message: 'customerId, artistId, and date are required.' });
@@ -2118,10 +2126,10 @@ app.post('/api/admin/appointments', (req, res) => {
 
   const query = `
     INSERT INTO appointments 
-      (customer_id, artist_id, appointment_date, start_time, design_title, service_type, status, notes, price, payment_status, is_deleted)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 0)
+      (customer_id, artist_id, appointment_date, start_time, design_title, service_type, status, notes, price, manual_paid_amount, payment_status, is_deleted)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 0)
   `;
-  db.query(query, [customerId, artistId, date, startTime || null, combinedTitle, serviceType || 'General Session', finalStatus, notes || '', price || 0], (err, result) => {
+  db.query(query, [customerId, artistId, date, startTime || null, combinedTitle, serviceType || 'General Session', finalStatus, notes || '', price || 0, manualPaidAmount || 0], (err, result) => {
     if (err) {
       console.error('❌ Error creating admin appointment:', err);
       return res.status(500).json({ success: false, message: 'Database error: ' + err.message });
@@ -2134,7 +2142,7 @@ app.post('/api/admin/appointments', (req, res) => {
 // PUT update an appointment (Admin)
 app.put('/api/admin/appointments/:id', (req, res) => {
   const { id } = req.params;
-  const { customerId, artistId, serviceType, designTitle, date, startTime, status, paymentStatus, notes, price } = req.body;
+  const { customerId, artistId, serviceType, designTitle, date, startTime, status, paymentStatus, notes, price, manualPaidAmount } = req.body;
 
   const combinedTitle = serviceType && designTitle ? `${serviceType}: ${designTitle}` : (designTitle || serviceType || null);
 
@@ -2152,6 +2160,7 @@ app.put('/api/admin/appointments/:id', (req, res) => {
   if (paymentStatus !== undefined) { updates.push('payment_status = ?'); params.push(paymentStatus); }
   if (notes !== undefined) { updates.push('notes = ?'); params.push(notes); }
   if (price !== undefined) { updates.push('price = ?'); params.push(price); }
+  if (manualPaidAmount !== undefined) { updates.push('manual_paid_amount = ?'); params.push(manualPaidAmount); }
 
   if (updates.length === 0) {
     return res.status(400).json({ success: false, message: 'No fields to update.' });
@@ -3513,11 +3522,12 @@ app.get('/api/admin/appointments', (req, res) => {
       ap.before_photo,
       ap.after_photo,
       ap.price,
+      ap.manual_paid_amount,
       c.name as client_name,
       c.email as client_email,
       a.name as artist_name,
       ar.hourly_rate,
-      (SELECT COALESCE(SUM(amount), 0) FROM payments p WHERE p.appointment_id = ap.id AND p.status = 'paid') / 100 as total_paid
+      (COALESCE(ap.manual_paid_amount, 0) + COALESCE((SELECT SUM(amount) FROM payments p WHERE p.appointment_id = ap.id AND p.status = 'paid'), 0) / 100) as total_paid
     FROM appointments ap
     JOIN users c ON ap.customer_id = c.id
     JOIN users a ON ap.artist_id = a.id
@@ -3534,12 +3544,12 @@ app.get('/api/admin/appointments', (req, res) => {
 
 // Admin: Create Appointment (Walk-in / Manual Booking)
 app.post('/api/admin/appointments', (req, res) => {
-  const { customerId, artistId, date, startTime, endTime, serviceType, designTitle, notes, status, price } = req.body;
+  const { customerId, artistId, date, startTime, endTime, serviceType, designTitle, notes, status, price, manualPaidAmount } = req.body;
 
   const query = `
     INSERT INTO appointments 
-    (customer_id, artist_id, appointment_date, start_time, end_time, service_type, design_title, notes, status, price)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (customer_id, artist_id, appointment_date, start_time, end_time, service_type, design_title, notes, status, price, manual_paid_amount)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   db.query(query, [
@@ -3552,7 +3562,8 @@ app.post('/api/admin/appointments', (req, res) => {
     designTitle || '',
     notes,
     status || 'scheduled',
-    (price !== undefined) ? price : 0
+    (price !== undefined) ? price : 0,
+    manualPaidAmount || 0
   ], (err, result) => {
     if (err) {
       console.error('❌ Error creating appointment:', err);
@@ -3566,7 +3577,7 @@ app.post('/api/admin/appointments', (req, res) => {
 // Admin: Update Appointment (Status or Reschedule)
 app.put('/api/admin/appointments/:id', (req, res) => {
   const { id } = req.params;
-  const { status, paymentStatus, date, startTime, endTime, artistId, serviceType, designTitle, notes, price } = req.body;
+  const { status, paymentStatus, date, startTime, endTime, artistId, serviceType, designTitle, notes, price, manualPaidAmount } = req.body;
 
   let query = 'UPDATE appointments SET ';
   const params = [];
@@ -3611,6 +3622,10 @@ app.put('/api/admin/appointments/:id', (req, res) => {
   if (price !== undefined) {
     updates.push('price = ?');
     params.push(price);
+  }
+  if (manualPaidAmount !== undefined) {
+    updates.push('manual_paid_amount = ?');
+    params.push(manualPaidAmount);
   }
 
   if (updates.length === 0) return res.json({ success: true });
