@@ -111,9 +111,9 @@ function ArtistEarnings(){
                                                             <td>{new Date(session.appointment_date).toLocaleDateString()}</td>
                                                             <td>{session.client_name}</td>
                                                             <td>{session.design_title}</td>
-                                                            <td>₱{session.basePrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                                            <td>₱{(session.basePrice || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                                                             <td style={{color: session.payment_status === 'paid' ? '#10b981' : '#f59e0b', fontWeight: 'bold'}}>
-                                                                ₱{session.artistShare.toFixed(2)}
+                                                                ₱{(session.artistShare || 0).toFixed(2)}
                                                                 <span style={{ fontSize: '0.7rem', display: 'block', color: session.payment_status === 'paid' ? '#10b981' : '#f59e0b' }}>
                                                                     {session.payment_status === 'paid' ? 'Paid' : 'Unpaid'}
                                                                 </span>
@@ -143,7 +143,7 @@ function ArtistEarnings(){
                                                     {payoutHistory.map((payout, i) => (
                                                         <tr key={i}>
                                                             <td>{payout.month}</td>
-                                                            <td>₱{payout.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                                            <td>₱{(payout.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                                                             <td><span className="status-badge completed">{payout.status}</span></td>
                                                         </tr>
                                                     ))}

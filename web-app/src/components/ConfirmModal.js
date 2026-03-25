@@ -41,7 +41,7 @@ const ConfirmModal = ({
     };
 
     return (
-        <div className="modal-overlay open" onClick={onClose}>
+        <div className="modal-overlay open" style={{ zIndex: 9999 }} onClick={onClose}>
             <div className="modal-content" style={{ maxWidth: '450px', padding: '0', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
                 <div style={{ padding: '32px 24px', textAlign: 'center' }}>
                     <div style={{ 

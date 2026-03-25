@@ -265,7 +265,7 @@ function AdminSideNav() {
                 <div className="menu-section menu-section-bottom">
                     <button
                         className="menu-item logout-item"
-                        onClick={handleLogout}
+                        onClick={() => setShowLogoutConfirm(true)}
                         title="Logout"
                     >
                         <LogOut size={20} />
@@ -273,6 +273,17 @@ function AdminSideNav() {
                     </button>
                 </div>
             </nav>
+
+            <ConfirmModal
+                isOpen={showLogoutConfirm}
+                title="Confirm Logout"
+                message="Are you sure you want to sign out of your account?"
+                confirmText="Yes, Logout"
+                cancelText="Cancel"
+                type="danger"
+                onConfirm={handleLogout}
+                onClose={() => setShowLogoutConfirm(false)}
+            />
         </aside>
     );
 }

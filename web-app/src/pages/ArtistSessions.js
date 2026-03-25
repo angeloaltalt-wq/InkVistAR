@@ -166,6 +166,14 @@ function ArtistSessions() {
     };
 
     const handleUpdateStatus = async (newStatus) => {
+        if (newStatus === 'in_progress') {
+            const hasActiveSession = sessions.some(s => s.status === 'in_progress' && s.id !== activeSession.id);
+            if (hasActiveSession) {
+                showAlert("Action Denied", "You already have a session in progress. Please complete it first.", "warning");
+                return;
+            }
+        }
+
         if (newStatus === 'completed') {
             setConfirmModal({
                 isOpen: true,
@@ -185,6 +193,15 @@ function ArtistSessions() {
 
     const processStatusUpdate = async (newStatus) => {
         try {
+            // Auto-save details when starting the session so changes aren't lost
+            if (newStatus === 'in_progress') {
+                await Axios.put(`${API_URL}/api/appointments/${activeSession.id}/details`, {
+                    notes: sessionData.notes,
+                    beforePhoto: sessionData.beforePhoto,
+                    afterPhoto: sessionData.afterPhoto
+                });
+            }
+
             const res = await Axios.put(`${API_URL}/api/appointments/${activeSession.id}/status`, { status: newStatus });
             if (res.data.success) {
                 setActiveSession(prev => ({ ...prev, status: newStatus }));
@@ -193,7 +210,9 @@ function ArtistSessions() {
                     closeSessionModal();
                     fetchSessions();
                 } else if (newStatus === 'in_progress') {
-                    setTimeout(() => fetchSessionMaterials(activeSession.id), 1000);
+                    showAlert("Session Started", "Session details saved. You can now log supplies.", "success");
+                    fetchSessions(); // update the list
+                    setTimeout(() => fetchSessionMaterials(activeSession.id), 500);
                 }
             } else {
                 showAlert("Update Failed", "Failed to update session status. Please try again.", "warning");

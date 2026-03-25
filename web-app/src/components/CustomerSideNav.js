@@ -12,11 +12,13 @@ import {
     Bell,
     Building2
 } from 'lucide-react';
+import ConfirmModal from './ConfirmModal';
 import '../styles/CustomerSideNav.css';
 
 function CustomerSideNav() {
     const navigate = useNavigate();
     const location = useLocation();
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [collapsed, setCollapsed] = useState(() => {
         const stored = localStorage.getItem('customerSidenavCollapsed');
         return stored === 'true';
@@ -89,13 +91,24 @@ function CustomerSideNav() {
                 </div>
 
                 <div className="menu-section-bottom">
-                    <button className="menu-item logout-item" onClick={handleLogout}>
+                    <button className="menu-item logout-item" onClick={() => setShowLogoutConfirm(true)}>
                         <LogOut size={20} />
                         <span className="menu-text">Logout</span>
                         <div className="active-indicator" style={{ display: 'none' }} />
                     </button>
                 </div>
             </nav>
+
+            <ConfirmModal
+                isOpen={showLogoutConfirm}
+                title="Confirm Logout"
+                message="Are you sure you want to sign out of your account?"
+                confirmText="Yes, Logout"
+                cancelText="Cancel"
+                type="danger"
+                onConfirm={handleLogout}
+                onClose={() => setShowLogoutConfirm(false)}
+            />
         </aside>
     );
 }

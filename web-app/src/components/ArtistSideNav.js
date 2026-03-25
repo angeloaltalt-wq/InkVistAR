@@ -13,11 +13,13 @@ import {
     ChevronRight,
     Building2
 } from 'lucide-react';
+import ConfirmModal from './ConfirmModal';
 import '../styles/ArtistSideNav.css';
 
 function ArtistSideNav() {
     const navigate = useNavigate();
     const location = useLocation();
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [collapsed, setCollapsed] = useState(() => {
         const stored = localStorage.getItem('artistSidenavCollapsed');
         return stored === 'true';
@@ -91,13 +93,24 @@ function ArtistSideNav() {
                 </div>
 
                 <div className="menu-section-bottom">
-                    <button className="menu-item logout-item" onClick={handleLogout}>
+                    <button className="menu-item logout-item" onClick={() => setShowLogoutConfirm(true)}>
                         <LogOut size={20} />
                         <span className="menu-text">Logout</span>
                         <div className="active-indicator" style={{ display: 'none' }} />
                     </button>
                 </div>
             </nav>
+
+            <ConfirmModal
+                isOpen={showLogoutConfirm}
+                title="Confirm Logout"
+                message="Are you sure you want to sign out of your account?"
+                confirmText="Yes, Logout"
+                cancelText="Cancel"
+                type="danger"
+                onConfirm={handleLogout}
+                onClose={() => setShowLogoutConfirm(false)}
+            />
         </aside>
     );
 }
