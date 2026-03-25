@@ -2195,20 +2195,24 @@ app.get('/api/appointments/:id/materials', (req, res) => {
 app.post('/api/appointments/:id/materials', (req, res) => {
   const { id } = req.params;
   const { inventory_id, quantity } = req.body;
-  
+
   // Deduct from inventory immediately and add to session_materials as hold
-  db.query('UPDATE inventory SET current_stock = current_stock - ? WHERE id = ? AND current_stock >= ?', 
+  db.query('UPDATE inventory SET current_stock = current_stock - ? WHERE id = ? AND current_stock >= ?',
     [quantity, inventory_id, quantity], (err, result) => {
-      
-    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+
+    if (err) {
+      console.error('❌ Error deducting inventory:', err);
+      return res.status(500).json({ success: false, message: 'Database error: ' + err.message });
+    }
     if (result.affectedRows === 0) return res.status(400).json({ success: false, message: 'Insufficient stock or invalid item' });
 
-    db.query('INSERT INTO session_materials (appointment_id, inventory_id, quantity, status) VALUES (?, ?, ?, "hold")', 
+    db.query('INSERT INTO session_materials (appointment_id, inventory_id, quantity, status) VALUES (?, ?, ?, "hold")',
       [id, inventory_id, quantity], (insErr) => {
         if (insErr) {
+          console.error('❌ Error inserting session material:', insErr);
           // Rollback stock
           db.query('UPDATE inventory SET current_stock = current_stock + ? WHERE id = ?', [quantity, inventory_id]);
-          return res.status(500).json({ success: false, message: 'Failed to record material usage' });
+          return res.status(500).json({ success: false, message: 'Failed to record material usage: ' + insErr.message });
         }
         res.json({ success: true, message: 'Material added to session' });
     });
