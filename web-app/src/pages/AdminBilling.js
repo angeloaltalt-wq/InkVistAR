@@ -32,7 +32,14 @@ function AdminBilling() {
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
-    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
+    const [confirmDialog, setConfirmDialog] = useState({ 
+        isOpen: false, 
+        title: '', 
+        message: '', 
+        onConfirm: null,
+        type: 'danger',
+        isAlert: false
+    });
 
     // Modal animation handlers
     const openModal = (mode = 'create', invoice = null) => {
@@ -56,6 +63,17 @@ function AdminBilling() {
         setTimeout(() => {
             setInvoiceModal({ mounted: false, visible: false, mode: 'create', id: null });
         }, 400);
+    };
+
+    const showAlert = (title, message, type = 'info') => {
+        setConfirmDialog({
+            isOpen: true,
+            title,
+            message,
+            type,
+            isAlert: true,
+            onConfirm: () => setConfirmDialog(prev => ({ ...prev, isOpen: false }))
+        });
     };
 
     const openPreview = (invoice) => {
@@ -107,7 +125,7 @@ function AdminBilling() {
             fetchData(); // Refresh list
         } catch (error) {
             console.error("Error saving invoice:", error);
-            alert("Failed to save invoice: " + (error.response?.data?.message || error.message));
+            showAlert("Error", "Failed to save invoice: " + (error.response?.data?.message || error.message), "danger");
         }
     };
 
@@ -134,10 +152,10 @@ function AdminBilling() {
                 section: 'billing',
                 data: config
             });
-            alert("Configuration saved successfully");
+            showAlert("Success", "Configuration saved successfully", "success");
         } catch (error) {
             console.error("Error saving config:", error);
-            alert("Failed to save configuration");
+            showAlert("Error", "Failed to save configuration", "danger");
         }
     };
 
@@ -480,8 +498,14 @@ function AdminBilling() {
             )}
 
             <ConfirmModal 
-                {...confirmDialog} 
-                onCancel={() => setConfirmDialog({ isOpen: false })} 
+                isOpen={confirmDialog.isOpen}
+                title={confirmDialog.title}
+                message={confirmDialog.message}
+                confirmText={confirmDialog.confirmText}
+                onConfirm={confirmDialog.onConfirm}
+                onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+                type={confirmDialog.type}
+                isAlert={confirmDialog.isAlert}
             />
         </div>
     );

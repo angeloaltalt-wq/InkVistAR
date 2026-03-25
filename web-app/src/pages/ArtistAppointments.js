@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
-import { Check, X, Calendar, List, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, X, Calendar, List, ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
 import ArtistSideNav from '../components/ArtistSideNav';
+import Pagination from '../components/Pagination';
+import ConfirmModal from '../components/ConfirmModal';
 import './PortalStyles.css';
 import { API_URL } from '../config';
 
@@ -12,7 +14,8 @@ function ArtistAppointments(){
     const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
     const [currentDate, setCurrentDate] = useState(new Date());
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 10;
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [confirmModal, setConfirmModal] = useState({ visible: false, title: '', message: '', onConfirm: null });
     
     
     const [user] = useState(() => {
@@ -184,41 +187,54 @@ function ArtistAppointments(){
                                         <button className={`tab-button ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>History</button>
                                     </div>
 
-                                    <div className="data-card">
+                                    <div className="table-card-container" style={{ minHeight: '600px' }}>
                                         {currentItems.length ? (
                                             <>
-                                                <table className="portal-table">
-                                                    <thead><tr><th>Client</th><th>Service</th><th>Date</th><th>Time</th><th>Price</th><th>Status</th><th>Payment</th></tr></thead>
-                                                    <tbody>{currentItems.map(a => (
-                                                        <tr key={a.id}>
-                                                            <td>{a.client_name}</td>
-                                                            <td>{a.design_title}</td>
-                                                            <td>{new Date(a.appointment_date).toLocaleDateString()}</td>
-                                                            <td>{a.start_time}</td>
-                                                            <td style={{ fontWeight: 'bold' }}>₱{parseFloat(a.price || 0).toLocaleString()}</td>
-                                                            <td><span className={`status-badge ${a.status}`}>{a.status}</span></td>
-                                                            <td>
-                                                                <span className={`status-badge ${a.payment_status === 'paid' ? 'completed' : a.payment_status === 'pending' ? 'pending' : 'cancelled'}`} style={{ backgroundColor: a.payment_status === 'paid' ? '#dcfce7' : a.payment_status === 'pending' ? '#fef3c7' : '#f3f4f6', color: a.payment_status === 'paid' ? '#16a34a' : a.payment_status === 'pending' ? '#b45309' : '#64748b' }}>
-                                                                    {a.payment_status ? a.payment_status.charAt(0).toUpperCase() + a.payment_status.slice(1) : 'Unpaid'}
-                                                                </span>
-                                                            </td>
-                                                        </tr>
-                                                    ))}</tbody>
-                                                </table>
-                                                {totalPages > 1 && (
-                                                    <div className="pagination" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem', gap: '1rem' }}>
-                                                        <button className="btn btn-secondary" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
-                                                            Previous
-                                                        </button>
-                                                        <span>Page {currentPage} of {totalPages}</span>
-                                                        <button className="btn btn-secondary" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
-                                                            Next
-                                                        </button>
-                                                    </div>
-                                                )}
+                                                <div className="table-responsive">
+                                                    <table className="portal-table">
+                                                        <thead><tr><th>Client</th><th>Service</th><th>Date</th><th>Time</th><th>Price</th><th>Status</th><th>Payment</th></tr></thead>
+                                                        <tbody>{currentItems.map(a => (
+                                                            <tr key={a.id}>
+                                                                <td style={{ fontWeight: '600' }}>{a.client_name}</td>
+                                                                <td>{a.design_title}</td>
+                                                                <td>{new Date(a.appointment_date).toLocaleDateString()}</td>
+                                                                <td>{a.start_time || 'N/A'}</td>
+                                                                <td style={{ fontWeight: 'bold' }}>₱{parseFloat(a.price || 0).toLocaleString()}</td>
+                                                                <td><span className={`status-badge ${a.status}`}>{a.status}</span></td>
+                                                                <td>
+                                                                    <span className={`status-badge ${a.payment_status === 'paid' ? 'completed' : a.payment_status === 'pending' ? 'pending' : 'cancelled'}`} style={{ backgroundColor: a.payment_status === 'paid' ? '#dcfce7' : a.payment_status === 'pending' ? '#fef3c7' : '#f3f4f6', color: a.payment_status === 'paid' ? '#16a34a' : a.payment_status === 'pending' ? '#b45309' : '#64748b' }}>
+                                                                        {a.payment_status ? a.payment_status.charAt(0).toUpperCase() + a.payment_status.slice(1) : 'Unpaid'}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        ))}</tbody>
+                                                    </table>
+                                                </div>
+                                                <Pagination 
+                                                    currentPage={currentPage}
+                                                    totalPages={totalPages}
+                                                    onPageChange={setCurrentPage}
+                                                    itemsPerPage={itemsPerPage}
+                                                    onItemsPerPageChange={setItemsPerPage}
+                                                    totalItems={filteredAppointments.length}
+                                                    unit="appointments"
+                                                />
                                             </>
-                                        ) : <p className="no-data">No appointments in this category</p>}
+                                        ) : (
+                                            <div className="no-data-container">
+                                                <Inbox size={48} className="no-data-icon" />
+                                                <p className="no-data-text">No appointments in this category</p>
+                                            </div>
+                                        )}
                                     </div>
+                                    
+                                    <ConfirmModal 
+                                        isOpen={confirmModal.visible}
+                                        title={confirmModal.title}
+                                        message={confirmModal.message}
+                                        onConfirm={() => { confirmModal.onConfirm(); setConfirmModal({ ...confirmModal, visible: false }); }}
+                                        onClose={() => setConfirmModal({ ...confirmModal, visible: false })}
+                                    />
                                 </>
                             )}
                         </>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
 import { Play, CheckCircle, Upload, Save, X, Package, FileText, Image as ImageIcon, Clock } from 'lucide-react';
 import ArtistSideNav from '../components/ArtistSideNav';
+import ConfirmModal from '../components/ConfirmModal';
 import './PortalStyles.css';
 import { API_URL } from '../config';
 
@@ -21,6 +22,26 @@ function ArtistSessions() {
     const [addingMaterial, setAddingMaterial] = useState(false);
 
     const [sessionModal, setSessionModal] = useState({ mounted: false, visible: false });
+    const [isSaving, setIsSaving] = useState(false);
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: null,
+        type: 'danger',
+        isAlert: false
+    });
+
+    const showAlert = (title, message, type = 'info') => {
+        setConfirmModal({
+            isOpen: true,
+            title,
+            message,
+            type,
+            isAlert: true,
+            onConfirm: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
+        });
+    };
 
     const [user] = useState(() => {
         const saved = localStorage.getItem('user');
@@ -85,10 +106,10 @@ function ArtistSessions() {
             if (res.data.success) {
                 fetchSessionMaterials(activeSession.id);
             } else {
-                alert(res.data.message || 'Failed to add material. Check stock.');
+                showAlert("Inventory Error", res.data.message || 'Failed to add material. Check stock.', "warning");
             }
         } catch (e) {
-            alert('Connection failed');
+            showAlert("Connection Error", "Failed to connect to the server while adding material.", "danger");
         } finally {
             setAddingMaterial(false);
         }
@@ -129,39 +150,65 @@ function ArtistSessions() {
     };
 
     const handleUpdateStatus = async (newStatus) => {
-        try {
-            await Axios.put(`${API_URL}/api/appointments/${activeSession.id}/status`, { status: newStatus });
-            setActiveSession(prev => ({ ...prev, status: newStatus }));
+        if (newStatus === 'completed') {
+            setConfirmModal({
+                isOpen: true,
+                title: 'Complete Session?',
+                message: `Are you sure you want to mark this session as completed? Total material cost: ₱${sessionCost.toLocaleString()} will be recorded.`,
+                confirmText: 'Yes, Complete',
+                type: 'info',
+                onConfirm: async () => {
+                    await processStatusUpdate(newStatus);
+                    setConfirmModal({ ...confirmModal, isOpen: false });
+                }
+            });
+        } else {
+            await processStatusUpdate(newStatus);
+        }
+    };
 
-            // If completing, close modal and refresh
-            if (newStatus === 'completed') {
-                alert(`Session marked as completed!\nTotal material cost: ₱${sessionCost.toLocaleString()}.\nThis cost has been recorded and items consumed.`);
-                closeSessionModal();
-                fetchSessions();
-            } else if (newStatus === 'in_progress') {
-                setTimeout(() => fetchSessionMaterials(activeSession.id), 1000);
+    const processStatusUpdate = async (newStatus) => {
+        try {
+            const res = await Axios.put(`${API_URL}/api/appointments/${activeSession.id}/status`, { status: newStatus });
+            if (res.data.success) {
+                setActiveSession(prev => ({ ...prev, status: newStatus }));
+
+                if (newStatus === 'completed') {
+                    closeSessionModal();
+                    fetchSessions();
+                } else if (newStatus === 'in_progress') {
+                    setTimeout(() => fetchSessionMaterials(activeSession.id), 1000);
+                }
+            } else {
+                showAlert("Update Failed", "Failed to update session status. Please try again.", "warning");
             }
         } catch (error) {
             console.error("Error updating status:", error);
-            alert("Failed to update status");
+            showAlert("Connection Error", "Failed to connect to the server while updating status.", "danger");
         }
     };
 
     const handleSaveDetails = async () => {
         if (!activeSession) return;
+        setIsSaving(true);
         try {
-            await Axios.put(`${API_URL}/api/appointments/${activeSession.id}/details`, {
+            const res = await Axios.put(`${API_URL}/api/appointments/${activeSession.id}/details`, {
                 notes: sessionData.notes,
                 beforePhoto: sessionData.beforePhoto,
                 afterPhoto: sessionData.afterPhoto
             });
-            
-            alert('Session details saved successfully!');
-            setActiveSession(null);
-            fetchSessions();
+            if (res.data.success) {
+                showAlert("Saved", "Session details saved successfully!", "success");
+                setActiveSession(null);
+                fetchSessions();
+            } else {
+                showAlert("Error", "Failed to save session details. " + res.data.message, "danger");
+            }
         } catch (error) {
             console.error("Error saving details:", error);
-            alert("Failed to save session details");
+            showAlert("Error", "Failed to save session details. Please check your connection.", "danger");
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -175,8 +222,11 @@ function ArtistSessions() {
                 </header>
                 <div className="portal-content">
                     {loading ? <div className="no-data">Loading...</div> : (
-                        <div className="data-card">
-                            <h2>Today's Queue</h2>
+                        <div className="table-card-container" style={{ minHeight: '500px' }}>
+                            <div className="card-header-v2">
+                                <h2>Today's Queue</h2>
+                                <span className={`status-badge-v2 pending`}>{sessions.length} Appointments</span>
+                            </div>
                             {sessions.length > 0 ? (
                                 <div className="table-responsive">
                                     <table className="portal-table">
@@ -192,13 +242,18 @@ function ArtistSessions() {
                                         <tbody>
                                             {sessions.map(session => (
                                                 <tr key={session.id}>
-                                                    <td>{session.start_time}</td>
-                                                    <td>{session.client_name}</td>
+                                                    <td>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' }}>
+                                                            <Clock size={14} className="text-muted" />
+                                                            {session.start_time || 'N/A'}
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ fontWeight: '600' }}>{session.client_name}</td>
                                                     <td>{session.design_title}</td>
                                                     <td><span className={`status-badge ${session.status}`}>{session.status}</span></td>
                                                     <td>
-                                                        <button className="btn btn-primary" onClick={() => handleManageSession(session)} style={{padding: '5px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px'}}>
-                                                            <Play size={14}/> Manage
+                                                        <button className="btn btn-primary" onClick={() => handleManageSession(session)} style={{padding: '6px 14px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px'}}>
+                                                            <Play size={14}/> Manage Session
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -206,10 +261,26 @@ function ArtistSessions() {
                                         </tbody>
                                     </table>
                                 </div>
-                            ) : <p className="no-data">No sessions scheduled for today.</p>}
+                            ) : (
+                                <div className="no-data-container" style={{ flex: 1 }}>
+                                    <Calendar size={48} className="no-data-icon" />
+                                    <p className="no-data-text">No sessions scheduled for today.</p>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
+
+                <ConfirmModal
+                    isOpen={confirmModal.isOpen}
+                    title={confirmModal.title}
+                    message={confirmModal.message}
+                    confirmText={confirmModal.confirmText}
+                    onConfirm={confirmModal.onConfirm}
+                    onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+                    type={confirmModal.type}
+                    isAlert={confirmModal.isAlert}
+                />
             </div>
 
             {/* Active Session Modal */}

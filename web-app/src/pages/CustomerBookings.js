@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Axios from 'axios';
-import { Search, ChevronLeft, ChevronRight, Filter, CreditCard, Eye, CheckCircle, Info, X } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Filter, CreditCard, Eye, CheckCircle, Info, X, Calendar, Inbox } from 'lucide-react';
 import './PortalStyles.css';
 import { API_URL } from '../config';
 import CustomerSideNav from '../components/CustomerSideNav';
+import Pagination from '../components/Pagination';
+import ConfirmModal from '../components/ConfirmModal';
 
 function CustomerBookings(){
     const [appointments, setAppointments] = useState([]);
@@ -12,7 +14,7 @@ function CustomerBookings(){
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 5;
+    const [itemsPerPage, setItemsPerPage] = useState(10);
     const navigate = useNavigate();
     const user = JSON.parse(localStorage.getItem('user'));
     const customerId = user ? user.id : null;
@@ -21,6 +23,25 @@ function CustomerBookings(){
     const [selectedApt, setSelectedApt] = useState(null);
     const [modalTransactions, setModalTransactions] = useState([]);
     const [modalLoading, setModalLoading] = useState(false);
+    const [confirmModal, setConfirmModal] = useState({ 
+        isOpen: false, 
+        title: '', 
+        message: '', 
+        onConfirm: null, 
+        type: 'danger',
+        isAlert: false 
+    });
+
+    const showAlert = (title, message, type = 'info') => {
+        setConfirmModal({
+            isOpen: true,
+            title,
+            message,
+            type,
+            isAlert: true,
+            onConfirm: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
+        });
+    };
 
     useEffect(() => {
         const fetchAppointments = async () => {
@@ -39,11 +60,11 @@ function CustomerBookings(){
                     }));
                     setAppointments(formattedAppointments);
                 } else {
-                    alert('Could not fetch your bookings: ' + res.data.message);
+                    showAlert("Fetch Error", 'Could not fetch your bookings: ' + res.data.message, "danger");
                 }
             } catch(e){ 
                 console.error("Error fetching bookings:", e.response || e);
-                alert('Failed to connect to the server while fetching bookings. Please try again later.');
+                showAlert("Connection Error", 'Failed to connect to the server while fetching bookings. Please try again later.', "danger");
             } finally {
                 setLoading(false);
             }
@@ -65,7 +86,7 @@ function CustomerBookings(){
 
     const handlePay = (appointment, type = 'deposit') => {
         if (!appointment.price || appointment.price <= 0) {
-            alert("Price has not been set by the studio yet. Please wait for confirmation.");
+            showAlert("Quotation Pending", "Price has not been set by the studio yet. Please wait for confirmation.", "info");
             return;
         }
         const remainingBalance = appointment.price - (appointment.total_paid || 0);
@@ -102,119 +123,120 @@ function CustomerBookings(){
             <header className="portal-header"><h1>My Bookings</h1></header>
             <div className="portal-content">
                 {loading ? <div className="no-data">Loading...</div> : (
-                    <div className="data-card">
-                        {/* Controls Header */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '10px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <Filter size={18} color="#64748b" />
-                                <select 
-                                    className="form-input" 
-                                    value={statusFilter} 
-                                    onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                                    style={{ width: '150px', margin: 0 }}
-                                >
-                                    <option value="all">All Status</option>
-                                    <option value="confirmed">Confirmed</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="completed">Completed</option>
-                                    <option value="cancelled">Cancelled</option>
-                                </select>
+                <div className="portal-content">
+                    {loading ? <div className="no-data">Loading...</div> : (
+                        <div className="table-card-container" style={{ minHeight: '600px' }}>
+                            <div className="card-header-v2">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <Filter size={18} color="#64748b" />
+                                        <select 
+                                            className="pagination-select" 
+                                            value={statusFilter} 
+                                            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                                            style={{ margin: 0 }}
+                                        >
+                                            <option value="all">All Status</option>
+                                            <option value="confirmed">Confirmed</option>
+                                            <option value="pending">Pending</option>
+                                            <option value="completed">Completed</option>
+                                            <option value="cancelled">Cancelled</option>
+                                        </select>
+                                    </div>
+                                    <div style={{ position: 'relative', width: '250px' }}>
+                                        <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+                                        <input 
+                                            type="text" 
+                                            placeholder="Search bookings..." 
+                                            value={searchTerm}
+                                            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                                            className="pagination-select"
+                                            style={{ paddingLeft: '35px', width: '100%', margin: 0 }}
+                                        />
+                                    </div>
+                                </div>
+                                <span className="status-badge-v2 pending">{filteredAppointments.length} Bookings</span>
                             </div>
-                            <div style={{ position: 'relative', width: '100%', maxWidth: '300px' }}>
-                                <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
-                                <input 
-                                    type="text" 
-                                    placeholder="Search artist or service..." 
-                                    value={searchTerm}
-                                    onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                                    className="form-input"
-                                    style={{ paddingLeft: '40px', width: '100%', margin: 0 }}
-                                />
-                            </div>
-                        </div>
 
-                        {displayedAppointments.length ? (
-                            <>
-                            <div className="table-responsive">
-                                <table className="portal-table">
-                                    <thead><tr><th>Appt ID</th><th>Artist</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th><th>Price</th><th>Action</th></tr></thead>
-                                    <tbody>{displayedAppointments.map(a=> (
-                                        <tr key={a.id}>
-                                            <td style={{ fontWeight: '600', color: '#64748b' }}>#{a.id}</td>
-                                            <td>{a.artist_name}</td>
-                                            <td>{a.service_type || 'Tattoo'}</td>
-                                            <td>{new Date(a.appointment_date).toLocaleDateString()}</td>
-                                            <td>{a.start_time}</td>
-                                            <td><span className={`status-badge ${a.status.toLowerCase()}`}>{a.status}</span></td>
-                                            <td>
-                                                {a.price > 0 ? `₱${Number(a.price).toLocaleString()}` : <span style={{color: '#9ca3af', fontStyle: 'italic'}}>Pending</span>}
-                                            </td>
-                                            <td>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    {a.status === 'pending' && a.price > 0 && a.payment_status === 'unpaid' ? (
-                                                        <button 
-                                                            className="btn btn-primary" 
-                                                            style={{padding: '5px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px'}}
-                                                            onClick={() => handlePay(a)}
-                                                        >
-                                                            <CreditCard size={14}/> Pay Deposit
-                                                        </button>
-                                                    ) : a.payment_status === 'paid' ? (
-                                                        <span className="status-badge completed" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                                                            <CheckCircle size={12}/> Fully Paid
-                                                        </span>
-                                                    ) : a.payment_status === 'downpayment_paid' ? (
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                                            <span className="status-badge confirmed" style={{ backgroundColor: '#eff6ff', color: '#1d4ed8', display: 'flex', alignItems: 'center', gap: '3px', border: '1px solid #bfdbfe', width: 'fit-content' }}>
-                                                                <CheckCircle size={12}/> Remaining Balance
-                                                            </span>
+                            {displayedAppointments.length ? (
+                                <>
+                                    <div className="table-responsive">
+                                        <table className="portal-table">
+                                            <thead><tr><th>ID</th><th>Artist</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th><th>Price</th><th>Action</th></tr></thead>
+                                            <tbody>{displayedAppointments.map(a=> (
+                                                <tr key={a.id}>
+                                                    <td style={{ fontWeight: '600', color: '#64748b' }}>#{a.id}</td>
+                                                    <td style={{ fontWeight: '600' }}>{a.artist_name}</td>
+                                                    <td>{a.service_type || 'Tattoo'}</td>
+                                                    <td>{new Date(a.appointment_date).toLocaleDateString()}</td>
+                                                    <td>{a.start_time}</td>
+                                                    <td><span className={`status-badge ${a.status.toLowerCase()}`}>{a.status}</span></td>
+                                                    <td>
+                                                        {a.price > 0 ? (
+                                                            <div style={{ fontWeight: 'bold' }}>₱{Number(a.price).toLocaleString()}</div>
+                                                        ) : (
+                                                            <span style={{color: '#9ca3af', fontStyle: 'italic', fontSize: '0.85rem'}}>Pending Quote</span>
+                                                        )}
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            {a.status === 'pending' && a.price > 0 && a.payment_status === 'unpaid' ? (
+                                                                <button 
+                                                                    className="btn btn-primary" 
+                                                                    style={{padding: '6px 14px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px'}}
+                                                                    onClick={() => handlePay(a)}
+                                                                >
+                                                                    <CreditCard size={14}/> Pay Deposit
+                                                                </button>
+                                                            ) : a.payment_status === 'paid' ? (
+                                                                <span className="status-badge-v2 confirmed" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px' }}>
+                                                                    <CheckCircle size={12}/> Fully Paid
+                                                                </span>
+                                                            ) : a.payment_status === 'downpayment_paid' ? (
+                                                                <button 
+                                                                    className="btn btn-primary" 
+                                                                    style={{padding: '6px 14px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#3b82f6', border: 'none'}}
+                                                                    onClick={() => handlePay(a, 'balance')}
+                                                                >
+                                                                    <CreditCard size={14}/> Pay Balance
+                                                                </button>
+                                                            ) : (
+                                                                <span style={{color: '#9ca3af', fontSize: '0.9rem'}}>-</span>
+                                                            )}
+
                                                             <button 
-                                                                className="btn btn-primary" 
-                                                                style={{padding: '5px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: '#3b82f6', border: 'none'}}
-                                                                onClick={() => handlePay(a, 'balance')}
+                                                                className="billing-details-btn"
+                                                                onClick={() => handleViewDetails(a)}
+                                                                style={{ padding: '6px 12px' }}
                                                             >
-                                                                <CreditCard size={14}/> Pay Remaining Balance
+                                                                <Info size={14} /> Details
                                                             </button>
                                                         </div>
-                                                    ) : (
-                                                        <span style={{color: '#9ca3af', fontSize: '0.9rem'}}>-</span>
-                                                    )}
-
-                                                        <button 
-                                                            className="billing-details-btn"
-                                                            title="View Payment Details"
-                                                            onClick={() => handleViewDetails(a)}
-                                                        >
-                                                            <Info size={16} /> Billing Details
-                                                        </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}</tbody>
-                                </table>
-                            </div>
-                            
-                            {/* Pagination Controls */}
-                            {totalPages > 1 && (
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '1.5rem', gap: '10px' }}>
-                                    <button 
-                                        className="btn btn-secondary" 
-                                        disabled={currentPage === 1}
-                                        onClick={() => setCurrentPage(p => p - 1)}
-                                        style={{ padding: '6px 12px', display: 'flex', alignItems: 'center' }}
-                                    ><ChevronLeft size={16} /></button>
-                                    <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Page {currentPage} of {totalPages}</span>
-                                    <button 
-                                        className="btn btn-secondary" 
-                                        disabled={currentPage === totalPages}
-                                        onClick={() => setCurrentPage(p => p + 1)}
-                                        style={{ padding: '6px 12px', display: 'flex', alignItems: 'center' }}
-                                    ><ChevronRight size={16} /></button>
+                                                    </td>
+                                                </tr>
+                                            ))}</tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <Pagination 
+                                        currentPage={currentPage}
+                                        totalPages={totalPages}
+                                        onPageChange={setCurrentPage}
+                                        itemsPerPage={itemsPerPage}
+                                        onItemsPerPageChange={setItemsPerPage}
+                                        totalItems={filteredAppointments.length}
+                                        unit="bookings"
+                                    />
+                                </>
+                            ) : (
+                                <div className="no-data-container" style={{ flex: 1 }}>
+                                    <Inbox size={48} className="no-data-icon" />
+                                    <p className="no-data-text">No bookings found matching your criteria.</p>
                                 </div>
                             )}
-                            </>
-                        ) : <p className="no-data">No bookings found matching your criteria.</p>}
-                    </div>
+                        </div>
+                    )}
+                </div>
                 )}
             </div>
             </div>
@@ -300,6 +322,17 @@ function CustomerBookings(){
                     </div>
                 </div>
             )}
+            
+            <ConfirmModal 
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmText={confirmModal.confirmText}
+                onConfirm={confirmModal.onConfirm}
+                onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+                type={confirmModal.type}
+                isAlert={confirmModal.isAlert}
+            />
         </div>
     );
 }

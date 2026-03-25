@@ -34,7 +34,14 @@ function AdminInventory() {
     
     // State for modals to handle animations
     const [addEditModal, setAddEditModal] = useState({ mounted: false, visible: false });
-    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
+    const [confirmDialog, setConfirmDialog] = useState({ 
+        isOpen: false, 
+        title: '', 
+        message: '', 
+        onConfirm: null, 
+        type: 'danger', 
+        isAlert: false 
+    });
     const [transactionModal, setTransactionModal] = useState({ mounted: false, visible: false });
     const [historyModal, setHistoryModal] = useState({ mounted: false, visible: false });
     const [serviceKitsModal, setServiceKitsModal] = useState({ mounted: false, visible: false });
@@ -74,6 +81,17 @@ function AdminInventory() {
             setter({ mounted: false, visible: false });
             setSelectedItem(null); // Reset selected item when any modal closes
         }, 400); // Must match CSS transition duration
+    };
+
+    const showAlert = (title, message, type = 'info') => {
+        setConfirmDialog({
+            isOpen: true,
+            title,
+            message,
+            type,
+            isAlert: true,
+            onConfirm: () => setConfirmDialog(prev => ({ ...prev, isOpen: false }))
+        });
     };
 
     useEffect(() => {
@@ -124,7 +142,7 @@ function AdminInventory() {
 
     const handleSaveKit = async () => {
         if (!editingKitServiceType) {
-            alert("Please enter a Service Type (e.g., Realism Tattoo)");
+            showAlert("Service Type Required", "Please enter a Service Type (e.g., Realism Tattoo)", "warning");
             return;
         }
         setIsSaving(true);
@@ -133,13 +151,13 @@ function AdminInventory() {
                 service_type: editingKitServiceType,
                 materials: editingKitMaterials.map(m => ({ inventory_id: m.inventory_id, default_quantity: m.default_quantity }))
             });
-            alert("Service Kit saved successfully!");
+            showAlert("Success", "Service Kit saved successfully!", "success");
             fetchServiceKits();
             setEditingKitServiceType('');
             setEditingKitMaterials([]);
         } catch (error) {
             console.error("Error saving service kit", error);
-            alert("Error saving service kit");
+            showAlert("Error", "Error saving service kit", "danger");
         } finally {
             setIsSaving(false);
         }
@@ -298,13 +316,13 @@ function AdminInventory() {
         if (isSaving) return;
 
         if (!formData.name.trim()) {
-            alert("Item name is required");
+            showAlert("Name Required", "Item name is required", "warning");
             return;
         }
 
         // Validate for negative numbers
         if (Number(formData.currentStock) < 0 || Number(formData.cost) < 0) {
-            alert("Stock and cost values cannot be negative.");
+            showAlert("Invalid Input", "Stock and cost values cannot be negative.", "warning");
             return;
         }
 
@@ -322,16 +340,16 @@ function AdminInventory() {
 
             if (selectedItem) {
                 await Axios.put(`${API_URL}/api/admin/inventory/${selectedItem.id}`, payload);
-                alert('Item updated successfully');
+                showAlert("Success", "Item updated successfully!", "success");
             } else {
                 await Axios.post(`${API_URL}/api/admin/inventory`, payload);
-                alert('Item added successfully');
+                showAlert("Success", "Item added successfully!", "success");
             }
             closeModal(setAddEditModal);
             fetchInventory();
         } catch (error) {
             console.error("Error saving item:", error);
-            alert("Failed to save item: " + (error.response?.data?.message || error.message));
+            showAlert("Error", "Failed to save item: " + (error.response?.data?.message || error.message), "danger");
         } finally {
             setIsSaving(false);
         }
@@ -904,8 +922,14 @@ function AdminInventory() {
             )}
 
             <ConfirmModal 
-                {...confirmDialog} 
-                onCancel={() => setConfirmDialog({ isOpen: false })} 
+                isOpen={confirmDialog.isOpen}
+                title={confirmDialog.title}
+                message={confirmDialog.message}
+                confirmText={confirmDialog.confirmText}
+                onConfirm={confirmDialog.onConfirm}
+                onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+                type={confirmDialog.type}
+                isAlert={confirmDialog.isAlert}
             />
             </div>
         </div>

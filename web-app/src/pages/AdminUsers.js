@@ -26,7 +26,14 @@ function AdminUsers() {
 
     // Modal state for animations
     const [userModal, setUserModal] = useState({ mounted: false, visible: false });
-    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
+    const [confirmDialog, setConfirmDialog] = useState({ 
+        isOpen: false, 
+        title: '', 
+        message: '', 
+        onConfirm: null,
+        type: 'danger',
+        isAlert: false
+    });
 
     const [formData, setFormData] = useState({
         name: '',
@@ -49,6 +56,17 @@ function AdminUsers() {
             setUserModal({ mounted: false, visible: false });
             setSelectedUser(null);
         }, 400); // Match CSS transition duration
+    };
+
+    const showAlert = (title, message, type = 'info') => {
+        setConfirmDialog({
+            isOpen: true,
+            title,
+            message,
+            type,
+            isAlert: true,
+            onConfirm: () => setConfirmDialog(prev => ({ ...prev, isOpen: false }))
+        });
     };
 
     useEffect(() => {
@@ -174,11 +192,11 @@ function AdminUsers() {
                     phone: formData.phone,
                     status: formData.status
                 });
-                alert('User updated successfully');
+                showAlert("Success", "User updated successfully!", "success");
             } else {
                 // Add new user via API
                 if (!formData.password) {
-                    alert('Password is required for new users');
+                    showAlert("Password Required", "Password is required for new users", "warning");
                     return;
                 }
                 await Axios.post(`${API_URL}/api/admin/users`, {
@@ -189,7 +207,7 @@ function AdminUsers() {
                     phone: formData.phone,
                     status: formData.status
                 });
-                alert('User added successfully');
+                showAlert("Success", "User added successfully!", "success");
             }
             fetchUsers(); // Refresh list from database
             closeModal();
@@ -204,7 +222,7 @@ function AdminUsers() {
             });
         } catch (error) {
             console.error("Error saving user:", error);
-            alert('Error saving user: ' + (error.response?.data?.message || error.message));
+            showAlert("Error", 'Error saving user: ' + (error.response?.data?.message || error.message), "danger");
         }
     };
 
@@ -494,8 +512,14 @@ function AdminUsers() {
                 </div>
             )}
             <ConfirmModal 
-                {...confirmDialog} 
-                onCancel={() => setConfirmDialog({ isOpen: false })} 
+                isOpen={confirmDialog.isOpen}
+                title={confirmDialog.title}
+                message={confirmDialog.message}
+                confirmText={confirmDialog.confirmText}
+                onConfirm={confirmDialog.onConfirm}
+                onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+                type={confirmDialog.type}
+                isAlert={confirmDialog.isAlert}
             />
             </div>
         </div>
