@@ -53,11 +53,17 @@ function ArtistSessions() {
 
     const fetchSessions = async () => {
         try {
-            // Fetch today's appointments
-            const today = new Date().toISOString().split('T')[0];
-            const res = await Axios.get(`${API_URL}/api/artist/${artistId}/appointments?date=${today}`);
+            // Fetch all appointments for the artist, then filter by today locally
+            const res = await Axios.get(`${API_URL}/api/artist/${artistId}/appointments`);
             if (res.data.success) {
-                setSessions(res.data.appointments.filter(a => a.status !== 'cancelled'));
+                const today = new Date().toISOString().split('T')[0];
+                const todaySessions = res.data.appointments.filter(a => {
+                    const appointmentDate = typeof a.appointment_date === 'string'
+                        ? a.appointment_date.split('T')[0]
+                        : new Date(a.appointment_date).toISOString().split('T')[0];
+                    return appointmentDate === today && a.status !== 'cancelled';
+                });
+                setSessions(todaySessions);
             }
             setLoading(false);
         } catch (e) {
