@@ -2430,6 +2430,10 @@ app.put('/api/appointments/:id/details', (req, res) => {
   let query = 'UPDATE appointments SET notes = ?';
   let params = [notes];
 
+  /* 
+    Temporarily disabled before/after photos because the columns 
+    do not exist in the production database yet, causing 500 errors.
+  
   if (beforePhoto !== undefined) {
     query += ', before_photo = ?';
     params.push(beforePhoto);
@@ -2439,6 +2443,7 @@ app.put('/api/appointments/:id/details', (req, res) => {
     query += ', after_photo = ?';
     params.push(afterPhoto);
   }
+  */
 
   query += ' WHERE id = ?';
   params.push(id);
