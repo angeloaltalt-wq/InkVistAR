@@ -25,18 +25,9 @@ function AdminChat() {
             setLiveSessions(sorted);
 
             // If the selected active session was closed, deselect it
-            // Or update it if messages changed in the background
             const sel = selectedRef.current;
-            if (sel?.isLiveChat) {
-                const updated = sessions.find(s => s.id === sel.id);
-                if (!updated) {
-                    setSelectedAppointment(null);
-                } else {
-                    // Keep the selected state in sync with the latest messages/data
-                    setSelectedAppointment(prev =>
-                        prev?.id === updated.id ? { ...updated, client_name: updated.name, service_type: 'Live Web Chat', isLiveChat: true } : prev
-                    );
-                }
+            if (sel?.isLiveChat && !sessions.find(s => s.id === sel.id)) {
+                setSelectedAppointment(null);
             }
         });
 
@@ -77,7 +68,7 @@ function AdminChat() {
                             <div
                                 key={session.id}
                                 className={`appointment-item ${selectedAppointment?.id === session.id ? 'selected' : ''}`}
-                                onClick={() => setSelectedAppointment({ ...session, client_name: session.name, service_type: 'Live Web Chat', isLiveChat: true })}
+                                onClick={() => setSelectedAppointment({ id: session.id, client_name: session.name, service_type: 'Live Web Chat', isLiveChat: true })}
                                 style={{ borderLeft: '4px solid #10b981', background: selectedAppointment?.id === session.id ? '#f0fdf4' : 'white', cursor: 'pointer' }}
                             >
                                 <div className="appointment-item-name" style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -115,11 +106,9 @@ function AdminChat() {
                         {selectedAppointment ? (
                             <div className="chat-widget-wrapper" style={{ height: '100%', width: '100%' }}>
                                 <ChatWidget
-                                    key={selectedAppointment.id}
                                     room={selectedAppointment.id}
                                     currentUser={`Admin`}
                                     isAdminMode={true}
-                                    initialMessages={selectedAppointment.messages || []}
                                 />
                             </div>
                         ) : (
