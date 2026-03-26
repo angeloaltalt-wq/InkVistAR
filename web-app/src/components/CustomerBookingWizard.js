@@ -182,21 +182,27 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
             const isBusy = dateData.count > 2;
 
             let statusColor = '#10b981'; 
-            if (isFull || isTooFar) statusColor = '#ef4444';
+            if (isFull) statusColor = '#ef4444';
             else if (isBusy) statusColor = '#f59e0b';
 
             days.push(            
                 <button
                     key={i}
-                    onClick={() => !isPast && !isFull && setFormData({ ...formData, date: dateStr })}
-                    disabled={isPast || isFull}
+                    onClick={() => {
+                        if (isFull) {
+                            alert('Booking is not allowed on a full day. Please choose another date.');
+                            return;
+                        }
+                        setFormData({ ...formData, date: dateStr });
+                    }}
+                    disabled={isPast || isTooFar}
                     style={{
                         padding: '12px',
                         border: isSelected ? '2px solid #C19A6B' : '1px solid #f1f5f9',
-                        backgroundColor: isSelected ? '#fffcf0' : (isPast || isFull ? '#f8fafc' : 'white'),
-                        color: isPast || isFull ? '#cbd5e1' : '#1e293b',
+                        backgroundColor: isSelected ? '#fffcf0' : (isPast || isTooFar ? '#f8fafc' : 'white'),
+                        color: isPast || isTooFar ? '#cbd5e1' : (isFull ? '#ef4444' : '#1e293b'),
                         borderRadius: '10px',
-                        cursor: isPast || isFull ? 'default' : 'pointer',
+                        cursor: isPast || isTooFar ? 'default' : 'pointer',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
@@ -206,7 +212,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                     }}
                 >
                     <span style={{fontWeight: isSelected ? '700' : '500', fontSize: '1rem'}}>{i}</span>
-                    {!isPast && (
+                    {!isPast && !isTooFar && (
                         <div style={{width: '4px', height: '4px', borderRadius: '2px', backgroundColor: statusColor}} />
                     )}
                 </button>
