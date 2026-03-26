@@ -1467,7 +1467,8 @@ app.get('/api/artist/dashboard/:artistId', (req, res) => {
             hourly_rate: artist.hourly_rate,
             commission_rate: artist.commission_rate,
             rating: Number(artist.rating),
-            total_reviews: artist.total_reviews
+            total_reviews: artist.total_reviews,
+            profile_image: artist.profile_image
           },
           appointments: appointments,
           works: [],
