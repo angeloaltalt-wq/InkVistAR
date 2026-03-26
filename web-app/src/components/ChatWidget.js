@@ -7,7 +7,7 @@ import './ChatWidget.css';
 // Establish socket connection outside the component
 const socket = io(API_URL);
 
-export default function ChatWidget({ room = null, currentUser = 'Guest', isAdminMode = false }) {
+export default function ChatWidget({ room = null, currentUser = 'Guest', isAdminMode = false, initialMessages = [] }) {
   // Initialize state from sessionStorage or defaults
   const [isOpen, setIsOpen] = useState(isAdminMode ? true : false);
 
@@ -51,7 +51,7 @@ export default function ChatWidget({ room = null, currentUser = 'Guest', isAdmin
 
   // Live Chat (Human) Messages State
   const [humanMessages, setHumanMessages] = useState(() => {
-    if (isAdminMode) return [];
+    if (isAdminMode) return initialMessages;
     const saved = sessionStorage.getItem('chat_humanMessages');
     return saved ? JSON.parse(saved) : [
       { id: 'system-1', sender: 'system', text: "Connected to live chat.", timestamp: new Date() }
