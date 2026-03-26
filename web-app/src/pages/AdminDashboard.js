@@ -22,6 +22,7 @@ function AdminDashboard() {
     const [users, setUsers] = useState([]);
     const [auditLogs, setAuditLogs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [unreadNotifications, setUnreadNotifications] = useState(0);
     
     // Audit Logs State
     const [auditSearch, setAuditSearch] = useState('');
@@ -46,11 +47,13 @@ function AdminDashboard() {
     const fetchDashboardData = async () => {
         try {
             setLoading(true);
-            const [usersResponse, appointmentsResponse, logsResponse, inventoryResponse] = await Promise.all([
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const [usersResponse, appointmentsResponse, logsResponse, inventoryResponse, notificationsResponse] = await Promise.all([
                 Axios.get(`${API_URL}/api/debug/users`),
                 Axios.get(`${API_URL}/api/admin/appointments`),
                 Axios.get(`${API_URL}/api/admin/audit-logs`),
-                Axios.get(`${API_URL}/api/admin/inventory?status=active`)
+                Axios.get(`${API_URL}/api/admin/inventory?status=active`),
+                user.id ? Axios.get(`${API_URL}/api/notifications/${user.id}`) : Promise.resolve({ data: { unreadCount: 0 } })
             ]);
 
             if (usersResponse.data.success) {
@@ -176,6 +179,10 @@ function AdminDashboard() {
             if (logsResponse && logsResponse.data.success) {
                 setAuditLogs(logsResponse.data.data);
             }
+
+            if (notificationsResponse.data.success) {
+                setUnreadNotifications(notificationsResponse.data.unreadCount);
+            }
             setLoading(false);
         } catch (error) {
             console.error("Error fetching dashboard data:", error);
@@ -261,9 +268,31 @@ function AdminDashboard() {
                             <Search size={18} />
                             <input type="text" placeholder="Search things..." />
                         </div>
-                        <div className="notification-bell">
+                        <div className="notification-bell" style={{ position: 'relative', cursor: 'pointer' }} onClick={() => navigate('/admin/notifications')}>
                             <Bell size={20} />
-                            <div className="notification-dot"></div>
+                            {unreadNotifications > 0 && (
+                                <div 
+                                    className="notification-dot" 
+                                    style={{ 
+                                        position: 'absolute', 
+                                        top: '-5px', 
+                                        right: '-5px', 
+                                        background: '#ef4444', 
+                                        color: 'white', 
+                                        borderRadius: '50%', 
+                                        width: '18px', 
+                                        height: '18px', 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'center', 
+                                        fontSize: '10px', 
+                                        fontWeight: 'bold',
+                                        border: '2px solid white'
+                                    }}
+                                >
+                                    {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                                </div>
+                            )}
                         </div>
                         <button onClick={handleLogout} className="logout-btn">Logout</button>
                     </div>

@@ -383,6 +383,14 @@ export const markNotificationAsRead = async (notificationId) => {
   });
 };
 
+// Mark Notification as Unread
+export const markNotificationAsUnread = async (notificationId) => {
+  return fetchAPI(`/notifications/${notificationId}/read`, {
+    method: 'PUT',
+    body: JSON.stringify({ is_read: 0 })
+  });
+};
+
 // Send OTP
 export const sendOTP = async (email, userType) => {
   return fetchAPI('/send-otp', {

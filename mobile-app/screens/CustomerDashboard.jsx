@@ -130,7 +130,9 @@ export function CustomerDashboard({ userName, userId, onNavigate, onLogout }) {
               >
                 <Ionicons name="notifications" size={24} color="#ffffff" />
                 {dashboardData?.unreadCount > 0 && (
-                  <View style={styles.notificationDot} />
+                  <View style={styles.notificationDot}>
+                    <Text style={styles.notificationDotText}>{dashboardData.unreadCount > 99 ? '99+' : dashboardData.unreadCount}</Text>
+                  </View>
                 )}
               </TouchableOpacity>
               <TouchableOpacity 

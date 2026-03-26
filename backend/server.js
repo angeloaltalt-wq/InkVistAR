@@ -3140,8 +3140,9 @@ app.get('/api/notifications/:userId', (req, res) => {
 // Mark notification as read
 app.put('/api/notifications/:id/read', (req, res) => {
   const { id } = req.params;
+  const { is_read = 1 } = req.body;
 
-  db.query('UPDATE notifications SET is_read = 1 WHERE id = ?', [id], (err, result) => {
+  db.query('UPDATE notifications SET is_read = ? WHERE id = ?', [is_read, id], (err, result) => {
     if (err) {
       console.error('❌ Error updating notification:', err);
       return res.status(500).json({ success: false, message: 'Database error' });

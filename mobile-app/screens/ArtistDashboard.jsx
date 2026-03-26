@@ -260,7 +260,9 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
               >
                 <Ionicons name="notifications" size={22} color="#ffffff" />
                 {dashboardData?.unreadCount > 0 && (
-                  <View style={styles.notificationDot} />
+                  <View style={styles.notificationDot}>
+                    <Text style={styles.notificationDotText}>{dashboardData.unreadCount > 99 ? '99+' : dashboardData.unreadCount}</Text>
+                  </View>
                 )}
               </TouchableOpacity>
               <TouchableOpacity
@@ -606,14 +608,22 @@ const styles = StyleSheet.create({
   },
   notificationDot: {
     position: 'absolute',
-    top: 10,
-    right: 10,
+    top: -4,
+    right: -4,
     backgroundColor: '#ef4444',
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
     borderWidth: 1.5,
     borderColor: '#000000',
+  },
+  notificationDotText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   profileButton: {
     width: 44,

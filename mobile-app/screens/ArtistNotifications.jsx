@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { getNotifications, markNotificationAsRead } from '../src/utils/api';
+import { getNotifications, markNotificationAsRead, markNotificationAsUnread } from '../src/utils/api';
 
 const timeAgo = (dateString) => {
   const date = new Date(dateString);
@@ -96,6 +96,13 @@ export function ArtistNotifications({ onBack, userId }) {
     // Optional: Navigate to a specific screen based on item.type and item.related_id
   };
 
+  const handleUnread = async (item) => {
+    await markNotificationAsUnread(item.id);
+    setNotifications(notifications.map(n => 
+      n.id === item.id ? { ...n, is_read: false } : n
+    ));
+  };
+
   const getIcon = (type) => {
     switch (type) {
       case 'appointment_request': return { name: 'calendar', color: '#3b82f6' };
@@ -127,6 +134,15 @@ export function ArtistNotifications({ onBack, userId }) {
           </View>
           <Text style={styles.message} numberOfLines={2}>{item.message}</Text>
         </View>
+        {item.is_read && (
+          <TouchableOpacity 
+            style={styles.unreadAction} 
+            onPress={() => handleUnread(item)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="mail-unread-outline" size={20} color="#b8860b" />
+          </TouchableOpacity>
+        )}
         {!item.is_read && <View style={styles.unreadDot} />}
       </TouchableOpacity>
     );
@@ -319,6 +335,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     lineHeight: 20,
+  },
+  unreadAction: {
+    padding: 4,
   },
   unreadDot: {
     position: 'absolute',
