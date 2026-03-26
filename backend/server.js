@@ -2094,6 +2094,7 @@ app.get('/api/admin/appointments', (req, res) => {
       ap.appointment_date, ap.start_time, ap.end_time,
       ap.design_title, ap.status, ap.payment_status,
       ap.notes,
+      ap.before_photo, ap.after_photo,
       ap.price, ap.service_type, ap.manual_paid_amount,
       COALESCE(cu.name, 'Unknown Client') AS client_name,
       COALESCE(ar.name, 'Unknown Artist') AS artist_name,
