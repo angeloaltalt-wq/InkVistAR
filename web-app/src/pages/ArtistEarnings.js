@@ -5,16 +5,16 @@ import ArtistSideNav from '../components/ArtistSideNav';
 import './PortalStyles.css';
 import { API_URL } from '../config';
 
-function ArtistEarnings(){
-    const [stats, setStats] = useState({ 
-        totalEarnings: 0, 
+function ArtistEarnings() {
+    const [stats, setStats] = useState({
+        totalEarnings: 0,
         totalCommission: 0,
-        pendingPayout: 0 
+        pendingPayout: 0
     });
     const [sessionEarnings, setSessionEarnings] = useState([]);
     const [payoutHistory, setPayoutHistory] = useState([]);
     const [loading, setLoading] = useState(true);
-    
+
     const [user] = useState(() => {
         const saved = localStorage.getItem('user');
         return saved ? JSON.parse(saved) : null;
@@ -26,7 +26,7 @@ function ArtistEarnings(){
             try {
                 setLoading(true);
                 const res = await Axios.get(`${API_URL}/api/artist/${artistId}/earnings-ledger`);
-                
+
                 if (res.data.success) {
                     setStats({
                         totalEarnings: res.data.stats.totalEarned,
@@ -42,9 +42,9 @@ function ArtistEarnings(){
                     })));
                 }
                 setLoading(false);
-            } catch(e) { 
-                console.error(e); 
-                setLoading(false); 
+            } catch (e) {
+                console.error(e);
+                setLoading(false);
             }
         };
         fetchLedger();
@@ -56,11 +56,11 @@ function ArtistEarnings(){
             <div className="portal-container artist-portal">
                 <header className="portal-header">
                     <h1>Earnings & Commissions</h1>
-                    <button className="btn btn-secondary" style={{display: 'flex', gap: '5px', alignItems: 'center'}}>
-                        <Download size={16}/> Export Report
+                    <button className="btn btn-secondary" style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                        <Download size={16} /> Export Report
                     </button>
                 </header>
-                
+
                 <div className="portal-content">
                     {loading ? <div className="no-data">Loading...</div> : (
                         <>
@@ -69,8 +69,8 @@ function ArtistEarnings(){
                                 <div className="stat-card">
                                     <DollarSign className="stat-icon" size={32} />
                                     <div className="stat-info">
-                                        <p className="stat-label">Total Earnings</p>
-                                        <p className="stat-value">₱{stats.totalEarnings.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                        <p className="stat-label">Today's Earnings</p>
+                                        <p className="stat-value">₱{stats.totalEarnings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                     </div>
                                 </div>
                                 <div className="stat-card">
@@ -84,11 +84,11 @@ function ArtistEarnings(){
                                     <CreditCard className="stat-icon" size={32} />
                                     <div className="stat-info">
                                         <p className="stat-label">Current Month Payout</p>
-                                        <p className="stat-value">₱{stats.pendingPayout.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                        <p className="stat-value">₱{stats.pendingPayout.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
                                 {/* Session-based Earnings */}
                                 <div className="data-card">
@@ -111,8 +111,8 @@ function ArtistEarnings(){
                                                             <td>{new Date(session.appointment_date).toLocaleDateString()}</td>
                                                             <td>{session.client_name}</td>
                                                             <td>{session.design_title}</td>
-                                                            <td>₱{(session.basePrice || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                                                            <td style={{color: session.payment_status === 'paid' ? '#10b981' : '#f59e0b', fontWeight: 'bold'}}>
+                                                            <td>₱{(session.basePrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                            <td style={{ color: session.payment_status === 'paid' ? '#10b981' : '#f59e0b', fontWeight: 'bold' }}>
                                                                 ₱{(session.artistShare || 0).toFixed(2)}
                                                                 <span style={{ fontSize: '0.7rem', display: 'block', color: session.payment_status === 'paid' ? '#10b981' : '#f59e0b' }}>
                                                                     {session.payment_status === 'paid' ? 'Paid' : 'Unpaid'}
@@ -143,7 +143,7 @@ function ArtistEarnings(){
                                                     {payoutHistory.map((payout, i) => (
                                                         <tr key={i}>
                                                             <td>{payout.month}</td>
-                                                            <td>₱{(payout.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                                            <td>₱{(payout.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                                             <td><span className="status-badge completed">{payout.status}</span></td>
                                                         </tr>
                                                     ))}
