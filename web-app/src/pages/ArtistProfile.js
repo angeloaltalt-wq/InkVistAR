@@ -99,6 +99,20 @@ function ArtistProfile() {
 
             alert("Profile settings updated successfully!");
             setPasswords({ newPassword: '', confirmPassword: '' });
+
+            // Re-fetch profile to ensure image is loaded from database
+            const res = await Axios.get(`${API_URL}/api/artist/dashboard/${artistId}`);
+            if (res.data.success) {
+                const data = res.data.artist;
+                setProfile({
+                    name: data.name,
+                    email: data.email,
+                    specialization: data.specialization,
+                    hourly_rate: data.hourly_rate || 0,
+                    experience_years: data.experience_years || 0,
+                    profile_image: data.profile_image || ''
+                });
+            }
         } catch (error) {
             const errorMessage = error.response?.data?.message || "Failed to update settings. Please try again.";
             console.error("Profile update error:", error.response || error);
