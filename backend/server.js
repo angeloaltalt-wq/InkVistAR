@@ -2034,7 +2034,7 @@ app.get('/api/gallery/art-of-the-day', (req, res) => {
         return res.json({ success: true, work: latestResults[0] });
       }
 
-      return res.status(404).json({ success: false, message: 'No public portfolio works found.' });
+      return res.json({ success: true, work: null, message: 'No public portfolio works found.' });
     });
   });
 });
@@ -2177,6 +2177,15 @@ app.put('/api/admin/appointments/:id', (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Appointment not found.' });
     }
+
+    // Notify users of the update
+    db.query('SELECT customer_id, artist_id FROM appointments WHERE id = ?', [id], (e, r) => {
+      if (!e && r.length) {
+        createNotification(r[0].customer_id, 'Appointment Update', `An administrator has updated your appointment details.`, 'system', id);
+        createNotification(r[0].artist_id, 'Appointment Update', `An administrator has updated appointment details for your session.`, 'system', id);
+      }
+    });
+
     res.json({ success: true, message: 'Appointment updated successfully' });
   });
 });
@@ -2440,7 +2449,7 @@ app.post('/api/appointments/:id/release-material', (req, res) => {
 
   // 1. Get material info
   db.query('SELECT * FROM session_materials WHERE id = ? AND appointment_id = ? AND status = "hold"', [materialId, id], (err, results) => {
-    if (err || results.length === 0) return res.status(404).json({ success: false, message: 'Held material record not found' });
+    if (err || results.length === 0) return res.json({ success: false, message: 'Held material record not found' });
 
     const material = results[0];
 
@@ -3501,163 +3510,6 @@ app.get('/api/admin/inventory/transactions', (req, res) => {
 
       res.json({ success: true, data: results, pagination: { page, limit, total, totalPages } });
     });
-  });
-});
-
-// Admin: Get All Appointments
-app.get('/api/admin/appointments', (req, res) => {
-  const query = `
-    SELECT
-      ap.id,
-      ap.customer_id,
-      ap.artist_id,
-      ap.appointment_date,
-      ap.start_time,
-      ap.end_time,
-      ap.status,
-      ap.service_type,
-      ap.design_title,
-      ap.notes,
-      ap.reference_image,
-      ap.before_photo,
-      ap.after_photo,
-      ap.price,
-      ap.manual_paid_amount,
-      c.name as client_name,
-      c.email as client_email,
-      a.name as artist_name,
-      ar.hourly_rate,
-      (COALESCE(ap.manual_paid_amount, 0) + COALESCE((SELECT SUM(amount) FROM payments p WHERE p.appointment_id = ap.id AND p.status = 'paid'), 0) / 100) as total_paid
-    FROM appointments ap
-    JOIN users c ON ap.customer_id = c.id
-    JOIN users a ON ap.artist_id = a.id
-    LEFT JOIN artists ar ON a.id = ar.user_id
-    WHERE ap.is_deleted = 0
-    ORDER BY ap.appointment_date DESC
-  `;
-
-  db.query(query, (err, results) => {
-    if (err) return res.status(500).json({ success: false, message: err.message });
-    res.json({ success: true, data: results });
-  });
-});
-
-// Admin: Create Appointment (Walk-in / Manual Booking)
-app.post('/api/admin/appointments', (req, res) => {
-  const { customerId, artistId, date, startTime, endTime, serviceType, designTitle, notes, status, price, manualPaidAmount } = req.body;
-
-  const query = `
-    INSERT INTO appointments 
-    (customer_id, artist_id, appointment_date, start_time, end_time, service_type, design_title, notes, status, price, manual_paid_amount)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-
-  db.query(query, [
-    customerId,
-    artistId,
-    date,
-    startTime,
-    endTime || startTime,
-    serviceType || 'Tattoo Session',
-    designTitle || '',
-    notes,
-    status || 'scheduled',
-    (price !== undefined) ? price : 0,
-    manualPaidAmount || 0
-  ], (err, result) => {
-    if (err) {
-      console.error('❌ Error creating appointment:', err);
-      return res.status(500).json({ success: false, message: err.message });
-    }
-    logAction(null, 'CREATE_APPOINTMENT', `Created appointment for client ${customerId}`, req.ip);
-    res.json({ success: true, message: 'Appointment created successfully', id: result.insertId });
-  });
-});
-
-// Admin: Update Appointment (Status or Reschedule)
-app.put('/api/admin/appointments/:id', (req, res) => {
-  const { id } = req.params;
-  const { status, paymentStatus, date, startTime, endTime, artistId, serviceType, designTitle, notes, price, manualPaidAmount } = req.body;
-
-  let query = 'UPDATE appointments SET ';
-  const params = [];
-  const updates = [];
-
-  if (status) {
-    updates.push('status = ?');
-    params.push(status);
-  }
-  if (paymentStatus) {
-    updates.push('payment_status = ?');
-    params.push(paymentStatus);
-  }
-  if (date) {
-    updates.push('appointment_date = ?');
-    params.push(date);
-  }
-  if (startTime) {
-    updates.push('start_time = ?');
-    params.push(startTime);
-  }
-  if (endTime) {
-    updates.push('end_time = ?');
-    params.push(endTime);
-  }
-  if (artistId) {
-    updates.push('artist_id = ?');
-    params.push(artistId);
-  }
-  if (serviceType) {
-    updates.push('service_type = ?');
-    params.push(serviceType);
-  }
-  if (designTitle) {
-    updates.push('design_title = ?');
-    params.push(designTitle);
-  }
-  if (notes) {
-    updates.push('notes = ?');
-    params.push(notes);
-  }
-  if (price !== undefined) {
-    updates.push('price = ?');
-    params.push(price);
-  }
-  if (manualPaidAmount !== undefined) {
-    updates.push('manual_paid_amount = ?');
-    params.push(manualPaidAmount);
-  }
-
-  if (updates.length === 0) return res.json({ success: true });
-
-  query += updates.join(', ') + ' WHERE id = ?';
-  params.push(id);
-
-  db.query(query, params, (err) => {
-    if (err) return res.status(500).json({ success: false, message: err.message });
-
-    // Notify users (Simplified)
-    if (status) {
-      db.query('SELECT customer_id, artist_id FROM appointments WHERE id = ?', [id], (e, r) => {
-        if (!e && r.length) {
-          createNotification(r[0].customer_id, 'Appointment Update', `Admin updated appointment`, 'system', id);
-          createNotification(r[0].artist_id, 'Appointment Update', `Admin updated appointment`, 'system', id);
-        }
-      });
-    }
-
-    logAction(null, 'UPDATE_APPOINTMENT', `Updated appointment ID ${id}`, req.ip);
-    res.json({ success: true, message: 'Appointment updated' });
-  });
-});
-
-// Admin: Delete Appointment
-app.delete('/api/admin/appointments/:id', (req, res) => {
-  const { id } = req.params;
-  db.query('UPDATE appointments SET is_deleted = 1 WHERE id = ?', [id], (err) => {
-    if (err) return res.status(500).json({ success: false, message: err.message });
-    logAction(null, 'DELETE_APPOINTMENT', `Deleted appointment ID ${id}`, req.ip);
-    res.json({ success: true, message: 'Appointment deleted' });
   });
 });
 

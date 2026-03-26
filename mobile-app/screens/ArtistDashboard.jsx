@@ -1,13 +1,13 @@
 // ArtistDashboard.jsx - COMPLETE VERSION WITH REAL DATA
 import { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  StyleSheet, 
-  ScrollView, 
-  SafeAreaView, 
-  ActivityIndicator, 
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  SafeAreaView,
+  ActivityIndicator,
   RefreshControl,
   Image
 } from 'react-native';
@@ -29,7 +29,7 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
     try {
       setLoading(true);
       const result = await getArtistDashboard(userId);
-      
+
       if (result.success) {
         setDashboardData(result);
         setError(null);
@@ -52,7 +52,7 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
     const fetchArtOfTheDay = async () => {
       try {
         setLoadingArt(true);
-        const response = await fetch(`${API_URL}/gallery/art-of-the-day`);
+        const response = await fetch(`${API_URL}/api/gallery/art-of-the-day`);
         const data = await response.json();
         if (data.success) {
           setArtOfTheDay(data.work);
@@ -105,11 +105,11 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
   }
 
   // Destructure real data with fallbacks
-  const { 
-    artist = {}, 
-    appointments = [], 
-    works = [], 
-    stats = {} 
+  const {
+    artist = {},
+    appointments = [],
+    works = [],
+    stats = {}
   } = dashboardData || {};
 
   const artistName = artist?.name || userName;
@@ -121,17 +121,17 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
 
   // Calculate stats from real data
   const today = new Date();
-  
+
   // Helper to check if date is today (in local time)
   const isToday = (dateString) => {
     if (!dateString) return false;
     const d = new Date(dateString);
-    return d.getDate() === today.getDate() && 
-           d.getMonth() === today.getMonth() && 
-           d.getFullYear() === today.getFullYear();
+    return d.getDate() === today.getDate() &&
+      d.getMonth() === today.getMonth() &&
+      d.getFullYear() === today.getFullYear();
   };
 
-  const todayAppointments = appointments.filter(apt => 
+  const todayAppointments = appointments.filter(apt =>
     isToday(apt.appointment_date)
   ).length;
 
@@ -148,29 +148,29 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
 
   // Quick stats with real data
   const quickStats = [
-    { 
-      label: 'Today', 
-      value: todayAppointments.toString(), 
-      icon: 'today', 
-      change: todayAppointments > 0 ? '+1' : '+0' 
+    {
+      label: 'Today',
+      value: todayAppointments.toString(),
+      icon: 'today',
+      change: todayAppointments > 0 ? '+1' : '+0'
     },
-    { 
-      label: 'This Week', 
-      value: weekAppointments.toString(), 
-      icon: 'calendar', 
-      change: weekAppointments > 5 ? '+3' : '+0' 
+    {
+      label: 'This Week',
+      value: weekAppointments.toString(),
+      icon: 'calendar',
+      change: weekAppointments > 5 ? '+3' : '+0'
     },
-    { 
-      label: 'Total Earned', 
-      value: `₱${totalEarnings.toLocaleString()}`, 
-      icon: 'cash', 
-      change: totalEarnings > 0 ? '+12%' : '+0%' 
+    {
+      label: 'Total Earned',
+      value: `₱${totalEarnings.toLocaleString()}`,
+      icon: 'cash',
+      change: totalEarnings > 0 ? '+12%' : '+0%'
     },
-    { 
-      label: 'Hourly Rate', 
-      value: `₱${Number(artistHourlyRate || 0).toLocaleString()}`, 
-      icon: 'time', 
-      change: '→' 
+    {
+      label: 'Hourly Rate',
+      value: `₱${Number(artistHourlyRate || 0).toLocaleString()}`,
+      icon: 'time',
+      change: '→'
     },
   ];
 
@@ -186,7 +186,7 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
         const startTime = new Date(`2000-01-01T${apt.start_time}`);
         if (!isNaN(startTime)) {
           timeStr = startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-          
+
           if (apt.end_time) {
             const endTime = new Date(`2000-01-01T${apt.end_time}`);
             if (!isNaN(endTime)) {
@@ -197,7 +197,7 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
           }
         }
       }
-      
+
       return {
         id: apt.id,
         client: apt.client_name || 'Client',
@@ -215,19 +215,19 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
     title: work.title || 'Untitled',
     category: work.category || 'Portfolio',
     likes: work.likes || 0,
-    date: work.created_at 
-      ? new Date(work.created_at).toLocaleDateString('en-US', { 
-          month: 'short', 
-          day: 'numeric' 
-        })
+    date: work.created_at
+      ? new Date(work.created_at).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
+      })
       : 'Recently'
   }));
 
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
-        style={styles.scrollView} 
+      <ScrollView
+        style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -254,7 +254,7 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
               </Text>
             </View>
             <View style={styles.headerActions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.notificationButton}
                 onPress={() => onNavigate('artist-notifications')}
               >
@@ -263,7 +263,7 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
                   <View style={styles.notificationDot} />
                 )}
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.profileButton}
                 onPress={() => onNavigate('Profile')}
               >
@@ -283,8 +283,8 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
                 <Text style={styles.statLabel}>{stat.label}</Text>
                 <Text style={[
                   styles.statChange,
-                  stat.change.includes('+') || stat.change.includes('↑') 
-                    ? styles.statChangePositive 
+                  stat.change.includes('+') || stat.change.includes('↑')
+                    ? styles.statChangePositive
                     : styles.statChangeNeutral
                 ]}>
                   {stat.change}
@@ -300,7 +300,7 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Quick Actions</Text>
             <View style={styles.quickActions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.quickAction}
                 onPress={() => onNavigate('Schedule')}
               >
@@ -313,7 +313,7 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
                 <Text style={styles.quickActionText}>Schedule</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.quickAction}
                 onPress={() => onNavigate('Clients')}
               >
@@ -326,7 +326,7 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
                 <Text style={styles.quickActionText}>Sessions</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.quickAction}
                 onPress={() => onNavigate('Works')}
               >
@@ -339,7 +339,7 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
                 <Text style={styles.quickActionText}>Portfolio</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.quickAction}
                 onPress={() => onNavigate('artist-earnings')}
               >
@@ -364,11 +364,11 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
                 </TouchableOpacity>
               )}
             </View>
-            
+
             {todaySchedule.length > 0 ? (
               todaySchedule.map((apt) => (
-                <TouchableOpacity 
-                  key={apt.id} 
+                <TouchableOpacity
+                  key={apt.id}
                   style={styles.scheduleCard}
                   onPress={() => onNavigate('artist-active-session', { appointment: apt.fullApt })}
                 >
@@ -385,15 +385,15 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
                   </View>
                   <View style={[
                     styles.statusBadge,
-                    apt.status === 'confirmed' ? styles.statusConfirmed : 
-                    apt.status === 'completed' ? styles.statusCompleted : 
-                    styles.statusPending
+                    apt.status === 'confirmed' ? styles.statusConfirmed :
+                      apt.status === 'completed' ? styles.statusCompleted :
+                        styles.statusPending
                   ]}>
                     <Text style={[
                       styles.statusText,
-                      apt.status === 'confirmed' ? styles.statusTextConfirmed : 
-                      apt.status === 'completed' ? styles.statusTextCompleted : 
-                      styles.statusTextPending
+                      apt.status === 'confirmed' ? styles.statusTextConfirmed :
+                        apt.status === 'completed' ? styles.statusTextCompleted :
+                          styles.statusTextPending
                     ]}>
                       {apt.status}
                     </Text>
@@ -420,16 +420,16 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
                 </TouchableOpacity>
               )}
             </View>
-            
+
             {recentWorks.length > 0 ? (
-              <ScrollView 
-                horizontal 
+              <ScrollView
+                horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.worksContainer}
               >
                 {recentWorks.map((work) => (
-                  <TouchableOpacity 
-                    key={work.id} 
+                  <TouchableOpacity
+                    key={work.id}
                     style={styles.workCard}
                     onPress={() => onNavigate('artist-work-details', { workId: work.id })}
                   >
@@ -455,7 +455,7 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
               <View style={styles.emptyState}>
                 <Ionicons name="images-outline" size={48} color="#9ca3af" />
                 <Text style={styles.emptyStateText}>No portfolio works yet</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.addWorkButton}
                   onPress={() => onNavigate('Works')}
                 >
