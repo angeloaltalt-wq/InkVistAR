@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Heart, Award, Users, Clock, LogOut } from 'lucide-react';
+import { Calendar, Heart, Award, Users, Clock, LogOut, Plus } from 'lucide-react';
 import './PortalStyles.css';
 import CustomerSideNav from '../components/CustomerSideNav';
 import ChatWidget from '../components/ChatWidget';
@@ -88,6 +88,10 @@ function CustomerPortal() {
                         <p className="header-subtitle">Welcome back, {customer.name || 'Inker'}!</p>
                     </div>
                     <div className="header-actions">
+                        <button className="action-btn" onClick={() => navigate('/customer/book')} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
+                            <Plus size={16} /> 
+                            <span>Book Consultation</span>
+                        </button>
                         {customer.profile_image && (
                             <div style={{
                                 width: '40px', height: '40px', borderRadius: '50%',

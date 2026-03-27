@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Axios from 'axios';
-import { Search, ChevronLeft, ChevronRight, Filter, CreditCard, Eye, CheckCircle, Info, X, Calendar, Inbox } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Filter, CreditCard, Eye, CheckCircle, Info, X, Calendar, Inbox, Plus } from 'lucide-react';
 import './PortalStyles.css';
 import { API_URL } from '../config';
 import CustomerSideNav from '../components/CustomerSideNav';
@@ -120,7 +120,16 @@ function CustomerBookings(){
         <div className="portal-layout">
             <CustomerSideNav />
             <div className="portal-container customer-portal">
-            <header className="portal-header"><h1>My Bookings</h1></header>
+            <header className="portal-header">
+                <div className="header-title">
+                    <h1>My Bookings</h1>
+                </div>
+                <div className="header-actions">
+                    <button className="action-btn" onClick={() => navigate('/customer/book')} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
+                        <Plus size={16} /> Book New Session
+                    </button>
+                </div>
+            </header>
             <div className="portal-content">
                 {loading ? <div className="no-data">Loading...</div> : (
                 <div className="portal-content">
