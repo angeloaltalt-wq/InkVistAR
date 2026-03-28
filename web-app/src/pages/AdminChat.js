@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Axios from 'axios';
+import { MessageSquare, Calendar, Activity } from 'lucide-react';
 import AdminSideNav from '../components/AdminSideNav';
 import ChatWidget from '../components/ChatWidget';
 import { API_URL } from '../config';
@@ -53,40 +54,44 @@ function AdminChat() {
     return (
         <div className="admin-page-with-sidenav">
             <AdminSideNav />
-            <div className="admin-page page-container-enter" style={{ padding: '20px', display: 'flex', flexDirection: 'column' }}>
-                <div className="admin-chat-layout" style={{ borderRadius: '15px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', flex: 1 }}>
+            <div className="admin-page page-container-enter chat-page-wrapper">
+                <div className="admin-chat-layout glass-panel">
                     <div className="appointment-list-container">
-                        <h2 className="chat-list-header">Chats & Consultations</h2>
+                        <div className="chat-list-header">
+                            <h2>Chats & Consultations</h2>
+                        </div>
 
                         {/* Dynamic Live Sessions */}
                         {liveSessions.length > 0 && (
-                            <div style={{ padding: '10px 20px', backgroundColor: '#f8fafc', fontSize: '0.8rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                Active Web Chats ({liveSessions.length})
+                            <div className="chat-section-divider">
+                                <Activity size={14} /> Active Web Chats ({liveSessions.length})
                             </div>
                         )}
                         {liveSessions.map(session => (
                             <div
                                 key={session.id}
-                                className={`appointment-item ${selectedAppointment?.id === session.id ? 'selected' : ''}`}
+                                className={`appointment-item live-chat-item ${selectedAppointment?.id === session.id ? 'selected' : ''}`}
                                 onClick={() => setSelectedAppointment({ id: session.id, client_name: session.name, service_type: 'Live Web Chat', isLiveChat: true })}
-                                style={{ borderLeft: '4px solid #10b981', background: selectedAppointment?.id === session.id ? '#f0fdf4' : 'white', cursor: 'pointer' }}
                             >
-                                <div className="appointment-item-name" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <div className="appointment-item-name">
                                     <span>{session.name}</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600 }}>Active</span>
+                                    <span className="live-status-pill">Active</span>
                                 </div>
-                                <div className="appointment-item-service" style={{ color: '#64748b', fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                    {session.lastMessage}
-                                </div>
-                                <div className="appointment-item-date" style={{ marginTop: '4px' }}>{new Date(session.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                <div className="appointment-item-service">{session.lastMessage}</div>
+                                <div className="appointment-item-date">{new Date(session.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                             </div>
                         ))}
 
-                        <div style={{ padding: '10px 20px', backgroundColor: '#f8fafc', fontSize: '0.8rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: liveSessions.length ? '0' : '10px' }}>
-                            Scheduled Appointments
+                        <div className="chat-section-divider">
+                            <Calendar size={14} /> Scheduled Appointments
                         </div>
 
-                        {loading ? <div className="loader" style={{ marginTop: '1rem' }}>Loading...</div> : (
+                        {loading ? (
+                            <div className="chat-loader">
+                                <div className="spinner"></div>
+                                <span>Syncing records...</span>
+                            </div>
+                        ) : (
                             <ul className="appointment-list">
                                 {appointments.map(apt => (
                                     <li
@@ -102,9 +107,9 @@ function AdminChat() {
                             </ul>
                         )}
                     </div>
-                    <div className="chat-window-container" style={{ flex: 1, position: 'relative' }}>
+                    <div className="chat-window-container">
                         {selectedAppointment ? (
-                            <div className="chat-widget-wrapper" style={{ height: '100%', width: '100%' }}>
+                            <div className="chat-widget-wrapper">
                                 <ChatWidget
                                     room={selectedAppointment.id}
                                     currentUser={`Admin`}
@@ -113,7 +118,8 @@ function AdminChat() {
                             </div>
                         ) : (
                             <div className="no-chat-selected">
-                                <h3>Select a chat or consultation to start messaging.</h3>
+                                <MessageSquare size={48} />
+                                <h3>Select a conversation to begin.</h3>
                             </div>
                         )}
                     </div>
