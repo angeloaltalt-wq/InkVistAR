@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Axios from 'axios';
 import { ShoppingCart, Search, Plus, Minus, Trash2, Receipt, Package, CheckCircle, X, RefreshCw, Filter } from 'lucide-react';
 import AdminSideNav from '../components/AdminSideNav';
@@ -17,10 +17,12 @@ function AdminPOS() {
     const [error, setError] = useState(null);
 
     useEffect(() => {
+        console.log("🛒 POS System Mounting...");
         fetchInventory();
     }, []);
 
     const fetchInventory = async () => {
+        if (!API_URL) return setError("Configuration Error: API_URL is missing.");
         try {
             setLoading(true);
             setError(null);
@@ -107,16 +109,19 @@ function AdminPOS() {
         }
     };
 
-    const categories = ['All', ...new Set((inventory || []).map(item => item?.category).filter(Boolean))];
+    const categories = useMemo(() => {
+        return ['All', ...new Set((inventory || []).map(item => item?.category).filter(Boolean))];
+    }, [inventory]);
 
-    const filteredInventory = Array.isArray(inventory) ? inventory.filter(item => {
-        if (!item) return false;
-        const matchesSearch = (item.name || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||
-                             (item.category || '').toLowerCase().includes((searchTerm || '').toLowerCase());
-        const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
-        
-        return matchesSearch && matchesCategory;
-    }) : [];
+    const filteredInventory = useMemo(() => {
+        return Array.isArray(inventory) ? inventory.filter(item => {
+            if (!item) return false;
+            const matchesSearch = (item.name || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||
+                                 (item.category || '').toLowerCase().includes((searchTerm || '').toLowerCase());
+            const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
+            return matchesSearch && matchesCategory;
+        }) : [];
+    }, [inventory, searchTerm, activeCategory]);
 
     return (
         <div className="admin-page-with-sidenav">
@@ -179,7 +184,7 @@ function AdminPOS() {
                                 </div>
                             )) : (
                                 <div className="pos-no-items">
-                                    {!loading && <Filter size={48} />}
+                                    <Filter size={48} />
                                     <p>No products found matching your search</p>
                                 </div>
                             )}
