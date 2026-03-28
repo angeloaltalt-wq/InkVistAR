@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Axios from 'axios';
-import { ShoppingCart, Search, Plus, Minus, Trash2, Package, CheckCircle, X, RefreshCw, Filter, Trash, ArrowRight, AlertCircle, Tag, Send } from 'lucide-react';
+import { ShoppingCart, Search, Plus, Minus, Trash2, Package, CheckCircle, X, RefreshCw, Filter, Trash, ArrowRight, AlertCircle, Tag, Send, User } from 'lucide-react';
 import AdminSideNav from '../components/AdminSideNav';
 import { API_URL } from '../config';
 import './AdminPOS.css';
 
 function AdminPOS() {
     const [inventory, setInventory] = useState([]);
+    const [customers, setCustomers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCustomerId, setSelectedCustomerId] = useState('');
     const [cart, setCart] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isCheckingOut, setIsCheckingOut] = useState(false);
@@ -21,6 +23,7 @@ function AdminPOS() {
     useEffect(() => {
         console.log("🛒 POS System Mounting...");
         fetchInventory();
+        fetchCustomers();
     }, []);
 
     const fetchInventory = useCallback(async () => {
@@ -41,6 +44,18 @@ function AdminPOS() {
             setLoading(false);
         }
     }, []);
+
+    const fetchCustomers = async () => {
+        try {
+            const response = await Axios.get(`${API_URL}/api/admin/users?status=active`);
+            if (response.data.success) {
+                const onlyCustomers = (response.data.data || []).filter(u => u.user_type === 'customer');
+                setCustomers(onlyCustomers);
+            }
+        } catch (error) {
+            console.error("Error fetching customers:", error);
+        }
+    };
 
     const addToCart = (item) => {
         const existing = cart.find(c => c.id === item.id);
@@ -117,6 +132,7 @@ function AdminPOS() {
                 orderId: Math.floor(Math.random() * 1000000)
             });
             
+            setSelectedCustomerId('');
             setCart([]);
             setShowReceipt(true);
             fetchInventory(); // Refresh stock
@@ -129,6 +145,11 @@ function AdminPOS() {
     };
 
     const handleSendReceipt = async () => {
+        if (!selectedCustomerId) {
+            alert("Please select a customer to send the receipt to.");
+            return;
+        }
+
         setIsSending(true);
         try {
             // Assuming lastOrder is available and valid
@@ -138,7 +159,8 @@ function AdminPOS() {
                 orderId: lastOrder.orderId,
                 items: lastOrder.items,
                 total: lastOrder.total,
-                date: lastOrder.date
+                date: lastOrder.date,
+                customerId: selectedCustomerId
             });
             
             alert("Receipt sent to customer via notification!");
@@ -357,6 +379,21 @@ function AdminPOS() {
                                     </tfoot>
                                 </table>
                             </div>
+
+                            <div className="invoice-send-section">
+                                <label><User size={16} /> Send Digital Copy</label>
+                                <select 
+                                    value={selectedCustomerId} 
+                                    onChange={(e) => setSelectedCustomerId(e.target.value)}
+                                    className="customer-select-v2"
+                                >
+                                    <option value="">-- Select Customer to Notify --</option>
+                                    {customers.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name} ({c.email})</option>
+                                    ))}
+                                </select>
+                            </div>
+
                             <button className="close-receipt-btn" onClick={handleSendReceipt} disabled={isSending}>{isSending ? 'Sending...' : 'Send to Customer'}</button>
                         </div>
                     </div>

@@ -3934,16 +3934,13 @@ app.get('/api/manager/dashboard', (req, res) => {
 
 // Send POS Invoice to Customer (Creates Notification)
 app.post('/api/admin/send-pos-invoice', async (req, res) => {
-  const { orderId, items, total, date } = req.body;
+  const { orderId, items, total, date, customerId } = req.body;
 
   try {
     // Basic validation
-    if (!orderId || !items || !Array.isArray(items) || !total || !date) {
-      return res.status(400).json({ success: false, message: 'Invalid data provided' });
+    if (!orderId || !items || !Array.isArray(items) || !total || !date || !customerId) {
+      return res.status(400).json({ success: false, message: 'Invalid data or customer ID missing' });
     }
-
-    // TODO: Fetch customer ID from the database based on any customer identifier you have (e.g., phone, recent appointments, etc.)
-    const customerId = 4; // Replace 4 with the actual customer ID or lookup logic
     
     // Construct invoice message
     let invoiceMessage = `Thank you for your purchase! Here's your invoice:\n\n`;
