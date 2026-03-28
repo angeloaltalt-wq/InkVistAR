@@ -558,6 +558,14 @@ db.getConnection((err, connection) => {
     `;
     db.query(invoicesTableQuery, (err) => { if (err) console.error('⚠️ Error checking invoices table:', err.message); });
 
+    // MIGRATION: Add customer_id to invoices table
+    db.query("SHOW COLUMNS FROM invoices LIKE 'customer_id'", (err, results) => {
+      if (!err && results.length === 0) {
+        console.log('🔄 Migrating invoices: Adding customer_id column...');
+        db.query("ALTER TABLE invoices ADD COLUMN customer_id INT NULL AFTER id");
+      }
+    });
+
     // Create Payouts Table (Artist Payments)
     const payoutsTableQuery = `
       CREATE TABLE IF NOT EXISTS payouts (
@@ -3851,9 +3859,9 @@ app.get('/api/admin/invoices', (req, res) => {
 
 // Admin: Create Invoice
 app.post('/api/admin/invoices', (req, res) => {
-  const { client, type, amount, status } = req.body;
-  const query = 'INSERT INTO invoices (client_name, service_type, amount, status, created_at) VALUES (?, ?, ?, ?, NOW())';
-  db.query(query, [client, type, amount, status], (err, result) => {
+  const { client, type, amount, status, customerId } = req.body;
+  const query = 'INSERT INTO invoices (customer_id, client_name, service_type, amount, status, created_at) VALUES (?, ?, ?, ?, ?, NOW())';
+  db.query(query, [customerId || null, client, type, amount, status], (err, result) => {
     if (err) return res.status(500).json({ success: false, message: err.message });
     res.json({ success: true, message: 'Invoice created', id: result.insertId });
   });

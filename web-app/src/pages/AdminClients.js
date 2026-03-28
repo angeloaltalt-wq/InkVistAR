@@ -86,15 +86,21 @@ function AdminClients() {
         setActiveTab('profile');
 
         try {
-            const [profileRes, historyRes] = await Promise.all([
+            const [profileRes, historyRes, posRes] = await Promise.all([
                 Axios.get(`${API_URL}/api/customer/profile/${client.id}`),
-                Axios.get(`${API_URL}/api/customer/${client.id}/appointments`)
+                Axios.get(`${API_URL}/api/customer/${client.id}/appointments`),
+                Axios.get(`${API_URL}/api/admin/invoices`) // We'll filter this locally for the client
             ]);
 
             const profile = profileRes.data.success ? profileRes.data.profile : {};
-            const appointments = historyRes.data.success ? historyRes.data.appointments : [];
+            const appointments = (historyRes.data.success ? historyRes.data.appointments : []).map(a => ({ ...a, recordType: 'Session' }));
+            const posSales = (posRes.data.success ? posRes.data.data : [])
+                .filter(inv => inv.customer_id === client.id)
+                .map(inv => ({ ...inv, appointment_date: inv.created_at, design_title: inv.service_type, status: inv.status, recordType: 'Retail' }));
 
-            setClientDetails({ profile, appointments, notes: profile.notes || '' });
+            const combinedHistory = [...appointments, ...posSales].sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
+
+            setClientDetails({ profile, appointments: combinedHistory, notes: profile.notes || '' });
             setFormData(profile);
 
         } catch (error) {

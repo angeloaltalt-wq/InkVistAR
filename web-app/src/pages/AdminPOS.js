@@ -124,7 +124,8 @@ function AdminPOS() {
                 client: clientLabel,
                 type: 'Retail POS Sale',
                 amount: cartTotal,
-                status: 'Paid'
+                status: 'Paid',
+                customerId: selectedCustomerId || null
             });
             
             setLastOrder({
