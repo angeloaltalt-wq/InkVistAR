@@ -179,7 +179,7 @@ function AdminClients() {
                         />
                     </div>
                     <div className="premium-filters-group">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600' }}>
+                        <div className="filter-label-group">
                             <Filter size={16} />
                             <span>Status:</span>
                         </div>
@@ -192,7 +192,7 @@ function AdminClients() {
                             <option value="deleted">Deactivated Clients</option>
                         </select>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem', fontWeight: '600', marginLeft: '0.5rem' }}>
+                        <div className="filter-label-group" style={{ marginLeft: '0.5rem' }}>
                             <SlidersHorizontal size={16} />
                             <span>Sort:</span>
                         </div>
