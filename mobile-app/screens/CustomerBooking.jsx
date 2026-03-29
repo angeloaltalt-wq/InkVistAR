@@ -109,7 +109,7 @@ export function CustomerBooking({ customerId, onBack }) {
   const showTimePicker = designTitle !== 'Tattoo Session';
 
   const handleBook = async () => {
-    if (!selectedArtist || !selectedDate || !designTitle) {
+    if (!selectedDate) {
       Alert.alert('Missing Information', 'Please fill in all fields marked with *');
       return;
     }
@@ -127,14 +127,14 @@ export function CustomerBooking({ customerId, onBack }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerId,
-          artistId: selectedArtist.id,
+          artistId: 1, // Default to studio lead/admin for manual assignment
           date: selectedDate,
           startTime: showTimePicker ? selectedTime : null,
           endTime: showTimePicker ? selectedTime : null,
-          designTitle,
+          designTitle: designTitle || 'General Consultation',
           notes,
           referenceImage: image,
-          price: selectedArtist.hourly_rate || 0
+          price: 0 // Consultations are free
         })
       });
 
@@ -233,7 +233,6 @@ export function CustomerBooking({ customerId, onBack }) {
     { label: '5:00 PM', value: '17:00' },
     { label: '6:00 PM', value: '18:00' },
     { label: '7:00 PM', value: '19:00' },
-    { label: '8:00 PM', value: '20:00' }
   ];
 
   const serviceTypes = ['Tattoo Session', 'Consultation', 'Piercing', 'Touch-up', 'Aftercare Check'];
@@ -245,36 +244,14 @@ export function CustomerBooking({ customerId, onBack }) {
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Book Appointment</Text>
+        <Text style={styles.headerTitle}>Request Consultation</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
-        
-        {/* 1. Select Artist */}
-        <Text style={styles.sectionTitle}>1. Select Artist *</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.artistList}>
-          {artists.map((artist) => (
-            <TouchableOpacity 
-              key={artist.id} 
-              style={[
-                styles.artistCard, 
-                selectedArtist?.id === artist.id && styles.selectedArtistCard
-              ]}
-              onPress={() => setSelectedArtist(artist)}
-            >
-              <View style={styles.artistAvatar}>
-                <Text style={styles.artistInitials}>{artist.name.charAt(0)}</Text>
-              </View>
-              <Text style={styles.artistName}>{artist.name}</Text>
-              <Text style={styles.artistStudio}>{artist.studio_name}</Text>
-              <Text style={styles.artistRate}>${artist.hourly_rate}/hr</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
 
-        {/* 2. Select Date */}
-        <Text style={styles.sectionTitle}>2. Select Date *</Text>
+        {/* 1. Select Date */}
+        <Text style={styles.sectionTitle}>1. Select Preferred Date *</Text>
         <View style={styles.calendarContainer}>
           {/* Calendar Header */}
           <View style={styles.calendarHeader}>
@@ -309,36 +286,8 @@ export function CustomerBooking({ customerId, onBack }) {
           </View>
         </View>
 
-        {/* 3. Service Type (moved before time so conditional visibility works) */}
-        <Text style={styles.sectionTitle}>3. Service Type *</Text>
-        <View style={styles.timeGrid}>
-          {serviceTypes.map((type) => (
-            <TouchableOpacity 
-              key={type} 
-              style={[
-                styles.timeChip, 
-                designTitle === type && styles.selectedTimeChip,
-                { width: '48%' }
-              ]}
-              onPress={() => {
-                setDesignTitle(type);
-                // Clear time selection when switching to Tattoo Session
-                if (type === 'Tattoo Session') {
-                  setSelectedTime('');
-                }
-              }}
-            >
-              <Text style={[styles.timeText, designTitle === type && styles.selectedTimeText]}>
-                {type}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* 4. Select Time — conditional on service type */}
-        {showTimePicker ? (
-          <>
-            <Text style={styles.sectionTitle}>4. Select Time *</Text>
+        {/* 2. Select Time */}
+        <Text style={styles.sectionTitle}>2. Select Preferred Time *</Text>
             <View style={styles.timeGrid}>
               {timeSlots.map((slot) => (
                 <TouchableOpacity 
@@ -355,19 +304,10 @@ export function CustomerBooking({ customerId, onBack }) {
                 </TouchableOpacity>
               ))}
             </View>
-          </>
-        ) : designTitle === 'Tattoo Session' ? (
-          <View style={styles.infoBox}>
-            <Ionicons name="information-circle" size={20} color="#b8860b" />
-            <Text style={styles.infoBoxText}>
-              For Tattoos, the exact duration and start time will be coordinated directly with the artist after your date is approved.
-            </Text>
-          </View>
-        ) : null}
 
-        {/* 5. Description & Notes */}
+        {/* 3. Description & Notes */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Description & Notes</Text>
+          <Text style={styles.label}>Design Idea & Notes</Text>
           <TextInput 
             style={[styles.input, styles.textArea]} 
             placeholder="Describe size, placement, style..."
@@ -398,18 +338,6 @@ export function CustomerBooking({ customerId, onBack }) {
             </TouchableOpacity>
           )}
         </View>
-
-        {/* 4. Summary & Price */}
-        {selectedArtist && selectedDate && designTitle && (
-            <View style={{ backgroundColor: '#fffdf5', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#daa520', marginBottom: 20 }}>
-                <Text style={{ fontWeight: 'bold', color: '#daa520', marginBottom: 5 }}>Estimated Cost</Text>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text style={{ color: '#4b5563' }}>Service: {designTitle}</Text>
-                    <Text style={{ fontWeight: 'bold', color: '#111' }}>₱{parseFloat(selectedArtist.hourly_rate || 0).toLocaleString()}</Text>
-                </View>
-                <Text style={{ fontSize: 11, color: '#9ca3af', marginTop: 5 }}>* Final price may vary based on session duration.</Text>
-            </View>
-        )}
 
         {/* Submit Button */}
         <TouchableOpacity 

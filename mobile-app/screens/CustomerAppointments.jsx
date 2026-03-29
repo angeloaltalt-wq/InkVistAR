@@ -203,8 +203,9 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
     }
   };
 
-  const renderAppointmentItem = ({ item }) => (
-    <TouchableOpacity 
+const renderAppointmentItem = ({ item, index }) => (
+    <TouchableOpacity
+      key={item.id ? `appt-${item.id}-${index}` : `appt-idx-${index}`}
       style={styles.appointmentCard}
       onPress={() => setSelectedAppointment(item)}
     >
@@ -239,7 +240,7 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>My Appointments</Text>
+          <Text style={styles.headerTitle}>My Consultations</Text>
           <TouchableOpacity onPress={() => setViewMode(viewMode === 'list' ? 'calendar' : 'list')} style={styles.headerButton}>
             <Ionicons name={viewMode === 'list' ? 'calendar' : 'list'} size={24} color="#111" />
           </TouchableOpacity>
@@ -300,13 +301,13 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
         ) : (
           <View style={styles.listContainer}>
             {displayedAppointments.length > 0 ? (
-              displayedAppointments.map((item) => renderAppointmentItem({ item }))
+              displayedAppointments.map((item, index) => renderAppointmentItem({ item, index }))
             ) : (
               <View style={styles.emptyState}>
                 <Ionicons name="calendar-outline" size={48} color="#d1d5db" />
-                <Text style={styles.emptyText}>No appointments found.</Text>
+                <Text style={styles.emptyText}>No consultation requests found.</Text>
                 <TouchableOpacity style={styles.bookButton} onPress={onBookNew}>
-                  <Text style={styles.bookButtonText}>Book New Appointment</Text>
+                  <Text style={styles.bookButtonText}>New Consultation Request</Text>
                 </TouchableOpacity>
               </View>
             )}

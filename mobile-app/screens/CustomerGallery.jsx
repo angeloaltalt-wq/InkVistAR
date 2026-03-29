@@ -150,7 +150,7 @@ export function CustomerGallery({ onBack, userId }) {
     closeDetail();
     // Pass the style/category as context to the booking screen if needed
     navigation.navigate('booking-create', { 
-      prefillNote: `I'm interested in a design similar to "${selectedWork?.title}" by ${selectedWork?.artist_name}.` 
+      prefillNote: `I'm interested in a consultation for a design similar to "${selectedWork?.title}".` 
     });
   };
 
@@ -350,7 +350,7 @@ export function CustomerGallery({ onBack, userId }) {
                         style={styles.bookSimilarGradient}
                       >
                         <Ionicons name="calendar" size={20} color="#ffffff" />
-                        <Text style={styles.bookSimilarText}>Book Similar</Text>
+                        <Text style={styles.bookSimilarText}>Request Consultation</Text>
                       </LinearGradient>
                     </TouchableOpacity>
                     <TouchableOpacity

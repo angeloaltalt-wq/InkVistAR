@@ -255,6 +255,14 @@ export const updateAppointmentStatus = async (appointmentId, status) => {
   });
 };
 
+// Artist: Change Password
+export const changeArtistPassword = async (artistId, currentPassword, newPassword) => {
+  return fetchAPI('/artist/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ artistId, currentPassword, newPassword })
+  });
+};
+
 // Artist: Get Clients
 export const getArtistClients = async (artistId) => {
   return fetchAPI(`/artist/${artistId}/clients`);

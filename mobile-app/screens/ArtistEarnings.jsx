@@ -13,7 +13,8 @@ export function ArtistEarnings({ onBack, artistId }) {
     sessionsCount: 0,
     average: 0,
     change: '+0%',
-    pendingPayout: 0
+    pendingPayout: 0,
+    totalPotential: 0
   });
   const [transactions, setTransactions] = useState([]);
   const [allCompletedAppts, setAllCompletedAppts] = useState([]);
@@ -78,18 +79,23 @@ export function ArtistEarnings({ onBack, artistId }) {
 
     const filteredPaidData = filteredData.filter(a => a.payment_status === 'paid');
     const total = filteredPaidData.reduce((sum, a) => sum + a.artistShare, 0);
-    const count = filteredPaidData.length;
-    const avg = count > 0 ? total / count : 0;
+    
+    const filteredUnpaidData = filteredData.filter(a => a.payment_status !== 'paid');
+    const pending = filteredUnpaidData.reduce((sum, a) => sum + a.artistShare, 0);
+    
+    const paidCount = filteredPaidData.length;
+    const avg = paidCount > 0 ? total / paidCount : 0;
 
     // Just some mock change for visual flair, like the web app
     const change = total > 0 ? `+${Math.floor(Math.random() * 15) + 5}%` : '+0%';
 
     setStats({
       totalEarnings: total,
-      sessionsCount: count,
+      sessionsCount: filteredData.length,
       average: avg,
       change: change,
-      pendingPayout: total // Simplification: current filter total is pending
+      pendingPayout: pending,
+      totalPotential: total + pending
     });
 
     setTransactions(filteredData.slice(0, 5)); // Show top 5 recent for current filter
@@ -128,14 +134,14 @@ export function ArtistEarnings({ onBack, artistId }) {
 
               <View style={styles.statsRow}>
                 <View style={styles.statCard}>
-                  <Ionicons name="calendar" size={18} color="#ffffff" />
-                  <Text style={styles.statNumber}>{stats.sessionsCount}</Text>
-                  <Text style={styles.statLabel}>Sessions</Text>
+                  <Ionicons name="time" size={18} color="#ffffff" />
+                  <Text style={styles.statNumber}>₱{stats.pendingPayout.toLocaleString()}</Text>
+                  <Text style={styles.statLabel}>Pending</Text>
                 </View>
                 <View style={styles.statCard}>
                   <Ionicons name="cash" size={18} color="#ffffff" />
-                  <Text style={styles.statNumber}>₱{stats.average.toLocaleString(undefined, { maximumFractionDigits: 0 })}</Text>
-                  <Text style={styles.statLabel}>Average</Text>
+                  <Text style={styles.statNumber}>₱{stats.totalPotential.toLocaleString()}</Text>
+                  <Text style={styles.statLabel}>Total Value</Text>
                 </View>
               </View>
             </>
@@ -185,33 +191,6 @@ export function ArtistEarnings({ onBack, artistId }) {
             )}
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Payment Settings</Text>
-            <TouchableOpacity style={styles.paymentCard}>
-              <View style={styles.paymentIcon}>
-                <Ionicons name="card" size={24} color="#3b82f6" />
-              </View>
-              <View style={styles.paymentDetails}>
-                <Text style={styles.paymentTitle}>Payout Method</Text>
-                <Text style={styles.paymentInfo}>G-Cash (Primary)</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity 
-            style={styles.withdrawButton}
-            onPress={() => Alert.alert('Withdrawal', `Your request for ₱${stats.totalEarnings.toLocaleString()} withdrawal is being processed.`)}
-            disabled={stats.totalEarnings <= 0}
-          >
-            <LinearGradient
-              colors={['#000000', '#059669']}
-              style={[styles.withdrawButtonGradient, stats.totalEarnings <= 0 && { opacity: 0.5 }]}
-            >
-              <Ionicons name="cash" size={24} color="#ffffff" />
-              <Text style={styles.withdrawButtonText}>Withdraw Earnings</Text>
-            </LinearGradient>
-          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -260,7 +239,4 @@ const styles = StyleSheet.create({
   paymentDetails: { flex: 1 },
   paymentTitle: { fontSize: 16, fontWeight: '600', color: '#111827', marginBottom: 2 },
   paymentInfo: { fontSize: 14, color: '#6b7280' },
-  withdrawButton: { marginTop: 8 },
-  withdrawButtonGradient: { flexDirection: 'row', height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  withdrawButtonText: { color: '#ffffff', fontSize: 18, fontWeight: '600' },
 });

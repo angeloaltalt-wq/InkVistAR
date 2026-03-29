@@ -317,7 +317,7 @@ export function ArtistDashboard({ userName, userEmail, userId, onNavigate, onLog
 
               <TouchableOpacity
                 style={styles.quickAction}
-                onPress={() => onNavigate('Clients')}
+                onPress={() => onNavigate('Sessions')}
               >
                 <LinearGradient
                   colors={['#b91c1c', '#dc2626']}

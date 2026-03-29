@@ -1,11 +1,16 @@
-import { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { sendChatMessage } from '../src/utils/api';
+import { sendChatMessage, API_URL } from '../src/utils/api';
+import io from 'socket.io-client';
 
-export function CustomerChatbotPage({ onBack }) {
-  const [messages, setMessages] = useState([
+// Initialize socket connection (stripping /api from the URL for socket.io)
+const socket = io(API_URL.replace('/api', ''));
+
+export function CustomerChatbotPage({ onBack, userId, userName }) {
+  const [isHumanMode, setIsHumanMode] = useState(false);
+  const [botMessages, setBotMessages] = useState([
     {
       id: 1,
       text: "Hi! I'm your tattoo design assistant. I can help you with design ideas, placement suggestions, aftercare tips, and more. How can I help you today?",
@@ -13,13 +18,62 @@ export function CustomerChatbotPage({ onBack }) {
       timestamp: new Date(),
     },
   ]);
+  
+  const [humanMessages, setHumanMessages] = useState([
+    { id: 'sys-1', sender: 'system', text: "Welcome to Live Support.", timestamp: new Date() }
+  ]);
+
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollViewRef = useRef(null);
 
+  // Unique room ID for live chat
+  const room = useMemo(() => userId ? `customer_${userId}` : `guest_${Math.random().toString(36).substr(2, 9)}`, [userId]);
+  const currentUserName = userName || 'Guest User';
+
+  // Determine if studio is open (1 PM - 8 PM)
+  const isShopOpen = useMemo(() => {
+    // const currentHour = new Date().getHours();
+    // return currentHour >= 13 && currentHour < 20;
+    return true; // Testing mode: Always open
+  }, []);
+
   useEffect(() => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
-  }, [messages]);
+  }, [botMessages, humanMessages, isHumanMode]);
+
+  // Socket.IO Listeners
+  useEffect(() => {
+    socket.emit('join_room', room);
+
+    const receiveMessageHandler = (data) => {
+      if (data.room !== room) return;
+      setHumanMessages(prev => [...prev, {
+        id: Date.now() + Math.random(),
+        sender: data.sender,
+        text: data.text,
+        timestamp: new Date()
+      }]);
+    };
+
+    const sessionClosedHandler = () => {
+      setIsHumanMode(false);
+      setHumanMessages(prev => [...prev, { 
+        id: 'sys-reset', 
+        sender: 'system', 
+        text: "Live chat ended by the agent. Returning to AI assistant.", 
+        timestamp: new Date() 
+      }]);
+    };
+
+    socket.on('receive_message', receiveMessageHandler);
+    socket.on('session_closed', sessionClosedHandler);
+
+    return () => {
+      socket.off('receive_message', receiveMessageHandler);
+      socket.off('session_closed', sessionClosedHandler);
+    };
+  }, [room]);
 
   const handleSend = () => {
     sendMessage(inputValue);
@@ -28,31 +82,63 @@ export function CustomerChatbotPage({ onBack }) {
   const sendMessage = async (messageText) => {
     if (messageText.trim().length === 0 || isLoading) return;
 
-    const userMessage = {
-      id: Date.now().toString(),
-      text: messageText.trim(),
-      sender: 'user',
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setIsLoading(true);
     if (inputValue === messageText) {
       setInputValue('');
     }
 
-    const response = await sendChatMessage(messageText.trim());
-    setIsLoading(false);
+    if (isHumanMode) {
+      // Mode: Live Agent (Human)
+      const messageData = {
+        room: room,
+        sender: currentUserName,
+        text: messageText.trim(),
+      };
+      
+      // If this is the first human message, alert the admin tracking
+      if (humanMessages.length <= 1) {
+        socket.emit('start_support_session', { room: room, name: currentUserName });
+      }
 
-    const botMessage = {
-      id: (Date.now() + 1).toString(),
-      sender: 'bot',
-      timestamp: new Date(),
-      text: response.success ? response.response : (response.message || 'Sorry, something went wrong.'),
-      isError: !response.success,
-    };
+      socket.emit('send_message', messageData);
+      setHumanMessages(prev => [...prev, {
+        id: Date.now(),
+        sender: currentUserName,
+        text: messageText.trim(),
+        timestamp: new Date()
+      }]);
+    } else {
+      // Mode: AI Bot
+      const userMessage = {
+        id: Date.now().toString(),
+        text: messageText.trim(),
+        sender: 'user',
+        timestamp: new Date(),
+      };
 
-    setMessages(prev => [...prev, botMessage]);
+      setBotMessages(prev => [...prev, userMessage]);
+      setIsLoading(true);
+
+      const response = await sendChatMessage(messageText.trim());
+      setIsLoading(false);
+
+      const botMessage = {
+        id: (Date.now() + 1).toString(),
+        sender: 'bot',
+        timestamp: new Date(),
+        text: response.success ? response.response : (response.message || 'Sorry, something went wrong.'),
+        isError: !response.success,
+      };
+
+      setBotMessages(prev => [...prev, botMessage]);
+    }
+  };
+
+  const toggleMode = () => {
+    if (!isHumanMode && !isShopOpen) {
+      Alert.alert('Agents offline', 'Our live support is available from 1:00 PM to 8:00 PM. Please use our AI Assistant in the meantime!');
+      return;
+    }
+    setIsHumanMode(!isHumanMode);
   };
 
   const quickQuestions = [
@@ -83,9 +169,13 @@ export function CustomerChatbotPage({ onBack }) {
               <Ionicons name="sparkles" size={20} color="#ffffff" />
             </View>
             <View style={styles.headerInfo}>
-              <Text style={styles.headerTitle}>Tattoo AI Assistant</Text>
-              <Text style={styles.headerSubtitle}>Always here to help</Text>
+              <Text style={styles.headerTitle}>{isHumanMode ? 'Live Artist Support' : 'Tattoo AI Assistant'}</Text>
+              <Text style={styles.headerSubtitle}>{isHumanMode ? 'Chatting with a person' : 'Always here to help'}</Text>
             </View>
+            <TouchableOpacity onPress={toggleMode} style={styles.modeToggle}>
+              <Ionicons name={isHumanMode ? "hardware-chip-outline" : "person-outline"} size={20} color="#ffffff" />
+              <Text style={styles.modeToggleText}>{isHumanMode ? "AI" : "Live"}</Text>
+            </TouchableOpacity>
           </View>
         </LinearGradient>
 
@@ -95,32 +185,37 @@ export function CustomerChatbotPage({ onBack }) {
           contentContainerStyle={styles.messagesContent}
           showsVerticalScrollIndicator={false}
         >
-          {messages.map((message) => (
+          {(isHumanMode ? humanMessages : botMessages).map((message) => (
             <View
               key={message.id}
               style={[
                 styles.messageWrapper,
-                message.sender === 'user' ? styles.messageWrapperUser : styles.messageWrapperBot
+                (message.sender === 'user' || message.sender === currentUserName) ? styles.messageWrapperUser : 
+                message.sender === 'system' ? styles.messageWrapperSystem : styles.messageWrapperBot
               ]}
             >
+              {message.sender === 'system' ? (
+                <Text style={styles.systemText}>{message.text}</Text>
+              ) : (
               <View style={[
                 styles.messageBubble,
-                message.sender === 'user' ? styles.messageBubbleUser : styles.messageBubbleBot,
+                (message.sender === 'user' || message.sender === currentUserName) ? styles.messageBubbleUser : styles.messageBubbleBot,
                 message.isError && styles.messageBubbleError,
               ]}>
                 <Text style={[
                   styles.messageText,
-                  message.sender === 'user' ? styles.messageTextUser : styles.messageTextBot
+                  (message.sender === 'user' || message.sender === currentUserName) ? styles.messageTextUser : styles.messageTextBot
                 ]}>
                   {message.text}
                 </Text>
                 <Text style={[
                   styles.messageTime,
-                  message.sender === 'user' ? styles.messageTimeUser : styles.messageTimeBot
+                  (message.sender === 'user' || message.sender === currentUserName) ? styles.messageTimeUser : styles.messageTimeBot
                 ]}>
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </Text>
               </View>
+              )}
             </View>
           ))}
 
@@ -131,7 +226,7 @@ export function CustomerChatbotPage({ onBack }) {
             </View>
           )}
 
-          {!isLoading && messages.length > 0 && (
+          {!isLoading && !isHumanMode && botMessages.length === 1 && (
             <View style={styles.quickQuestionsContainer}>
               <Text style={styles.quickQuestionsLabel}>Quick questions:</Text>
               <View style={styles.quickQuestionsButtons}>
@@ -152,14 +247,14 @@ export function CustomerChatbotPage({ onBack }) {
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Ask me anything about tattoos..."
+            placeholder={isHumanMode ? "Type a message to an artist..." : "Ask me anything about tattoos..."}
             placeholderTextColor="#9ca3af"
             value={inputValue}
             onChangeText={setInputValue}
-            editable={!isLoading}
+            editable={!isLoading || isHumanMode}
             multiline
           />
-          <TouchableOpacity onPress={handleSend} disabled={isLoading}>
+          <TouchableOpacity onPress={handleSend} disabled={isLoading && !isHumanMode}>
             <LinearGradient
               colors={['#000000', '#daa520']}
               start={{ x: 0, y: 0 }}
@@ -224,6 +319,18 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     opacity: 0.9,
   },
+  modeToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6
+  },
+  modeToggleText: {
+    color: '#ffffff', fontSize: 12, fontWeight: '700'
+  },
   messagesContainer: {
     flex: 1,
   },
@@ -239,6 +346,9 @@ const styles = StyleSheet.create({
   },
   messageWrapperBot: {
     alignItems: 'flex-start',
+  },
+  messageWrapperSystem: {
+    alignItems: 'center',
   },
   messageBubble: {
     maxWidth: '80%',
@@ -280,6 +390,12 @@ const styles = StyleSheet.create({
   },
   messageTimeBot: {
     color: '#9ca3af',
+  },
+  systemText: {
+    fontSize: 12,
+    color: '#94a3b8',
+    textAlign: 'center',
+    fontStyle: 'italic'
   },
   typingIndicator: {
     flexDirection: 'row',

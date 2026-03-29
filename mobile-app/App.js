@@ -395,7 +395,9 @@ export default function App() {
       <Tab.Screen name="AR">
         {(props) => <SimpleARPreview {...props} selectedDesign={{ name: 'Sample', type: 'Preview' }} onBack={() => props.navigation.navigate('Home')} />}
       </Tab.Screen>
-      <Tab.Screen name="Chat" component={ChatScreen} initialParams={{ room: 'test_room', currentUser: `customer_${user.id}` }}/>
+      <Tab.Screen name="Chat">
+        {(props) => <CustomerChatbotPage {...props} userId={user.id} userName={user.name} onBack={() => props.navigation.navigate('Home')} />}
+      </Tab.Screen>
       <Tab.Screen name="Appointments">
         {(props) => <CustomerAppointments {...props} customerId={user.id} onBack={() => props.navigation.navigate('Home')} onBookNew={() => props.navigation.navigate('booking-create')} />}
       </Tab.Screen>
@@ -520,7 +522,7 @@ export default function App() {
 
                 <Stack.Screen name="artist-notifications">
                   {(props) => (
-                    <ArtistNotifications
+                    <CustomerNotifications
                       {...props}
                       userId={user.id}
                       onBack={() => props.navigation.goBack()}
@@ -572,8 +574,10 @@ export default function App() {
                 {/* Stack screens that sit on top of tabs */}
                 <Stack.Screen name="chatbot-enhanced">
                   {(props) => (
-                    <SimpleChatbot
+                    <CustomerChatbotPage
                       {...props}
+                      userId={user.id}
+                      userName={user.name}
                       onBack={() => props.navigation.goBack()}
                     />
                   )}

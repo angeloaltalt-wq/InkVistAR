@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getArtistDashboard, updateArtistProfile } from '../src/utils/api';
+import { getArtistDashboard, updateArtistProfile, changeArtistPassword } from '../src/utils/api';
 
 export const ArtistProfile = ({ userId, userName, userEmail, onLogout }) => {
   const [loading, setLoading] = useState(true);
@@ -18,6 +18,12 @@ export const ArtistProfile = ({ userId, userName, userEmail, onLogout }) => {
 
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editForm, setEditForm] = useState({});
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    current: '',
+    new: '',
+    confirm: ''
+  });
 
   useEffect(() => {
     fetchProfileData();
@@ -48,12 +54,29 @@ export const ArtistProfile = ({ userId, userName, userEmail, onLogout }) => {
 
   const handleEdit = () => {
     setEditForm({ ...profile });
+    setShowPasswordSection(false);
+    setPasswordForm({ current: '', new: '', confirm: '' });
     setEditModalVisible(true);
   };
 
   const handleSave = async () => {
     setLoading(true);
     try {
+      // Handle Password Change if section is visible and current password is provided
+      if (showPasswordSection && passwordForm.current) {
+        if (passwordForm.new !== passwordForm.confirm) {
+          Alert.alert('Error', 'New passwords do not match.');
+          setLoading(false);
+          return;
+        }
+        const pwdResult = await changeArtistPassword(userId, passwordForm.current, passwordForm.new);
+        if (!pwdResult.success) {
+          Alert.alert('Security Error', pwdResult.message || 'Failed to change password.');
+          setLoading(false);
+          return;
+        }
+      }
+
       const result = await updateArtistProfile(userId, editForm);
       if (result.success) {
         Alert.alert('Success', 'Profile updated successfully');
@@ -178,6 +201,49 @@ export const ArtistProfile = ({ userId, userName, userEmail, onLogout }) => {
                 keyboardType="numeric"
               />
 
+              <TouchableOpacity 
+                style={styles.passwordToggle} 
+                onPress={() => setShowPasswordSection(!showPasswordSection)}
+              >
+                <Text style={styles.passwordToggleText}>
+                  {showPasswordSection ? 'Hide Password Settings' : 'Change Password'}
+                </Text>
+                <Ionicons name={showPasswordSection ? "chevron-up" : "chevron-down"} size={16} color="#daa520" />
+              </TouchableOpacity>
+
+              {showPasswordSection && (
+                <View style={styles.passwordSection}>
+                  <Text style={styles.inputLabel}>Current Password</Text>
+                  <TextInput 
+                    style={styles.input} 
+                    secureTextEntry
+                    value={passwordForm.current}
+                    onChangeText={(text) => setPasswordForm({...passwordForm, current: text})}
+                    placeholder="Required to change password"
+                  />
+
+                  <Text style={styles.inputLabel}>New Password</Text>
+                  <TextInput 
+                    style={styles.input} 
+                    secureTextEntry
+                    value={passwordForm.new}
+                    onChangeText={(text) => setPasswordForm({...passwordForm, new: text})}
+                    placeholder="At least 6 characters"
+                  />
+
+                  <Text style={styles.inputLabel}>Confirm New Password</Text>
+                  <TextInput 
+                    style={[
+                      styles.input, 
+                      passwordForm.new !== passwordForm.confirm && passwordForm.confirm !== '' ? { borderColor: '#ef4444' } : null
+                    ]} 
+                    secureTextEntry
+                    value={passwordForm.confirm}
+                    onChangeText={(text) => setPasswordForm({...passwordForm, confirm: text})}
+                  />
+                </View>
+              )}
+
               <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
                 <Text style={styles.saveButtonText}>Save Changes</Text>
               </TouchableOpacity>
@@ -214,6 +280,9 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 20, fontWeight: 'bold' },
   inputLabel: { fontSize: 14, color: '#6b7280', marginBottom: 5, marginTop: 10 },
   input: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, padding: 10, fontSize: 16 },
+  passwordToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 20, padding: 10, borderTopWidth: 1, borderTopColor: '#eee' },
+  passwordToggleText: { color: '#daa520', fontWeight: 'bold', marginRight: 5 },
+  passwordSection: { backgroundColor: '#f9fafb', padding: 10, borderRadius: 8, marginTop: 5 },
   saveButton: { marginTop: 25, backgroundColor: '#daa520', padding: 15, borderRadius: 8, alignItems: 'center' },
   saveButtonText: { color: 'white', fontWeight: 'bold', fontSize: 16 }
 });
