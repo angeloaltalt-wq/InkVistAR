@@ -20,10 +20,12 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
   const [sessionMaterials, setSessionMaterials] = useState([]);
   const [sessionCost, setSessionCost] = useState(0);
   const [inventoryItems, setInventoryItems] = useState([]);
+  const [serviceKits, setServiceKits] = useState({});
   const [addingMaterial, setAddingMaterial] = useState(false);
 
   useEffect(() => {
     fetchInventory();
+    fetchServiceKits();
     if (status === 'in_progress') {
       fetchSessionMaterials();
     }
@@ -33,11 +35,18 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
     try {
       const response = await fetch(`${API_URL}/api/admin/inventory`);
       const data = await response.json();
-      if (data.success && data.inventory) {
-        // Find top items or just grab the first few things like gloves, caps for quick add
-        setInventoryItems(data.inventory.filter(item => item.current_stock > 0));
+      if (data.success && data.data) {
+        setInventoryItems(data.data.filter(item => item.current_stock > 0));
       }
     } catch (e) { console.error('Error fetching inventory', e); }
+  };
+
+  const fetchServiceKits = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/admin/service-kits`);
+      const data = await response.json();
+      if (data.success) setServiceKits(data.data || {});
+    } catch (e) { console.error('Error fetching kits', e); }
   };
 
   const fetchSessionMaterials = async () => {
@@ -71,6 +80,55 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
     } finally {
       setAddingMaterial(false);
     }
+  };
+
+  const handleQuickAddKit = async (kitItems) => {
+    if (!appointment?.id || !kitItems || kitItems.length === 0) return;
+    setAddingMaterial(true);
+    try {
+      for (const item of kitItems) {
+        await fetch(`${API_URL}/api/appointments/${appointment.id}/materials`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            inventory_id: item.inventory_id, 
+            quantity: item.default_quantity 
+          })
+        });
+      }
+      fetchSessionMaterials();
+      Alert.alert('Kit Added', 'All items from the kit have been added to the session.');
+    } catch (e) {
+      Alert.alert('Error', 'Failed to add kit items.');
+    } finally {
+      setAddingMaterial(false);
+    }
+  };
+
+  const handleReleaseMaterial = async (materialId) => {
+    if (!appointment?.id || !materialId) return;
+    Alert.alert(
+      'Return to Stock',
+      'Are you sure you want to return this item to inventory?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Return Item', 
+          onPress: async () => {
+            try {
+              const res = await fetch(`${API_URL}/api/appointments/${appointment.id}/release-material`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ materialId })
+              });
+              const data = await res.json();
+              if (data.success) fetchSessionMaterials();
+              else Alert.alert('Error', data.message);
+            } catch (e) { Alert.alert('Error', 'Connection failed'); }
+          }
+        }
+      ]
+    );
   };
 
   const pickImage = async (type) => {
@@ -138,7 +196,7 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          notes: combinedNotes,
+          notes: sessionData.notes,
           beforePhoto: sessionData.beforePhoto,
           afterPhoto: sessionData.afterPhoto
         })
@@ -276,6 +334,11 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
                         <View style={styles.materialQtyBadge}>
                           <Text style={styles.materialQtyText}>{mat.quantity}</Text>
                         </View>
+                        {mat.status === 'hold' && (
+                          <TouchableOpacity onPress={() => handleReleaseMaterial(mat.id)} style={{ marginLeft: 10 }}>
+                            <Ionicons name="close-circle" size={20} color="#ef4444" />
+                          </TouchableOpacity>
+                        )}
                       </View>
                     ))}
                   </View>
@@ -283,6 +346,24 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
                 
                 {/* Quick Add Buttons */}
                 <View style={styles.quickAddSection}>
+                  {Object.keys(serviceKits).length > 0 && (
+                    <View style={{ marginBottom: 15 }}>
+                      <Text style={styles.quickAddTitle}>
+                        <Ionicons name="briefcase" size={16} color="#daa520" /> Apply Service Kit
+                      </Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickAddScroll}>
+                        {Object.keys(serviceKits).map(kitName => (
+                          <TouchableOpacity 
+                            key={kitName}
+                            style={[styles.quickAddChip, { backgroundColor: '#000' }]}
+                            onPress={() => handleQuickAddKit(serviceKits[kitName])}
+                          >
+                            <Text style={[styles.quickAddChipText, { color: '#fff' }]}>{kitName}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
                   <Text style={styles.quickAddTitle}>
                     <Ionicons name="flash" size={16} color="#daa520" /> Quick Add Item (+1)
                   </Text>

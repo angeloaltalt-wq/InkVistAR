@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getArtistAppointments } from '../src/utils/api';
 import { LinearGradient } from 'expo-linear-gradient';
 
-export const ArtistClients = ({ artistId, onBack, navigation }) => {
+export const ArtistSessions = ({ artistId, onBack, navigation }) => {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -63,10 +63,7 @@ export const ArtistClients = ({ artistId, onBack, navigation }) => {
       </View>
 
       <View style={styles.cardBody}>
-        <TouchableOpacity 
-          style={styles.clientSection}
-          onPress={() => navigation.navigate('artist-client-details', { session: item })}
-        >
+        <View style={styles.clientSection}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{item.client_name?.charAt(0) || '?'}</Text>
           </View>
@@ -74,22 +71,15 @@ export const ArtistClients = ({ artistId, onBack, navigation }) => {
             <Text style={styles.clientName}>{item.client_name || 'Unknown Client'}</Text>
             <Text style={styles.designTitle} numberOfLines={1}>{item.design_title || 'No design specified'}</Text>
           </View>
-        </TouchableOpacity>
+        </View>
         
         <View style={styles.priceSection}>
-          <Text style={styles.priceLabel}>Fee</Text>
-          <Text style={styles.priceValue}>₱{Number(item.price || 0).toLocaleString()}</Text>
+          <Text style={styles.priceLabel}>Earnings</Text>
+          <Text style={styles.priceValue}>₱{Number((item.price || 0) * (item.commission_rate || 0.6)).toLocaleString()}</Text>
         </View>
       </View>
 
       <View style={styles.cardActions}>
-        <TouchableOpacity 
-          style={styles.secondaryAction}
-          onPress={() => navigation.navigate('artist-client-details', { session: item })}
-        >
-          <Text style={styles.secondaryActionText}>Client Details</Text>
-        </TouchableOpacity>
-        
         {(item.status === 'confirmed' || item.status === 'in_progress') && (
           <TouchableOpacity 
             style={styles.primaryAction}

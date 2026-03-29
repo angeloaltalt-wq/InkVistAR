@@ -25,8 +25,9 @@ import ChatScreen from './screens/ChatScreen.jsx';
 // Import artist pages
 import { ArtistProfile } from './screens/ArtistProfile.jsx';
 import { ArtistSchedule } from './screens/ArtistSchedule.jsx';
-import { ArtistClients } from './screens/ArtistClients.jsx';
+import { ArtistSessions } from './screens/ArtistSessions.jsx';
 import { ArtistWorks } from './screens/ArtistWorks.jsx';
+import { ArtistActiveSession } from './screens/ArtistActiveSession.jsx';
 import { ArtistEarnings } from './screens/ArtistEarnings.jsx';
 import { ArtistNotifications } from './screens/ArtistNotifications.jsx';
 import { CustomerNotifications } from './screens/CustomerNotifications.jsx';
@@ -468,8 +469,8 @@ export default function App() {
       <Tab.Screen name="Schedule">
         {(props) => <ArtistSchedule {...props} artistId={user.id} onBack={() => props.navigation.navigate('Home')} />}
       </Tab.Screen>
-      <Tab.Screen name="Clients">
-        {(props) => <ArtistClients {...props} artistId={user.id} onBack={() => props.navigation.navigate('Home')} />}
+      <Tab.Screen name="Sessions">
+        {(props) => <ArtistSessions {...props} artistId={user.id} onBack={() => props.navigation.navigate('Home')} />}
       </Tab.Screen>
       <Tab.Screen name="Works">
         {(props) => <ArtistWorks {...props} artistId={user.id} onBack={() => props.navigation.navigate('Home')} />}
@@ -530,6 +531,19 @@ export default function App() {
                 <Stack.Screen name="artist-client-details" component={ArtistClientDetailsScreen} />
 
                 <Stack.Screen name="artist-appointment-details" component={ArtistAppointmentDetailsScreen} />
+
+                <Stack.Screen name="artist-active-session">
+                  {(props) => (
+                    <ArtistActiveSession
+                      {...props}
+                      appointment={props.route.params.appointment}
+                      onBack={() => props.navigation.goBack()}
+                      onComplete={() => {
+                        props.navigation.goBack();
+                      }}
+                    />
+                  )}
+                </Stack.Screen>
 
                 <Stack.Screen name="artist-work-details">
                   {(props) => (
