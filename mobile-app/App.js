@@ -456,7 +456,7 @@ export default function App() {
           let iconName;
           if (route.name === 'Home') iconName = focused ? 'home' : 'home-outline';
           else if (route.name === 'Schedule') iconName = focused ? 'calendar' : 'calendar-outline';
-          else if (route.name === 'Clients') iconName = focused ? 'list' : 'list-outline';
+          else if (route.name === 'Sessions') iconName = focused ? 'flash' : 'flash-outline';
           else if (route.name === 'Works') iconName = focused ? 'images' : 'images-outline';
           else if (route.name === 'Profile') iconName = focused ? 'person' : 'person-outline';
           return <Ionicons name={iconName} size={24} color={color} />;

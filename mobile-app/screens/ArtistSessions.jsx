@@ -74,8 +74,8 @@ export const ArtistSessions = ({ artistId, onBack, navigation }) => {
         </View>
         
         <View style={styles.priceSection}>
-          <Text style={styles.priceLabel}>Earnings</Text>
-          <Text style={styles.priceValue}>₱{Number((item.price || 0) * (item.commission_rate || 0.6)).toLocaleString()}</Text>
+          <Text style={styles.priceLabel}>Earnings (30%)</Text>
+          <Text style={styles.priceValue}>₱{Number((item.price || 0) * 0.3).toLocaleString()}</Text>
         </View>
       </View>
 
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   cardActions: { flexDirection: 'row', gap: 12 },
   secondaryAction: { flex: 1, height: 48, borderRadius: 12, backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', justifyContent: 'center', alignItems: 'center' },
   secondaryActionText: { color: '#4b5563', fontWeight: '600', fontSize: 14 },
-  primaryAction: { flex: 2, height: 48, borderRadius: 12, overflow: 'hidden' },
+  primaryAction: { flex: 1, height: 48, borderRadius: 12, overflow: 'hidden' },
   primaryActionGradient: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
   primaryActionText: { color: 'white', fontWeight: '700', fontSize: 14 },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 100, paddingHorizontal: 40 },

@@ -119,7 +119,7 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
               const res = await fetch(`${API_URL}/api/appointments/${appointment.id}/release-material`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ materialId })
+                body: JSON.stringify({ materialId: Number(materialId) })
               });
               const data = await res.json();
               if (data.success) fetchSessionMaterials();
