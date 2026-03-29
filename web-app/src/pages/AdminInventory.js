@@ -1039,7 +1039,7 @@ function AdminInventory() {
                                                 </div>
                                             </div>
                                         ) : (
-                                            <>
+                                            <React.Fragment>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', gap: '0.5rem' }}>
                                                     <h4 style={{ margin: 0, color: '#1f2937', flex: 1 }}>{type}</h4>
                                                     <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -1071,15 +1071,8 @@ function AdminInventory() {
                                                       <li key={i}>{mat.default_quantity}x {mat.item_name}</li>
                                                     ))}
                                                 </ul>
-                                            </>
+                                            </React.Fragment>
                                         )}
-                                            </div>
-                                        </div>
-                                        <ul style={{ margin: 0, paddingLeft: '20px', color: '#4b5563' }}>
-                                            {materials.map((mat, i) => (
-                                              <li key={i}>{mat.default_quantity}x {mat.item_name}</li>
-                                            ))}
-                                        </ul>
                                     </div>
                                 ))
                             )}
