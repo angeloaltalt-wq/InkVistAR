@@ -2236,7 +2236,10 @@ app.get('/api/admin/service-kits', (req, res) => {
 
 // Add/Update a service kit
 app.post('/api/admin/service-kits', (req, res) => {
-  const { service_type, old_service_type, materials } = req.body; // materials: [{inventory_id, default_quantity}]
+  const service_type = (req.body.service_type || '').trim();
+  const old_service_type = (req.body.old_service_type || '').trim();
+  const { materials } = req.body;
+
   if (!service_type || !materials || !Array.isArray(materials)) {
     return res.status(400).json({ success: false, message: 'Invalid data' });
   }
@@ -2267,12 +2270,21 @@ app.post('/api/admin/service-kits', (req, res) => {
 
 // Delete a service kit by service type
 app.delete('/api/admin/service-kits/:service_type', (req, res) => {
-  const serviceType = req.params.service_type;
+  const serviceType = (req.params.service_type || '').trim();
+  console.log(`[DEBUG] Attempting to delete service kit with type: "${serviceType}"`);
+
   if (!serviceType) return res.status(400).json({ success: false, message: 'Service type required' });
 
   db.query('DELETE FROM service_kits WHERE service_type = ?', [serviceType], (err, result) => {
-    if (err) return res.status(500).json({ success: false, message: 'Database error' });
-    if (result.affectedRows === 0) return res.status(404).json({ success: false, message: 'Service kit not found' });
+    if (err) {
+        console.error(`[ERROR] DB error during kit delete:`, err.message);
+        return res.status(500).json({ success: false, message: 'Database error' });
+    }
+    if (result.affectedRows === 0) {
+        console.warn(`[WARN] Delete failed: No rows matched service type "${serviceType}"`);
+        return res.status(404).json({ success: false, message: 'Service kit not found in database' });
+    }
+    console.log(`[SUCCESS] Deleted ${result.affectedRows} items for service kit: "${serviceType}"`);
     res.json({ success: true, message: 'Service kit deleted' });
   });
 });

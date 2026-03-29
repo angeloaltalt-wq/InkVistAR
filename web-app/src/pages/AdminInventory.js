@@ -98,7 +98,7 @@ function AdminInventory() {
 
     const confirmDeleteKit = async (serviceType) => {
         try {
-            const res = await Axios.delete(`${API_URL}/api/admin/service-kits/${encodeURIComponent(serviceType)}`);
+            const res = await Axios.delete(`${API_URL}/api/admin/service-kits/${encodeURIComponent((serviceType || '').trim())}`);
             if (res.data.success) {
                 showAlert('Deleted', `Service kit '${serviceType}' has been removed.`, 'success');
                 fetchServiceKits();
@@ -181,8 +181,8 @@ function AdminInventory() {
         setIsSaving(true);
         try {
             await Axios.post(`${API_URL}/api/admin/service-kits`, {
-                service_type: editingKitServiceType,
-                old_service_type: editingKitOriginalType || editingKitServiceType,
+                service_type: editingKitServiceType.trim(),
+                old_service_type: (editingKitOriginalType || editingKitServiceType).trim(),
                 materials: editingKitMaterials.map(m => ({ inventory_id: m.inventory_id, default_quantity: m.default_quantity }))
             });
             showAlert("Success", "Service Kit saved successfully!", "success");
