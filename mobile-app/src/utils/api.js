@@ -293,6 +293,14 @@ export const deleteArtistClient = async (clientId) => {
   });
 };
 
+// Update Push Token
+export const updatePushToken = async (userId, pushToken) => {
+  return fetchAPI(`/users/${userId}/push-token`, {
+    method: 'PUT',
+    body: JSON.stringify({ pushToken })
+  });
+};
+
 // Artist: Get Dashboard
 export const getArtistDashboard = async (artistId) => {
   return fetchAPI(`/artist/dashboard/${artistId}`);

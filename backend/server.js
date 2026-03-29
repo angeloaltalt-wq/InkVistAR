@@ -1238,6 +1238,19 @@ app.post('/api/artist/change-password', async (req, res) => {
   });
 });
 
+// Save Push Token
+app.put('/api/users/:id/push-token', (req, res) => {
+  const { id } = req.params;
+  const { pushToken } = req.body;
+
+  if (!pushToken) return res.status(400).json({ success: false, message: 'Push token required' });
+
+  db.query('UPDATE users SET push_token = ? WHERE id = ?', [pushToken, id], (err) => {
+    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+    res.json({ success: true, message: 'Push token updated' });
+  });
+});
+
 // ========== OTP ENDPOINTS ==========
 
 app.post('/api/send-otp', (req, res) => {
@@ -2286,6 +2299,33 @@ app.delete('/api/admin/service-kits/:service_type', (req, res) => {
     }
     console.log(`[SUCCESS] Deleted ${result.affectedRows} items for service kit: "${serviceType}"`);
     res.json({ success: true, message: 'Service kit deleted' });
+  });
+});
+
+// GET all appointments (Admin)
+app.get('/api/admin/appointments', (req, res) => {
+  const query = `
+    SELECT 
+      ap.*, 
+      u_cust.name as client_name, 
+      u_cust.email as client_email,
+      u_art.name as artist_name,
+      ar.commission_rate,
+      (SELECT COALESCE(SUM(amount), 0) FROM payments p WHERE p.appointment_id = ap.id AND p.status = 'paid') / 100 as total_paid
+    FROM appointments ap
+    JOIN users u_cust ON ap.customer_id = u_cust.id
+    JOIN users u_art ON ap.artist_id = u_art.id
+    LEFT JOIN artists ar ON ap.artist_id = ar.user_id
+    WHERE ap.is_deleted = 0
+    ORDER BY ap.appointment_date DESC, ap.start_time DESC
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('❌ Error fetching all appointments:', err);
+      return res.status(500).json({ success: false, message: 'Database error' });
+    }
+    res.json({ success: true, data: results });
   });
 });
 
