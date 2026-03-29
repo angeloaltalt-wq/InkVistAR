@@ -8,6 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { getArtistPortfolio, addArtistWork, deleteArtistWork, updateArtistWorkVisibility } from '../src/utils/api';
+import { API_URL } from '../src/config';
 
 export function ArtistWorks({ onBack, artistId }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,6 +26,7 @@ export function ArtistWorks({ onBack, artistId }) {
   const [loading, setLoading] = useState(true);
   const [uploadType, setUploadType] = useState('url'); // 'url' or 'upload'
   const [selectedWork, setSelectedWork] = useState(null);
+  const [editingWorkId, setEditingWorkId] = useState(null);
 
   const categories = [
     { id: 'all', label: 'All', icon: 'grid' },
@@ -85,6 +87,17 @@ export function ArtistWorks({ onBack, artistId }) {
     }
   };
 
+  const resetForm = () => {
+    setNewWorkTitle('');
+    setNewWorkImage('');
+    setNewWorkDescription('');
+    setNewWorkPriceEstimate('');
+    setTitleError('');
+    setIsPublic(true);
+    setEditingWorkId(null);
+    setUploadType('url');
+  };
+
   const handleUploadWork = async () => {
     if (!newWorkTitle.trim() || titleError) return;
     if (!newWorkImage.trim()) {
@@ -92,28 +105,56 @@ export function ArtistWorks({ onBack, artistId }) {
       return;
     }
 
-    const result = await addArtistWork(artistId, {
-      title: newWorkTitle,
-      description: newWorkDescription,
+    // Inline Sanitization: Trim and strip HTML tags
+    const sanitize = (text) => text.trim().replace(/<[^>]*>?/gm, '');
+
+    const payload = {
+      title: sanitize(newWorkTitle),
+      description: sanitize(newWorkDescription),
       category: newWorkCategory,
       imageUrl: newWorkImage,
       isPublic: isPublic,
-      priceEstimate: newWorkPriceEstimate || null
-    });
+      priceEstimate: newWorkPriceEstimate ? sanitize(newWorkPriceEstimate) : null
+    };
+
+    setLoading(true);
+    let result;
+    if (editingWorkId) {
+      try {
+        const response = await fetch(`${API_URL}/api/artist/portfolio/${editingWorkId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        result = await response.json();
+      } catch (e) {
+        result = { success: false, message: 'Network error occurred while updating.' };
+      }
+    } else {
+      result = await addArtistWork(artistId, payload);
+    }
+    setLoading(false);
 
     if (result.success) {
-      Alert.alert('Success!', 'Your work has been uploaded to your portfolio.');
-      setNewWorkTitle('');
-      setNewWorkImage('');
-      setNewWorkDescription('');
-      setNewWorkPriceEstimate('');
-      setTitleError('');
-      setIsPublic(true);
+      Alert.alert('Success!', editingWorkId ? 'Work updated successfully.' : 'Your work has been uploaded to your portfolio.');
+      resetForm();
       setShowUploadModal(false);
       loadPortfolio();
     } else {
       Alert.alert('Error', result.message || 'Failed to upload work.');
     }
+  };
+
+  const handleEditWork = (work) => {
+    setEditingWorkId(work.id);
+    setNewWorkTitle(work.title);
+    setNewWorkDescription(work.description || '');
+    setNewWorkCategory(work.category || 'Realism');
+    setIsPublic(work.is_public === 1 || work.is_public === true);
+    setNewWorkImage(work.image_url);
+    setNewWorkPriceEstimate(work.price_estimate ? String(work.price_estimate) : '');
+    setUploadType(work.image_url?.startsWith('data:') ? 'upload' : 'url');
+    setShowUploadModal(true);
   };
 
   const handleDeleteWork = (id) => {
@@ -289,6 +330,12 @@ export function ArtistWorks({ onBack, artistId }) {
                     </View>
                   </View>
                   <TouchableOpacity 
+                    style={styles.workEdit}
+                    onPress={() => handleEditWork(work)}
+                  >
+                    <Ionicons name="pencil-outline" size={16} color="#daa520" />
+                  </TouchableOpacity>
+                  <TouchableOpacity 
                     style={styles.workDelete}
                     onPress={() => handleDeleteWork(work.id)}
                   >
@@ -307,8 +354,8 @@ export function ArtistWorks({ onBack, artistId }) {
           <View style={styles.modalContent}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Add New Work</Text>
-                <TouchableOpacity onPress={() => setShowUploadModal(false)}>
+                <Text style={styles.modalTitle}>{editingWorkId ? 'Edit Work' : 'Add New Work'}</Text>
+                <TouchableOpacity onPress={() => { setShowUploadModal(false); resetForm(); }}>
                   <Ionicons name="close" size={24} color="#111827" />
                 </TouchableOpacity>
               </View>
@@ -419,7 +466,7 @@ export function ArtistWorks({ onBack, artistId }) {
               </View>
 
               <View style={styles.modalActions}>
-                <TouchableOpacity style={styles.cancelButton} onPress={() => setShowUploadModal(false)}>
+                <TouchableOpacity style={styles.cancelButton} onPress={() => { setShowUploadModal(false); resetForm(); }}>
                   <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
@@ -428,7 +475,7 @@ export function ArtistWorks({ onBack, artistId }) {
                   disabled={!newWorkTitle.trim() || !!titleError}
                 >
                   <LinearGradient colors={['#000', '#daa520']} style={styles.uploadButtonGradient}>
-                    <Text style={styles.uploadButtonText}>Upload Work</Text>
+                    <Text style={styles.uploadButtonText}>{editingWorkId ? 'Save Changes' : 'Upload Work'}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
@@ -508,22 +555,22 @@ export function ArtistWorks({ onBack, artistId }) {
                   </TouchableOpacity>
                 </View>
 
-                {/* <TouchableOpacity 
-                  style={[styles.cancelButton, { marginTop: 16, backgroundColor: '#fee2e2' }]} 
+                <TouchableOpacity 
+                  style={[styles.cancelButton, { marginTop: 16, backgroundColor: '#f3f4f6' }]} 
                   onPress={() => {
-                    handleDeleteWork(selectedWork.id);
+                    handleEditWork(selectedWork);
                     setSelectedWork(null);
                   }}
                 >
-                  <Text style={[styles.cancelButtonText, { color: '#ef4444' }]}>Delete Work</Text>
-                </TouchableOpacity> */}
+                  <Text style={[styles.cancelButtonText, { color: '#daa520' }]}>Edit Work Details</Text>
+                </TouchableOpacity>
               </ScrollView>
             )}
           </View>
         </View>
       </Modal>
 
-      <TouchableOpacity style={styles.fab} onPress={() => setShowUploadModal(true)}>
+      <TouchableOpacity style={styles.fab} onPress={() => { resetForm(); setShowUploadModal(true); }}>
         <LinearGradient colors={['#000', '#daa520']} style={styles.fabGradient}>
           <Ionicons name="add" size={32} color="#fff" />
         </LinearGradient>
@@ -567,6 +614,7 @@ const styles = StyleSheet.create({
   categoryBadgeText: { fontSize: 10, color: '#374151' },
   workDate: { fontSize: 10, color: '#9ca3af' },
   workDelete: { position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center' },
+  workEdit: { position: 'absolute', top: 8, right: 40, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '90%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
