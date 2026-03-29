@@ -2388,7 +2388,7 @@ app.get('/api/appointments/:id/materials', (req, res) => {
     SELECT sm.id, sm.inventory_id, sm.quantity, sm.status, i.name as item_name, i.unit, i.cost 
     FROM session_materials sm 
     JOIN inventory i ON sm.inventory_id = i.id 
-    WHERE sm.appointment_id = ?
+    WHERE sm.appointment_id = ? AND sm.status != 'released'
   `;
   db.query(query, [id], (err, results) => {
     if (err) return res.status(500).json({ success: false, message: 'Database error' });
