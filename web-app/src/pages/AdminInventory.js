@@ -892,9 +892,10 @@ function AdminInventory() {
                         </div>
                         <div className="modal-body" style={{maxHeight: '70vh', overflowY: 'auto'}}>
                             
-                            {/* Create New Kit Section */}
-                            <div style={{ background: '#f9fafb', padding: '1.5rem', borderRadius: '8px', border: '1px solid #e5e7eb', marginBottom: '2rem' }}>
-                                <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1.1rem' }}>Create / Edit Kit</h3>
+                            {/* Create New Kit Section - Only shown when not editing an existing kit */}
+                            {!editingKitOriginalType && (
+                                <div style={{ background: '#f9fafb', padding: '1.5rem', borderRadius: '8px', border: '1px solid #e5e7eb', marginBottom: '2rem' }}>
+                                    <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1.1rem' }}>Create New Service Kit</h3>
                                 <div className="form-group">
                                     <label>Service Type (Exact Match from Booking Form)</label>
                                     <input 
@@ -954,31 +955,12 @@ function AdminInventory() {
                                     </div>
                                 )}
                                 <div style={{ marginTop: '1rem', textAlign: 'right' }}>
-                                    {editingKitOriginalType && (
-                                        <>
-                                            <button 
-                                                type="button" 
-                                                className="btn btn-secondary" 
-                                                style={{ marginRight: '10px' }}
-                                                onClick={() => { setEditingKitServiceType(''); setEditingKitOriginalType(''); setEditingKitMaterials([]); }}
-                                            >
-                                                Cancel Edit
-                                            </button>
-                                            <button 
-                                                type="button" 
-                                                className="btn btn-secondary" 
-                                                style={{ backgroundColor: '#fee2e2', color: '#dc2626', border: 'none', marginRight: '10px' }}
-                                                onClick={() => handleDeleteKit(editingKitOriginalType)}
-                                            >
-                                                <Trash2 size={16} style={{marginRight: '5px', verticalAlign: 'middle'}} /> Delete Kit
-                                            </button>
-                                        </>
-                                    )}
                                      <button className="btn btn-primary" onClick={handleSaveKit} disabled={isSaving || editingKitMaterials.length === 0}>
                                         {isSaving ? 'Saving...' : 'Save Kit'}
                                      </button>
                                 </div>
                             </div>
+                            )}
 
                             {/* Existing Kits */}
                             <h3>Existing Service Kits</h3>
@@ -1001,9 +983,9 @@ function AdminInventory() {
                                                             default_quantity: m.default_quantity,
                                                             unit: m.unit
                                                         }))); 
-                                                    }} style={{ backgroundColor: '#10b981' }}
+                                                    }} style={{ backgroundColor: '#10b981', padding: '8px' }}
                                                 >
-                                                    <Edit2 size={16}/> Edit
+                                                    <Edit2 size={16}/>
                                                 </button>
                                                 <button 
                                                     className="action-btn delete-btn service-kit-action-btn" 
