@@ -15,7 +15,8 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: '*',
-    methods: ['GET', 'POST']
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
   }
 });
 
@@ -1129,58 +1130,6 @@ app.post('/api/reset-password', async (req, res) => {
       if (updateErr) return res.status(500).json({ success: false, message: 'Database error during password update.' });
       logAction(user.id, 'PASSWORD_RESET', `User reset their password.`, req.ip || '::1');
       res.json({ success: true, message: 'Password updated successfully' });
-    });
-  });
-});
-
-// ========== ARTIST CHANGE PASSWORD ENDPOINT ==========
-app.post('/api/artist/change-password', async (req, res) => {
-  const { artistId, currentPassword, newPassword } = req.body;
-  console.log('🔐 Artist change password requested for ID:', artistId);
-
-  // Validation
-  if (!artistId || !currentPassword || !newPassword) {
-    return res.status(400).json({ success: false, message: 'All password fields are required' });
-  }
-
-  if (newPassword.length < 6) {
-    return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
-  }
-
-  // Find user
-  db.query('SELECT * FROM users WHERE id = ?', [artistId], async (err, results) => {
-    if (err) {
-      console.error('❌ DB error:', err.message);
-      return res.status(500).json({ success: false, message: 'Database error' });
-    }
-    if (results.length === 0) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    const user = results[0];
-
-    // Verify current password
-    const isMatch = await bcrypt.compare(currentPassword, user.password_hash);
-    if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'Current password is incorrect' });
-    }
-
-    // Check if new password is same as old
-    const isSamePassword = await bcrypt.compare(newPassword, user.password_hash);
-    if (isSamePassword) {
-      return res.status(400).json({ success: false, message: 'New password cannot be the same as the old password' });
-    }
-
-    // Hash and update
-    const password_hash = await bcrypt.hash(newPassword, 10);
-
-    db.query('UPDATE users SET password_hash = ? WHERE id = ?', [password_hash, artistId], (updateErr) => {
-      if (updateErr) {
-        console.error('❌ Error updating password:', updateErr);
-        return res.status(500).json({ success: false, message: 'Failed to update password' });
-      }
-      logAction(artistId, 'PASSWORD_CHANGED', 'Artist changed their password', req.ip || '::1');
-      res.json({ success: true, message: 'Password changed successfully' });
     });
   });
 });
@@ -2665,24 +2614,54 @@ app.post('/api/admin/payouts', (req, res) => {
 
 // POST Release/Return individual material to inventory
 app.post('/api/appointments/:id/release-material', (req, res) => {
-  const { id } = req.params; // Appointment ID
-  const { materialId } = req.body; // session_materials.id
+  const appointmentId = parseInt(req.params.id, 10);
+  const materialId = parseInt(req.body.materialId, 10);
 
-  if (!materialId) return res.status(400).json({ success: false, message: 'Material record ID required' });
+  console.log(`♻️ Releasing material ${materialId} for appt ${appointmentId}`);
+  console.log(`DEBUG: Received materialId: ${req.body.materialId} (parsed: ${materialId}), appointmentId: ${req.params.id} (parsed: ${appointmentId})`);
+
+  if (isNaN(materialId)) return res.status(400).json({ success: false, message: 'Material record ID required' });
 
   // 1. Get material info
-  db.query('SELECT * FROM session_materials WHERE id = ? AND appointment_id = ? AND status = "hold"', [materialId, id], (err, results) => {
-    if (err || results.length === 0) return res.json({ success: false, message: 'Held material record not found' });
+  const selectQuery = 'SELECT * FROM session_materials WHERE id = ? AND appointment_id = ? AND status = "hold"';
+  const selectParams = [materialId, appointmentId];
+  console.log(`DEBUG: Executing SELECT query: ${selectQuery} with params: ${selectParams}`);
+  db.query(selectQuery, selectParams, (err, results) => {
+    if (err) {
+      console.error('ERROR: DB error during material SELECT:', err.message);
+      return res.status(500).json({ success: false, message: 'Database error during material lookup.' });
+    }
+    if (results.length === 0) {
+      // Deep diagnostic: why wasn't it found?
+      db.query('SELECT status FROM session_materials WHERE id = ?', [materialId], (checkErr, checkRes) => {
+        if (!checkErr && checkRes.length > 0) {
+          console.warn(`核心 DEBUG: Material #${materialId} found but status is '${checkRes[0].status}', not 'hold'. This is why the release failed.`);
+        } else {
+          console.warn(`核心 DEBUG: Material ID #${materialId} does not exist in session_materials at all.`);
+        }
+      });
+
+      return res.json({ success: false, message: `Held material #${materialId} not found for appointment #${appointmentId}. Ensure the item is still on hold.` });
+    }
 
     const material = results[0];
+    console.log(`DEBUG: Found material:`, material);
 
     // 2. Return to stock
     db.query('UPDATE inventory SET current_stock = current_stock + ? WHERE id = ?', [material.quantity, material.inventory_id], (updErr) => {
-      if (updErr) return res.status(500).json({ success: false, message: 'Failed to update stock' });
+      if (updErr) {
+        console.error('ERROR: Failed to update inventory stock:', updErr.message);
+        return res.status(500).json({ success: false, message: 'Failed to update stock' });
+      }
+      console.log(`DEBUG: Updated inventory for item ${material.inventory_id} by adding ${material.quantity}`);
 
       // 3. Mark as released
       db.query('UPDATE session_materials SET status = "released" WHERE id = ?', [materialId], (relErr) => {
-        if (relErr) return res.status(500).json({ success: false, message: 'Failed to update record status' });
+        if (relErr) {
+          console.error('ERROR: Failed to update session_materials status:', relErr.message);
+          return res.status(500).json({ success: false, message: 'Failed to update record status' });
+        }
+        console.log(`DEBUG: Session material ${materialId} status updated to "released"`);
 
         res.json({ success: true, message: 'Material returned to inventory successfully' });
       });

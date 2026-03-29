@@ -123,7 +123,7 @@ function ArtistSessions() {
         if (!activeSession) return;
         try {
             const res = await Axios.post(`${API_URL}/api/appointments/${activeSession.id}/release-material`, {
-                materialId
+                materialId: Number(materialId) // Ensure materialId is a number
             });
             if (res.data.success) {
                 // Refresh will happen in the finally block
@@ -474,7 +474,7 @@ function ArtistSessions() {
                                     {activeSession.status === 'in_progress' ? (
                                         <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '15px', flex: 1, display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                                                <strong>Items Held/Consumed ({sessionMaterials.reduce((sum, m) => sum + Number(m.quantity || 0), 0)})</strong>
+                                                <strong>Items Held/Consumed</strong>
                                                 <span style={{ color: '#10b981', fontWeight: 'bold' }}>₱{sessionCost.toLocaleString()}</span>
                                             </div>
 
