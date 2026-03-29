@@ -4,7 +4,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
     User, Mail, Phone, Calendar, Image, DollarSign,
     BarChart3, Clock, Trash2, X, Save, Shield, Briefcase,
-    Search, Filter, SlidersHorizontal, Globe, Lock
     Search, Filter, SlidersHorizontal, Globe, Lock, Users, Palette, UserCircle, Users2
 } from 'lucide-react';
 import AdminSideNav from '../components/AdminSideNav';
