@@ -273,7 +273,8 @@ function AdminClients() {
                                         <td>#{client.id}</td>
                                         <td><strong>{client.name}</strong></td>
                                         <td>{client.email}</td>
-                                        <td>
+                                        
+                                        <td className="actions-cell">
                                             {filterStatus === 'active' ? (
                                                 <button className="btn-indigo-sm" onClick={() => openManageModal(client)}>
                                                     Manage
