@@ -334,7 +334,7 @@ function AdminNotifications() {
                     gap: 5px;
                 }
                 .notif-body {
-                    color: rgba(255, 255, 255, 0.7);
+                    color: rgba(44, 38, 38, 0.7);
                     font-size: 0.95rem;
                     line-height: 1.5;
                     margin-bottom: 15px;
@@ -365,7 +365,7 @@ function AdminNotifications() {
                 }
                 .notif-btn.ghost {
                     background: transparent;
-                    color: rgba(255, 255, 255, 0.6);
+                    color: rgba(112, 96, 96, 0.6);
                     border: 1px solid rgba(255, 255, 255, 0.1);
                 }
                 .notif-btn.ghost:hover {
