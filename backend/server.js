@@ -2992,7 +2992,7 @@ app.get('/api/appointments/:id/payment-status', async (req, res) => {
 
             // Update DB so future polls are faster
             const paymentType = pmData?.data?.attributes?.metadata?.paymentType || 'full';
-            const newPaymentStatus = paymentType === 'deposit' ? 'downpayment_paid' : 'paid';
+            const newPaymentStatus = (paymentType === 'deposit' || paymentType === 'custom') ? 'downpayment_paid' : 'paid';
             const newAptStatus = (currentAptStatus?.toLowerCase() === 'pending') ? 'confirmed' : currentAptStatus;
 
             db.query("UPDATE appointments SET payment_status = ?, status = ? WHERE id = ?", [newPaymentStatus, newAptStatus, appointmentId], (updErr) => {

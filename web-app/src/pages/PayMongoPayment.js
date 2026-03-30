@@ -204,13 +204,15 @@ const PayMongoPayment = () => {
                         <button onClick={handlePayment} className="btn btn-primary" style={{ ...btnBase, backgroundColor: '#10b981' }}>
                             Proceed to PayMongo
                         </button>
-                        <button 
-                            onClick={() => setStatus('selection')} 
-                            className="btn btn-secondary"
-                            style={{ ...btnBase, background: 'transparent', color: '#64748b', marginTop: '12px', fontSize: '0.9rem', border: '1px solid #e2e8f0' }}
-                        >
-                            Change Payment Method
-                        </button>
+                        {type !== 'balance' && (
+                            <button 
+                                onClick={() => setStatus('selection')} 
+                                className="btn btn-secondary"
+                                style={{ ...btnBase, background: 'transparent', color: '#64748b', marginTop: '12px', fontSize: '0.9rem', border: '1px solid #e2e8f0' }}
+                            >
+                                Change Payment Method
+                            </button>
+                        )}
                     </>
                 ) : (
                     <div style={{ textAlign: 'center', padding: '24px' }}>
