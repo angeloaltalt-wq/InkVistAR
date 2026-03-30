@@ -2774,7 +2774,7 @@ app.put('/api/appointments/:id/details', (req, res) => {
 
 // Create a PayMongo Checkout Session
 app.post('/api/payments/create-checkout-session', async (req, res) => {
-  const { appointmentId, price: providedPrice, paymentType } = req.body; // paymentType: 'full' or 'deposit'
+  const { appointmentId, price: providedPrice, paymentType, customAmount } = req.body; // paymentType: 'full', 'deposit', or 'custom'
 
   if (!appointmentId) {
     return res.status(400).json({ success: false, message: 'appointmentId is required' });
@@ -2813,11 +2813,20 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
       const isLatePayment = (appointment.status === 'completed' || appointment.status === 'finished');
       const description = isLatePayment
         ? `Late payment for Appointment #${appointmentId}`
-        : `${paymentType === 'deposit' ? 'Deposit' : 'Booking'} payment for Appointment #${appointmentId}`;
+        : `${paymentType === 'deposit' ? 'Deposit' : paymentType === 'custom' ? 'Partial' : 'Booking'} payment for Appointment #${appointmentId}`;
+
+      // Use custom amount if provided and paymentType is custom
+      if (paymentType === 'custom' && customAmount) {
+        const customAmountPesos = Math.max(100, Math.round(Number(customAmount)));
+        await proceedWithSession(Math.round(customAmountPesos * 100), 'Partial Payment', description);
+        return;
+      }
 
       const itemName = isLatePayment
         ? `Tattoo Service - Balance payment (Appt #${appointmentId})`
-        : (appointment.design_title || 'Tattoo Service') + (paymentType === 'deposit' ? ' (Deposit)' : '');
+        : paymentType === 'custom'
+          ? `Partial Payment (Appt #${appointmentId})`
+          : (appointment.design_title || 'Tattoo Service') + (paymentType === 'deposit' ? ' (Deposit)' : '');
 
       try {
         if (paymentType === 'deposit') {
@@ -3080,7 +3089,7 @@ app.post('/api/payments/webhook', (req, res) => {
   // If paid, update appointment and notify
   if (status === 'paid' && appointmentId) {
     const paymentType = metadata.paymentType || 'full';
-    const newPaymentStatus = paymentType === 'deposit' ? 'downpayment_paid' : 'paid';
+    const newPaymentStatus = (paymentType === 'deposit' || paymentType === 'custom') ? 'downpayment_paid' : 'paid';
 
     // Get current status first to determine new status
     db.query('SELECT status, customer_id, artist_id FROM appointments WHERE id = ?', [appointmentId], (fetchErr, rows) => {

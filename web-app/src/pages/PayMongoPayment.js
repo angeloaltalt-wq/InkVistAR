@@ -13,6 +13,7 @@ const PayMongoPayment = () => {
 
     const [status, setStatus] = useState(type === 'balance' ? 'initializing' : 'selection'); // selection, initializing, ready, processing, failed
     const [paymentType, setPaymentType] = useState(type === 'balance' ? 'balance' : 'deposit');
+    const [customAmount, setCustomAmount] = useState('');
     const [checkoutUrl, setCheckoutUrl] = useState(null);
 
     const depositPrice = Math.max(100, Math.round(price * 0.3));
@@ -33,11 +34,18 @@ const PayMongoPayment = () => {
 
         setStatus('initializing');
         try {
+            // Validation for custom amount
+            if (paymentType === 'custom' && (!customAmount || Number(customAmount) < 100)) {
+                alert('Please enter a valid amount (minimum ₱100).');
+                setStatus('selection');
+                return;
+            }
             // Defensively cast all values to scalar types to avoid circular references (like React events)
             const payload = {
                 appointmentId: appointmentId ? String(appointmentId) : null,
                 price: price ? Number(price) : 0,
-                paymentType: (typeof finalType === 'string') ? finalType : 'deposit'
+                paymentType: (typeof finalType === 'string') ? finalType : 'deposit',
+                customAmount: finalType === 'custom' ? Number(customAmount) : null
             };
             
             console.log('[Checkout] Payload:', payload);
@@ -123,6 +131,19 @@ const PayMongoPayment = () => {
                 <span style={{ fontWeight: 800, fontSize: '1.25rem', color: '#1e293b' }}>₱{amount.toLocaleString()}</span>
             </div>
             <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748b', lineHeight: '1.5' }}>{description}</p>
+            {optType === 'custom' && paymentType === 'custom' && (
+                <div style={{ marginTop: '15px' }} onClick={e => e.stopPropagation()}>
+                    <input 
+                        type="number" 
+                        className="form-input" 
+                        placeholder="Enter amount (min ₱100)" 
+                        value={customAmount}
+                        onChange={e => setCustomAmount(e.target.value)}
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #C19A6B' }}
+                        min="100"
+                    />
+                </div>
+            )}
         </div>
     );
 
@@ -148,6 +169,7 @@ const PayMongoPayment = () => {
                         <h4 style={{ margin: '0 0 20px 0', fontSize: '1rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '1px' }}>Select Payment</h4>
                         {optionCard('deposit', 'Downpayment', depositPrice, 'Secure your slot with a 30% initial payment.')}
                         {optionCard('full', 'Full Payment', price, 'Complete your payment now for a seamless session.')}
+                        {optionCard('custom', 'Custom Amount', Number(customAmount) || 0, 'Enter a specific amount you wish to pay.')}
                         
                         <button 
                             onClick={() => initializeSession()} 
@@ -168,12 +190,14 @@ const PayMongoPayment = () => {
                         <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '20px', marginBottom: '24px', border: '1px solid #e2e8f0' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                                 <span style={{ color: '#64748b', fontWeight: '500' }}>Selected Plan:</span>
-                                <span style={{ fontWeight: '700', color: '#1e293b' }}>{paymentType === 'deposit' ? 'Downpayment' : paymentType === 'balance' ? 'Remaining Balance' : 'Full Payment'}</span>
+                                <span style={{ fontWeight: '700', color: '#1e293b' }}>
+                                    {paymentType === 'deposit' ? 'Downpayment' : paymentType === 'balance' ? 'Remaining Balance' : paymentType === 'custom' ? 'Custom Partial' : 'Full Payment'}
+                                </span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                                 <span style={{ color: '#64748b', fontWeight: '500' }}>Amount to Pay:</span>
                                 <span style={{ fontWeight: '800', fontSize: '1.75rem', color: '#1e293b' }}>
-                                    ₱{(paymentType === 'deposit' ? depositPrice : location.state?.remainingBalance || price).toLocaleString()}
+                                    ₱{(paymentType === 'deposit' ? depositPrice : paymentType === 'custom' ? Number(customAmount) : location.state?.remainingBalance || price).toLocaleString()}
                                 </span>
                             </div>
                         </div>

@@ -428,7 +428,7 @@ function CustomerBookings(){
                                 {(selectedApt.price - modalTransactions.reduce((sum, t) => t.status === 'paid' ? sum + (t.amount / 100) : sum, 0)) > 0 && (
                                     <button 
                                         className="btn btn-primary" 
-                                        style={{ width: '100%', marginTop: '20px', padding: '12px', borderRadius: '10px', backgroundColor: '#3b82f6', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}
+                                        style={{ width: '100%', marginTop: '20px', padding: '12px', borderRadius: '10px', backgroundColor: '#3b82f6', color: 'white', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 'bold' }}
                                         onClick={() => {
                                             setIsModalOpen(false);
                                             const hasPaidAny = modalTransactions.some(t => t.status === 'paid');
@@ -467,7 +467,7 @@ function CustomerBookings(){
                                 <div style={{ marginTop: '24px' }}>
                                     <button 
                                         className="btn btn-primary" 
-                                        style={{ width: '100%', padding: '14px', borderRadius: '10px', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+                                        style={{ width: '100%', padding: '14px', borderRadius: '10px', color: 'white', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
                                         onClick={() => { setIsModalOpen(false); handlePay(selectedApt, 'balance'); }}
                                     >
                                         <CreditCard size={20} /> Pay Remaining Balance
