@@ -35,8 +35,8 @@ const PayMongoPayment = () => {
         setStatus('initializing');
         try {
             // Validation for custom amount
-            if (paymentType === 'custom' && (!customAmount || Number(customAmount) < 100)) {
-                alert('Please enter a valid amount (minimum ₱100).');
+            if (paymentType === 'custom' && (!customAmount || Number(customAmount) < depositPrice)) {
+                alert(`Please enter a valid amount (minimum 30% deposit: ₱${depositPrice.toLocaleString()}).`);
                 setStatus('selection');
                 return;
             }
@@ -136,11 +136,11 @@ const PayMongoPayment = () => {
                     <input 
                         type="number" 
                         className="form-input" 
-                        placeholder="Enter amount (min ₱100)" 
+                        placeholder={`Enter amount (min ₱${depositPrice.toLocaleString()})`} 
                         value={customAmount}
                         onChange={e => setCustomAmount(e.target.value)}
                         style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #C19A6B' }}
-                        min="100"
+                        min={depositPrice}
                     />
                 </div>
             )}
