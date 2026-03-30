@@ -288,7 +288,7 @@ function CustomerBookings(){
                                 <>
                                     <div className="table-responsive">
                                         <table className="portal-table">
-                                            <thead><tr><th>ID</th><th>Artist</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th><th>Price</th><th>Action</th></tr></thead>
+                                            <thead><tr><th>ID</th><th>Staff</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th><th>Price</th><th>Action</th></tr></thead>
                                             <tbody>{displayedAppointments.map(a=> (
                                                 <tr key={a.id}>
                                                     <td style={{ fontWeight: '600', color: '#64748b' }}>#{a.id}</td>
@@ -370,12 +370,43 @@ function CustomerBookings(){
             {/* Payment Details Modal */}
             {isModalOpen && selectedApt && (
                 <div className="modal-overlay">
-                    <div className="modal-content" style={{ maxWidth: '500px', width: '90%' }}>
+                    <div className="modal-content" style={{ maxWidth: '600px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
                         <div className="modal-header">
-                            <h3>Payment Details</h3>
+                            <h3>Appointment Details</h3>
                             <button className="close-btn" onClick={() => setIsModalOpen(false)}><X size={20} /></button>
                         </div>
                         <div className="modal-body">
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+                                <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Staff Assigned</label>
+                                    <p style={{ margin: '4px 0 0', fontWeight: '600', color: '#1e293b' }}>{selectedApt.artist_name || 'TBD'}</p>
+                                </div>
+                                <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Service Type</label>
+                                    <p style={{ margin: '4px 0 0', fontWeight: '600', color: '#1e293b' }}>{selectedApt.service_type || 'General Session'}</p>
+                                </div>
+                            </div>
+
+                            <div style={{ marginBottom: '24px' }}>
+                                <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '10px' }}>Vision & Booking Notes</label>
+                                <div style={{ padding: '16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
+                                    <h4 style={{ margin: '0 0 8px 0', fontSize: '1.05rem', color: '#0f172a' }}>{selectedApt.design_title}</h4>
+                                    <p style={{ margin: 0, fontSize: '0.95rem', color: '#475569', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+                                        {selectedApt.notes || 'No specific notes provided.'}
+                                    </p>
+                                    
+                                    {selectedApt.reference_image && (
+                                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
+                                            <p style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8', marginBottom: '10px', textTransform: 'uppercase' }}>Reference Image</p>
+                                            <div style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid #f1f5f9' }}>
+                                                <img src={selectedApt.reference_image} alt="Reference" style={{ width: '100%', maxHeight: '350px', objectFit: 'contain', background: '#f8fafc' }} />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <h4 style={{ marginBottom: '12px', color: '#475569', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Financial Summary</h4>
                             <div className="billing-summary" style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e2e8f0' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                                     <span style={{ color: '#64748b' }}>Total Service Price:</span>
