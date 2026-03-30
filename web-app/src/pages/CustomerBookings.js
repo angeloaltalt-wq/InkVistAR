@@ -698,35 +698,6 @@ function CustomerBookings(){
 
             <ConfirmModal 
                 isOpen={confirmModal.isOpen}
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="form-group" style={{ marginTop: '15px' }}>
-                                    <label style={{ fontWeight: '600', marginBottom: '8px', display: 'block' }}>Tattoo Details / Story</label>
-                                    <textarea 
-                                        className="form-input" 
-                                        rows="4" 
-                                        placeholder="Describe the size, color preference, and any specific details you want included..."
-                                        value={bookingData.notes}
-                                        onChange={e => setBookingData({...bookingData, notes: e.target.value})}
-                                    ></textarea>
-                                </div>
-                            </div>
-                            <div className="modal-footer">
-                                <button type="button" className="btn btn-secondary" onClick={() => setIsBookingModalOpen(false)}>Cancel</button>
-                                <button type="submit" className="btn btn-primary" disabled={isSubmitting} style={{ backgroundColor: '#daa520', border: 'none', minWidth: '180px' }}>
-                                    {isSubmitting ? 'Submitting...' : 'Request Consultation'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            <ConfirmModal 
-                isOpen={confirmModal.isOpen}
                 title={confirmModal.title}
                 message={confirmModal.message}
                 confirmText={confirmModal.confirmText}
