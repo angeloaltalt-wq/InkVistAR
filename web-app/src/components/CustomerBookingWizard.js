@@ -311,10 +311,36 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
         </div>
     );
 
-    const renderStep2 = () => (
+    const renderStepPlacement = () => (
         <div className="fade-in">
             <h3 style={{fontSize: '1.5rem', fontWeight: '700', color: '#1e293b', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px'}}>
-                <Calendar className="text-bronze" size={24} /> 2. Schedule Consultation
+                <MapPin className="text-bronze" size={24} /> 2. Placement
+            </h3>
+            <p style={{color: '#64748b', marginBottom: '32px'}}>Where on your body would you like this tattoo?</p>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
+                {["Forearm", "Upper Arm", "Shoulder", "Chest", "Back", "Ribs", "Thigh", "Calf", "Neck", "Wrist", "Hand", "Ankle"].map(part => (
+                    <button
+                        key={part} type="button"
+                        onClick={() => setFormData({...formData, placement: part})}
+                        style={{
+                            padding: '16px', borderRadius: '12px', border: `2px solid ${formData.placement === part ? '#C19A6B' : '#e2e8f0'}`,
+                            background: formData.placement === part ? '#C19A6B' : 'white',
+                            color: formData.placement === part ? 'white' : '#1e293b',
+                            fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.2s'
+                        }}
+                    >
+                        {part}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+
+    const renderStepScheduling = () => (
+        <div className="fade-in">
+            <h3 style={{fontSize: '1.5rem', fontWeight: '700', color: '#1e293b', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px'}}>
+                <Calendar className="text-bronze" size={24} /> 3. Schedule Consultation
             </h3>
             <p style={{color: '#64748b', marginBottom: '32px'}}>Consultations are free. Select a date to meet in-studio and discuss your design.</p>
             
