@@ -24,9 +24,9 @@ function CustomerBookings(){
     const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
     const [bookingStep, setBookingStep] = useState(1);
     const [artists, setArtists] = useState([]);
-    const [serviceTypes, setServiceTypes] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [currentMonth, setCurrentMonth] = useState(new Date());
+    const serviceOptions = ['Tattoo Session', 'Consultation', 'Piercing', 'Follow-up', 'Touch-up'];
     
     const [bookingData, setBookingData] = useState({
         artistId: '',
@@ -71,14 +71,6 @@ function CustomerBookings(){
             } catch (e) { console.error("Error fetching artists:", e); }
         };
         fetchArtists();
-
-        const fetchServices = async () => {
-            try {
-                const res = await Axios.get(`${API_URL}/api/admin/service-kits`);
-                if (res.data.success) setServiceTypes(Object.keys(res.data.data));
-            } catch (e) { console.error("Error fetching services:", e); }
-        };
-        fetchServices();
 
         // Handle auto-open from Gallery
         if (location.state?.autoOpenBooking) {
@@ -486,7 +478,7 @@ function CustomerBookings(){
                                         <div className="form-group">
                                             <label style={{ fontWeight: '600', marginBottom: '12px', display: 'block' }}>What type of service are you looking for?</label>
                                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
-                                                {serviceTypes.map(type => (
+                                                {serviceOptions.map(type => (
                                                     <div 
                                                         key={type}
                                                         onClick={() => setBookingData({...bookingData, serviceType: type})}
