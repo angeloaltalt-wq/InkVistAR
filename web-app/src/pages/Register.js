@@ -11,6 +11,7 @@ function Register() {
     lastName: '',
     email: '',
     phone: '',
+    countryCode: '+63',
     password: '',
     confirmPassword: ''
   });
@@ -58,7 +59,7 @@ function Register() {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         email: formData.email.trim(),
-        phone: formData.phone.trim(),
+        phone: formData.countryCode + formData.phone.trim(),
         password: formData.password,
         type: 'customer' // Defaulting to customer for public registration
       });
@@ -106,8 +107,19 @@ function Register() {
                 <input type="email" name="email" className={`form-input ${errors.email ? 'error' : ''}`} placeholder="Email Address" value={formData.email} onChange={handleChange} />
                 {errors.email && <small style={{color: 'red'}}>{errors.email}</small>}
             </div>
-            <div className="form-group">
-                <input type="tel" name="phone" className="form-input" value={formData.phone} onChange={handleChange} placeholder="Phone Number" />
+            <div className="form-group" style={{ display: 'flex', gap: '10px' }}>
+                <select 
+                    name="countryCode" 
+                    className="form-input" 
+                    style={{ width: '110px' }}
+                    value={formData.countryCode}
+                    onChange={handleChange}
+                >
+                    <option value="+63">PH +63</option>
+                    <option value="+1">US +1</option>
+                    <option value="+65">SG +65</option>
+                </select>
+                <input type="tel" name="phone" className="form-input" style={{ flex: 1 }} value={formData.phone} onChange={handleChange} placeholder="Phone Number" />
             </div>
             <div className="form-row" style={{ display: 'flex', gap: '1rem' }}>
                 <div className="form-group" style={{ flex: 1 }}>

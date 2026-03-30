@@ -271,14 +271,31 @@ function CustomerProfile() {
                                             </div>
                                             <div className="form-group">
                                                 <label style={formLabel}><Phone size={16} /> Phone</label>
-                                                <input
-                                                    type="tel"
-                                                    className="form-input"
-                                                    value={profile.phone}
-                                                    onChange={e => setProfile({ ...profile, phone: e.target.value })}
-                                                    placeholder="555-0123"
-                                                    style={inputStyle}
-                                                />
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <select 
+                                                        className="form-input" 
+                                                        style={{ width: '90px' }}
+                                                        value={profile.phone.startsWith('+') ? profile.phone.substring(0, 3) : '+63'}
+                                                        onChange={e => {
+                                                            const code = e.target.value;
+                                                            const currentNo = profile.phone.replace(/^\+\d+/, '');
+                                                            setProfile({ ...profile, phone: code + currentNo });
+                                                        }}
+                                                    >
+                                                        <option value="+63">+63</option>
+                                                        <option value="+1">+1</option>
+                                                        <option value="+65">+65</option>
+                                                    </select>
+                                                    <input
+                                                        type="tel" className="form-input" style={{ flex: 1 }}
+                                                        value={profile.phone.replace(/^\+\d+/, '')}
+                                                        onChange={e => {
+                                                            const prefix = profile.phone.match(/^\+\d+/) ? profile.phone.match(/^\+\d+/)[0] : '+63';
+                                                            setProfile({ ...profile, phone: prefix + e.target.value.replace(/[^\d]/g, '') });
+                                                        }}
+                                                        placeholder="9123456789"
+                                                    />
+                                                </div>
                                             </div>
                                             <div className="form-group">
                                                 <label style={formLabel}><MapPin size={16} /> Location</label>

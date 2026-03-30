@@ -28,7 +28,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
     const [bookedDates, setBookedDates] = useState({});
 
     const [authView, setAuthView] = useState('register'); // 'login' or 'register'
-    const [authData, setAuthData] = useState({ email: '', password: '', firstName: '', lastName: '', phone: '' });
+    const [authData, setAuthData] = useState({ email: '', password: '', confirmPassword: '', firstName: '', lastName: '', phone: '', countryCode: '+63' });
     const [authError, setAuthError] = useState('');
 
     useEffect(() => {
@@ -68,10 +68,16 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
         setAuthError('');
         setLoading(true);
 
+        // Sanitization
+        const email = authData.email.trim();
+        const firstName = authData.firstName.trim();
+        const lastName = authData.lastName.trim();
+        const phone = authData.phone.trim();
+
         try {
             if (authView === 'login') {
                 const res = await Axios.post(`${API_URL}/api/login`, {
-                    email: authData.email,
+                    email: email,
                     password: authData.password
                 });
                 if (res.data.success) {
@@ -79,22 +85,45 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                     setAuthError('');
                 }
             } else {
-                if (!authData.phone) {
+                // Inline Validation & Sanitization for Registration
+                if (!firstName || !lastName) {
+                    setAuthError('First and last names are required');
+                    setLoading(false);
+                    return;
+                }
+                if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                    setAuthError('Please enter a valid email address');
+                    setLoading(false);
+                    return;
+                }
+                if (!phone) {
                     setAuthError('Phone number is required');
                     setLoading(false);
                     return;
                 }
+                if (authData.password.length < 6) {
+                    setAuthError('Password must be at least 6 characters');
+                    setLoading(false);
+                    return;
+                }
+                if (authData.password !== authData.confirmPassword) {
+                    setAuthError('Passwords do not match');
+                    setLoading(false);
+                    return;
+                }
+
                 const res = await Axios.post(`${API_URL}/api/register`, {
-                    firstName: authData.firstName,
-                    lastName: authData.lastName,
-                    email: authData.email,
-                    phone: authData.phone || formData.phone,
+                    firstName,
+                    lastName,
+                    email,
+                    phone: authData.countryCode + phone,
                     password: authData.password,
                     type: 'customer'
                 });
                 if (res.data.success) {
                     alert('Registration successful! Please login to finalize your booking.');
                     setAuthView('login');
+                    setAuthData(prev => ({ ...prev, password: '', confirmPassword: '' }));
                 }
             }
         } catch (err) {
@@ -369,34 +398,54 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                         <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
                             <input 
                                 type="text" className="form-input" placeholder="First Name" required
-                                value={authData.firstName} onChange={e => setAuthData({...authData, firstName: e.target.value})}
+                                value={authData.firstName} onChange={e => setAuthData({...authData, firstName: e.target.value.replace(/^\s+/, '')})}
                             />
                             <input 
                                 type="text" className="form-input" placeholder="Last Name" required
-                                value={authData.lastName} onChange={e => setAuthData({...authData, lastName: e.target.value})}
+                                value={authData.lastName} onChange={e => setAuthData({...authData, lastName: e.target.value.replace(/^\s+/, '')})}
                             />
                         </div>
                     )}
                     <div style={{ marginBottom: '12px' }}>
                         <input 
                             type="email" className="form-input" placeholder="Email Address" required
-                            value={authData.email} onChange={e => setAuthData({...authData, email: e.target.value})}
+                            value={authData.email} onChange={e => setAuthData({...authData, email: e.target.value.trim()})}
                         />
                     </div>
                     {authView === 'register' && (
-                        <div style={{ marginBottom: '12px' }}>
+                        <div style={{ marginBottom: '12px', display: 'flex', gap: '8px' }}>
+                            <select 
+                                className="form-input" 
+                                style={{ width: '100px' }}
+                                value={authData.countryCode}
+                                onChange={e => setAuthData({...authData, countryCode: e.target.value})}
+                            >
+                                <option value="+63">+63 (PH)</option>
+                                <option value="+1">+1 (US)</option>
+                                <option value="+44">+44 (UK)</option>
+                                <option value="+65">+65 (SG)</option>
+                                <option value="+61">+61 (AU)</option>
+                            </select>
                             <input 
-                                type="tel" className="form-input" placeholder="Phone Number (Required)" required
-                                value={authData.phone} onChange={e => setAuthData({...authData, phone: e.target.value})}
+                                type="tel" className="form-input" style={{ flex: 1 }} placeholder="Phone Number" required
+                                value={authData.phone} onChange={e => setAuthData({...authData, phone: e.target.value.replace(/[^\d]/g, '')})}
                             />
                         </div>
                     )}
-                    <div style={{ marginBottom: '24px' }}>
+                    <div style={{ marginBottom: authView === 'register' ? '12px' : '24px' }}>
                         <input 
                             type="password" className="form-input" placeholder="Password" required
                             value={authData.password} onChange={e => setAuthData({...authData, password: e.target.value})}
                         />
                     </div>
+                    {authView === 'register' && (
+                        <div style={{ marginBottom: '24px' }}>
+                            <input 
+                                type="password" className="form-input" placeholder="Confirm Password" required
+                                value={authData.confirmPassword} onChange={e => setAuthData({...authData, confirmPassword: e.target.value})}
+                            />
+                        </div>
+                    )}
                     
                     <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '14px', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }} disabled={loading}>
                         {loading ? 'Processing...' : (authView === 'login' ? <><LogIn size={18}/> Log In</> : <><UserPlus size={18}/> Create Account</>)}
