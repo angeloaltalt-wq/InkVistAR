@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Axios from 'axios';
-import { Search, ChevronLeft, ChevronRight, Filter, CreditCard, Eye, CheckCircle, Info, X, Calendar, Inbox, Plus } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Filter, CreditCard, Eye, CheckCircle, Info, X, Calendar, Inbox, Plus, Upload, Camera, Image as ImageIcon, User } from 'lucide-react';
 import './PortalStyles.css';
 import { API_URL } from '../config';
 import CustomerSideNav from '../components/CustomerSideNav';
@@ -16,8 +16,23 @@ function CustomerBookings(){
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const navigate = useNavigate();
+    const location = useLocation();
     const user = JSON.parse(localStorage.getItem('user'));
     const customerId = user ? user.id : null;
+
+    // New Booking Form States
+    const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+    const [artists, setArtists] = useState([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [bookingData, setBookingData] = useState({
+        artistId: '',
+        date: '',
+        startTime: '',
+        designTitle: '',
+        placement: '',
+        notes: '',
+        referenceImage: null
+    });
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedApt, setSelectedApt] = useState(null);
@@ -42,6 +57,22 @@ function CustomerBookings(){
             onConfirm: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
         });
     };
+
+    useEffect(() => {
+        const fetchArtists = async () => {
+            try {
+                const res = await Axios.get(`${API_URL}/api/customer/artists`);
+                if (res.data.success) setArtists(res.data.artists);
+            } catch (e) { console.error("Error fetching artists:", e); }
+        };
+        fetchArtists();
+
+        // Handle auto-open from Gallery
+        if (location.state?.autoOpenBooking) {
+            setBookingData(prev => ({ ...prev, artistId: location.state.artistId || '', designTitle: location.state.designTitle || '' }));
+            setIsBookingModalOpen(true);
+        }
+    }, [location.state]);
 
     useEffect(() => {
         const fetchAppointments = async () => {
@@ -116,6 +147,51 @@ function CustomerBookings(){
         }
     };
 
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setBookingData({ ...bookingData, referenceImage: reader.result });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleSubmitBooking = async (e) => {
+        e.preventDefault();
+        if (!bookingData.artistId || !bookingData.date || !bookingData.startTime) {
+            showAlert("Missing Info", "Please select an artist, date, and preferred time.", "warning");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const res = await Axios.post(`${API_URL}/api/customer/appointments`, {
+                customerId,
+                artistId: bookingData.artistId,
+                date: bookingData.date,
+                startTime: bookingData.startTime,
+                designTitle: bookingData.designTitle,
+                notes: `Placement: ${bookingData.placement}\n\nDetails: ${bookingData.notes}`,
+                referenceImage: bookingData.referenceImage
+            });
+
+            if (res.data.success) {
+                showAlert("Booking Requested", "Your consultation request has been sent! Check your notifications for updates.", "success");
+                setIsBookingModalOpen(false);
+                setBookingData({ artistId: '', date: '', startTime: '', designTitle: '', placement: '', notes: '', referenceImage: null });
+                // Refresh list
+                const fetchRes = await Axios.get(`${API_URL}/api/customer/${customerId}/appointments`);
+                if (fetchRes.data.success) setAppointments(fetchRes.data.appointments);
+            }
+        } catch (err) {
+            showAlert("Booking Error", err.response?.data?.message || "Failed to submit request.", "danger");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     return (
         <div className="portal-layout">
             <CustomerSideNav />
@@ -125,7 +201,7 @@ function CustomerBookings(){
                     <h1>My Bookings</h1>
                 </div>
                 <div className="header-actions">
-                    <button className="action-btn" onClick={() => navigate('/customer/book')} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
+                    <button className="action-btn" onClick={() => setIsBookingModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
                         <Plus size={16} /> Book New Session
                     </button>
                 </div>
@@ -332,6 +408,102 @@ function CustomerBookings(){
                 </div>
             )}
             
+            {/* Custom New Booking Modal */}
+            {isBookingModalOpen && (
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ maxWidth: '700px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div className="modal-header">
+                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><Plus size={24} color="#daa520" /> New Tattoo Consultation</h2>
+                            <button className="close-btn" onClick={() => setIsBookingModalOpen(false)}><X size={24} /></button>
+                        </div>
+                        <form onSubmit={handleSubmitBooking}>
+                            <div className="modal-body">
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                    <div className="form-group">
+                                        <label style={{ fontWeight: '600', marginBottom: '8px', display: 'block' }}>Choose Your Artist</label>
+                                        <select 
+                                            className="form-input" 
+                                            required 
+                                            value={bookingData.artistId}
+                                            onChange={e => setBookingData({...bookingData, artistId: e.target.value})}
+                                        >
+                                            <option value="">Select an Artist</option>
+                                            {artists.map(a => <option key={a.id} value={a.id}>{a.name} ({a.specialization})</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label style={{ fontWeight: '600', marginBottom: '8px', display: 'block' }}>Tattoo Idea / Title</label>
+                                        <input 
+                                            type="text" 
+                                            className="form-input" 
+                                            placeholder="e.g. Traditional Dagger" 
+                                            value={bookingData.designTitle}
+                                            onChange={e => setBookingData({...bookingData, designTitle: e.target.value})}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '15px' }}>
+                                    <div className="form-group">
+                                        <label style={{ fontWeight: '600', marginBottom: '8px', display: 'block' }}>Placement on Body</label>
+                                        <input 
+                                            type="text" 
+                                            className="form-input" 
+                                            placeholder="e.g. Outer Forearm" 
+                                            value={bookingData.placement}
+                                            onChange={e => setBookingData({...bookingData, placement: e.target.value})}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label style={{ fontWeight: '600', marginBottom: '8px', display: 'block' }}>Reference Image</label>
+                                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                            <label className="btn btn-secondary" style={{ flex: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.85rem' }}>
+                                                <Upload size={16} /> {bookingData.referenceImage ? 'Change Image' : 'Upload Reference'}
+                                                <input type="file" hidden accept="image/*" onChange={handleImageUpload} />
+                                            </label>
+                                            {bookingData.referenceImage && <div style={{ width: '40px', height: '40px', borderRadius: '4px', overflow: 'hidden', border: '1px solid #e2e8f0' }}><img src={bookingData.referenceImage} alt="ref" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '15px' }}>
+                                    <div className="form-group">
+                                        <label style={{ fontWeight: '600', marginBottom: '8px', display: 'block' }}>Preferred Date</label>
+                                        <input type="date" className="form-input" required value={bookingData.date} onChange={e => setBookingData({...bookingData, date: e.target.value})} min={new Date().toISOString().split('T')[0]} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label style={{ fontWeight: '600', marginBottom: '8px', display: 'block' }}>Preferred Time</label>
+                                        <select className="form-input" required value={bookingData.startTime} onChange={e => setBookingData({...bookingData, startTime: e.target.value})}>
+                                            <option value="">Select Time Slot</option>
+                                            {['13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'].map(t => (
+                                                <option key={t} value={t}>{t === '13:00' ? '1:00 PM' : t === '20:00' ? '8:00 PM' : (parseInt(t)-12) + ':00 PM'}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="form-group" style={{ marginTop: '15px' }}>
+                                    <label style={{ fontWeight: '600', marginBottom: '8px', display: 'block' }}>Tattoo Details / Story</label>
+                                    <textarea 
+                                        className="form-input" 
+                                        rows="4" 
+                                        placeholder="Describe the size, color preference, and any specific details you want included..."
+                                        value={bookingData.notes}
+                                        onChange={e => setBookingData({...bookingData, notes: e.target.value})}
+                                    ></textarea>
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-secondary" onClick={() => setIsBookingModalOpen(false)}>Cancel</button>
+                                <button type="submit" className="btn btn-primary" disabled={isSubmitting} style={{ backgroundColor: '#daa520', border: 'none', minWidth: '180px' }}>
+                                    {isSubmitting ? 'Submitting...' : 'Request Consultation'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             <ConfirmModal 
                 isOpen={confirmModal.isOpen}
                 title={confirmModal.title}
