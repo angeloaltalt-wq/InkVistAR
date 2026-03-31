@@ -103,6 +103,7 @@ function AdminAppointments() {
                 }));
                 setAppointments(mappedAppointments);
                 setFilteredAppointments(mappedAppointments);
+                return mappedAppointments;
             }
             setLoading(false);
         } catch (error) {
@@ -295,9 +296,11 @@ function AdminAppointments() {
                 method: manualPaymentModal.method
             });
             if (res.data.success) {
-                setManualPaymentModal({ isOpen: false, amount: '', method: 'Cash' });
-                // Instantly refresh list to update balance display
-                fetchAppointments();
+                setManualPaymentModal({ ...manualPaymentModal, isOpen: false, amount: '' });
+                // Refresh the list and update the locally selected appointment to show the new balance
+                const newList = await fetchAppointments();
+                const freshData = newList.find(a => a.id === selectedAppointment.id);
+                if (freshData) setSelectedAppointment(freshData);
             }
         } catch (error) {
             alert(error.response?.data?.message || "Failed to record payment");
@@ -843,8 +846,8 @@ function AdminAppointments() {
                                                 </button>
                                             </div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                                                <span style={{ color: '#64748b' }}>Current: ₱{Number(formData.manualPaidAmount).toLocaleString()}</span>
-                                                <span style={{ fontWeight: '600', color: '#10b981' }}>Method: {formData.manualPaymentMethod || 'Cash'}</span>
+                                                <span style={{ color: '#64748b' }}>Total Collected: ₱{Number(selectedAppointment?.totalPaid || 0).toLocaleString()}</span>
+                                                <span style={{ fontWeight: '600', color: '#3b82f6' }}>Balance: ₱{Math.max(0, (formData.price || 0) - (selectedAppointment?.totalPaid || 0)).toLocaleString()}</span>
                                             </div>
                                         </div>
                                     </div>
