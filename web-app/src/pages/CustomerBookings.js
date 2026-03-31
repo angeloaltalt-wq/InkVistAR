@@ -418,6 +418,12 @@ function CustomerBookings(){
                                         ₱{(modalTransactions.reduce((sum, t) => t.status === 'paid' ? sum + (t.amount / 100) : sum, 0) + parseFloat(selectedApt.manual_paid_amount || 0)).toLocaleString()}
                                     </span>
                                 </div>
+                                {parseFloat(selectedApt.manual_paid_amount) > 0 && (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '0.85rem', color: '#64748b' }}>
+                                        <span>Manual Adjustment ({selectedApt.manual_payment_method || 'Cash'}):</span>
+                                        <span>₱{parseFloat(selectedApt.manual_paid_amount).toLocaleString()}</span>
+                                    </div>
+                                )}
                                 <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '15px 0' }} />
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ fontWeight: 600, color: '#1e293b' }}>Remaining Balance:</span>

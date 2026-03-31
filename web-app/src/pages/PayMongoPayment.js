@@ -213,6 +213,13 @@ const PayMongoPayment = () => {
                                 Change Payment Method
                             </button>
                         )}
+                        <button 
+                            onClick={() => navigate('/customer/bookings')} 
+                            className="btn btn-secondary"
+                            style={{ ...btnBase, background: 'transparent', color: '#64748b', marginTop: '8px', fontSize: '0.9rem', border: 'none' }}
+                        >
+                            Back to Bookings
+                        </button>
                     </>
                 ) : (
                     <div style={{ textAlign: 'center', padding: '24px' }}>

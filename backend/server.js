@@ -496,6 +496,14 @@ db.getConnection((err, connection) => {
           }
         });
 
+      // MIGRATION: Add 'manual_payment_method' column
+      db.query("SHOW COLUMNS FROM appointments LIKE 'manual_payment_method'", (err, results) => {
+        if (!err && results.length === 0) {
+          console.log('🔄 Migrating appointments: Adding manual_payment_method column...');
+          db.query("ALTER TABLE appointments ADD COLUMN manual_payment_method VARCHAR(50) NULL AFTER manual_paid_amount");
+        }
+      });
+
         // MIGRATION: Ensure status is VARCHAR(50) to avoid truncation if it was ENUM
         db.query("ALTER TABLE appointments MODIFY COLUMN status VARCHAR(50) DEFAULT 'pending'", (err) => {
           if (!err) console.log('✅ Ensured appointments status is VARCHAR(50)');
@@ -2132,7 +2140,8 @@ app.get('/api/customer/:customerId/appointments', (req, res) => {
   const query = `
     SELECT ap.*, ap.price, u.name as artist_name, u.email as artist_email, 
            COALESCE(a.studio_name, 'Independent Artist') as studio_name,
-           ((SELECT COALESCE(SUM(amount), 0) FROM payments p WHERE p.appointment_id = ap.id AND p.status = 'paid') / 100) + COALESCE(ap.manual_paid_amount, 0) as total_paid
+           ((SELECT COALESCE(SUM(amount), 0) FROM payments p WHERE p.appointment_id = ap.id AND p.status = 'paid') / 100) + COALESCE(ap.manual_paid_amount, 0) as total_paid,
+           ap.manual_payment_method
     FROM appointments ap
     JOIN users u ON ap.artist_id = u.id
     LEFT JOIN artists a ON u.id = a.user_id
@@ -2329,7 +2338,8 @@ app.get('/api/admin/appointments', (req, res) => {
       u_cust.email as client_email,
       u_art.name as artist_name,
       ar.commission_rate,
-      ((SELECT COALESCE(SUM(amount), 0) FROM payments p WHERE p.appointment_id = ap.id AND p.status = 'paid') / 100) + COALESCE(ap.manual_paid_amount, 0) as total_paid
+      ((SELECT COALESCE(SUM(amount), 0) FROM payments p WHERE p.appointment_id = ap.id AND p.status = 'paid') / 100) + COALESCE(ap.manual_paid_amount, 0) as total_paid,
+      ap.manual_payment_method
     FROM appointments ap
     JOIN users u_cust ON ap.customer_id = u_cust.id
     JOIN users u_art ON ap.artist_id = u_art.id
@@ -2376,7 +2386,7 @@ app.post('/api/admin/appointments', (req, res) => {
 // PUT update an appointment (Admin)
 app.put('/api/admin/appointments/:id', (req, res) => {
   const { id } = req.params;
-  const { customerId, artistId, serviceType, designTitle, date, startTime, status, paymentStatus, notes, price, manualPaidAmount } = req.body;
+  const { customerId, artistId, serviceType, designTitle, date, startTime, status, paymentStatus, notes, price, manualPaidAmount, manualPaymentMethod } = req.body;
 
   const combinedTitle = serviceType && designTitle ? `${serviceType}: ${designTitle}` : (designTitle || serviceType || null);
 
@@ -2395,6 +2405,7 @@ app.put('/api/admin/appointments/:id', (req, res) => {
   if (notes !== undefined) { updates.push('notes = ?'); params.push(notes); }
   if (price !== undefined) { updates.push('price = ?'); params.push(price); }
   if (manualPaidAmount !== undefined) { updates.push('manual_paid_amount = ?'); params.push(manualPaidAmount); }
+  if (manualPaymentMethod !== undefined) { updates.push('manual_payment_method = ?'); params.push(manualPaymentMethod); }
 
   if (updates.length === 0) {
     return res.status(400).json({ success: false, message: 'No fields to update.' });

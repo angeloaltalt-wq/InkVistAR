@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Calendar, List, ChevronLeft, ChevronRight, Search, Filter, SlidersHorizontal, Plus, Check, X } from 'lucide-react';
+import { Calendar, List, ChevronLeft, ChevronRight, Search, Filter, SlidersHorizontal, Plus, Check, X, User, Palette, Clock, CreditCard, DollarSign } from 'lucide-react';
 import AdminSideNav from '../components/AdminSideNav';
 import Pagination from '../components/Pagination';
 import './AdminAppointments.css';
@@ -29,6 +29,7 @@ function AdminAppointments() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [appointmentModal, setAppointmentModal] = useState({ mounted: false, visible: false });
+    const [manualPaymentModal, setManualPaymentModal] = useState({ isOpen: false });
     const [confirmModal, setConfirmModal] = useState({ open: false, message: '', onConfirm: null });
     const [formData, setFormData] = useState({
         clientId: '',
@@ -41,7 +42,8 @@ function AdminAppointments() {
         paymentStatus: 'unpaid',
         notes: '',
         price: 0,
-        manualPaidAmount: 0
+        manualPaidAmount: 0,
+        manualPaymentMethod: 'Cash'
     });
 
     // Modal animation handlers
@@ -96,7 +98,8 @@ function AdminAppointments() {
                     afterPhoto: apt.after_photo,
                     price: apt.price || 0,
                     totalPaid: apt.total_paid || 0,
-                    manualPaidAmount: apt.manual_paid_amount || 0
+                    manualPaidAmount: apt.manual_paid_amount || 0,
+                    manualPaymentMethod: apt.manual_payment_method || 'Cash'
                 }));
                 setAppointments(mappedAppointments);
                 setFilteredAppointments(mappedAppointments);
@@ -203,7 +206,8 @@ function AdminAppointments() {
             paymentStatus: appointment.paymentStatus,
             notes: appointment.notes,
             price: appointment.price,
-            manualPaidAmount: appointment.manualPaidAmount || 0
+            manualPaidAmount: appointment.manualPaidAmount || 0,
+            manualPaymentMethod: appointment.manualPaymentMethod || 'Cash'
         });
         setClientSearch(appointment.clientName);
         openModal();
@@ -230,7 +234,8 @@ function AdminAppointments() {
             paymentStatus: 'unpaid',
             notes: '',
             price: 0,
-            manualPaidAmount: 0
+            manualPaidAmount: 0,
+            manualPaymentMethod: 'Cash'
         });
         setClientSearch('');
         openModal();
@@ -259,7 +264,8 @@ function AdminAppointments() {
                     paymentStatus: formData.paymentStatus,
                     notes: formData.notes,
                     price: finalPrice,
-                    manualPaidAmount: parseFloat(formData.manualPaidAmount) || 0
+                    manualPaidAmount: parseFloat(formData.manualPaidAmount) || 0,
+                    manualPaymentMethod: formData.manualPaymentMethod
                 };
 
                 if (selectedAppointment) {
@@ -724,244 +730,112 @@ function AdminAppointments() {
                                 <button className="close-btn" onClick={closeModal}>×</button>
                             </div>
                             <div className="modal-body">
-                                <div className="form-row">
-                                    <div className="form-group" style={{ position: 'relative' }}>
-                                        <label>Client Search *</label>
-                                        <div className="premium-search-box" style={{ maxWidth: '100%', marginBottom: '5px' }}>
-                                            <Search size={16} />
-                                            <input
-                                                type="text"
-                                                placeholder="Type client name or email..."
-                                                value={clientSearch}
-                                                onChange={(e) => setClientSearch(e.target.value)}
-                                            />
-                                        </div>
-                                        {clientSearch && !formData.clientId && (
-                                            <div className="glass-card" style={{
-                                                position: 'absolute',
-                                                top: '100%',
-                                                left: 0,
-                                                right: 0,
-                                                zIndex: 10,
-                                                maxHeight: '200px',
-                                                overflowY: 'auto',
-                                                background: 'white',
-                                                marginTop: '2px'
-                                            }}>
-                                                {clients.filter(c =>
-                                                    c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
-                                                    c.email.toLowerCase().includes(clientSearch.toLowerCase())
-                                                ).map(c => (
-                                                    <div
-                                                        key={c.id}
-                                                        style={{ padding: '10px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}
-                                                        onClick={() => {
-                                                            setFormData({ ...formData, clientId: c.id });
-                                                            setClientSearch(c.name);
-                                                        }}
-                                                        onMouseEnter={(e) => e.target.style.background = '#f8fafc'}
-                                                        onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                                                    >
-                                                        <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{c.name}</div>
-                                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{c.email}</div>
-                                                    </div>
-                                                ))}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+                                    {/* Left Column: People & Service */}
+                                    <div>
+                                        <h3 style={{ fontSize: '0.9rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <User size={16} /> Client & Artist
+                                        </h3>
+                                        <div className="form-group" style={{ position: 'relative' }}>
+                                            <label>Client Search *</label>
+                                            <div className="premium-search-box" style={{ maxWidth: '100%', marginBottom: '5px' }}>
+                                                <Search size={16} />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search clients..."
+                                                    value={clientSearch}
+                                                    onChange={(e) => setClientSearch(e.target.value)}
+                                                />
                                             </div>
-                                        )}
-                                        {formData.clientId && (
-                                            <div style={{ fontSize: '0.8rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-                                                <Check size={14} /> Selected: {clients.find(c => c.id === formData.clientId)?.name}
-                                                <button
-                                                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', padding: 0, marginLeft: 'auto' }}
-                                                    onClick={() => { setFormData({ ...formData, clientId: '' }); setClientSearch(''); }}
-                                                >
-                                                    Clear
+                                            {clientSearch && !formData.clientId && (
+                                                <div className="glass-card" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, maxHeight: '150px', overflowY: 'auto', background: 'white' }}>
+                                                    {clients.filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase())).map(c => (
+                                                        <div key={c.id} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }} onClick={() => { setFormData({ ...formData, clientId: c.id }); setClientSearch(c.name); }}>
+                                                            <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{c.name}</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {formData.clientId && <div style={{ fontSize: '0.75rem', color: '#10b981', marginTop: '4px' }}>✓ Selected: {clients.find(c => c.id === formData.clientId)?.name}</div>}
+                                        </div>
+                                        <div className="form-group" style={{ marginTop: '15px' }}>
+                                            <label>Assign Artist *</label>
+                                            <select value={formData.artistId} onChange={(e) => setFormData({ ...formData, artistId: e.target.value })} className="premium-select-v2" style={{ width: '100%' }}>
+                                                <option value="">Select Artist</option>
+                                                {artists.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                                            </select>
+                                        </div>
+
+                                        <h3 style={{ fontSize: '0.9rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '30px', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <Palette size={16} /> Service Information
+                                        </h3>
+                                        <div className="form-group">
+                                            <label>Service Type *</label>
+                                            <select value={formData.serviceType} onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })} className="premium-select-v2" style={{ width: '100%' }}>
+                                                <option value="Tattoo Session">Tattoo Session</option>
+                                                <option value="Consultation">Consultation</option>
+                                                <option value="Piercing">Piercing</option>
+                                                <option value="Touch-up">Touch-up</option>
+                                            </select>
+                                        </div>
+                                        <div className="form-group" style={{ marginTop: '15px' }}>
+                                            <label>Design Title / Idea</label>
+                                            <input type="text" value={formData.designTitle} onChange={(e) => setFormData({ ...formData, designTitle: e.target.value })} className="premium-input-v2" placeholder="e.g. Neo-Traditional Dagger" style={{ width: '100%' }} />
+                                        </div>
+                                    </div>
+
+                                    {/* Right Column: Schedule & Pricing */}
+                                    <div>
+                                        <h3 style={{ fontSize: '0.9rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <Clock size={16} /> Schedule
+                                        </h3>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '15px' }}>
+                                            <div className="form-group">
+                                                <label>Date *</label>
+                                                <input type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="premium-select-v2" style={{ width: '100%', backgroundImage: 'none' }} />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Time *</label>
+                                                <input type="time" value={formData.time} onChange={(e) => setFormData({ ...formData, time: e.target.value })} className="premium-select-v2" style={{ width: '100%', backgroundImage: 'none' }} />
+                                            </div>
+                                        </div>
+                                        <div className="form-group" style={{ marginTop: '15px' }}>
+                                            <label>Appointment Status</label>
+                                            <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="premium-select-v2" style={{ width: '100%' }}>
+                                                <option value="pending">Pending Review</option>
+                                                <option value="confirmed">Confirmed</option>
+                                                <option value="completed">Completed</option>
+                                                <option value="cancelled">Cancelled</option>
+                                            </select>
+                                        </div>
+
+                                        <h3 style={{ fontSize: '0.9rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '30px', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <DollarSign size={16} /> Pricing & Payment
+                                        </h3>
+                                        <div className="form-group">
+                                            <label>Total Quoted Price (₱)</label>
+                                            <input type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} className="premium-input-v2" style={{ width: '100%', backgroundImage: 'none' }} />
+                                        </div>
+                                        
+                                        <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '12px', marginTop: '15px', border: '1px solid #e2e8f0' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                                <label style={{ margin: 0 }}>Manual Payment Adjustment</label>
+                                                <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '5px' }} onClick={() => setManualPaymentModal({ isOpen: true })}>
+                                                    <Plus size={14} /> Adjust Manually
                                                 </button>
                                             </div>
-                                        )}
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Assign Artist *</label>
-                                        <select
-                                            value={formData.artistId}
-                                            onChange={(e) => setFormData({ ...formData, artistId: e.target.value })}
-                                            className="premium-select-v2"
-                                            style={{ width: '100%' }}
-                                        >
-                                            <option value="">Select Artist</option>
-                                            {artists.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="form-group">
-                                    <label>Quick Select Service Type *</label>
-                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                                        {['Tattoo Session', 'Consultation', 'Piercing', 'Touch-up'].map(service => (
-                                            <button
-                                                key={service}
-                                                className={`badge ${formData.serviceType === service ? 'status-confirmed' : ''}`}
-                                                style={{ cursor: 'pointer', border: '1px solid #e2e8f0', padding: '6px 12px' }}
-                                                onClick={() => setFormData({ ...formData, serviceType: service })}
-                                            >
-                                                {service}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <select
-                                        value={formData.serviceType}
-                                        onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
-                                        className="premium-select-v2"
-                                        style={{ width: '100%' }}
-                                    >
-                                        <option value="">Custom Service Type</option>
-                                        <option value="Tattoo Session">Tattoo Session</option>
-                                        <option value="Consultation">Consultation</option>
-                                        <option value="Piercing">Piercing</option>
-                                        <option value="Touch-up">Touch-up</option>
-                                        <option value="Aftercare Check">Aftercare Check</option>
-                                    </select>
-                                </div>
-
-                                <div className="form-group" style={{ marginTop: '15px' }}>
-                                    <label>Design Title / Idea</label>
-                                    <input
-                                        type="text"
-                                        value={formData.designTitle}
-                                        onChange={(e) => setFormData({ ...formData, designTitle: e.target.value })}
-                                        className="premium-input-v2"
-                                        placeholder="e.g. Traditional Dragon, Floral Sleeve, etc."
-                                        style={{ width: '100%' }}
-                                    />
-                                </div>
-
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label>Status *</label>
-                                        <select
-                                            value={formData.status}
-                                            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                            className="premium-select-v2"
-                                            style={{ width: '100%' }}
-                                        >
-                                            <option value="confirmed">Confirmed</option>
-                                            <option value="pending">Pending</option>
-                                            <option value="completed">Completed</option>
-                                            <option value="cancelled">Cancelled</option>
-                                        </select>
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Payment Status *</label>
-                                        <select
-                                            value={formData.paymentStatus}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                setFormData({
-                                                    ...formData,
-                                                    paymentStatus: val,
-                                                    manualPaidAmount: val === 'paid' ? formData.price : formData.manualPaidAmount
-                                                });
-                                            }}
-                                            className="premium-select-v2"
-                                            style={{ width: '100%' }}
-                                        >
-                                            <option value="unpaid">Unpaid</option>
-                                            <option value="downpayment_paid">Downpayment Paid</option>
-                                            <option value="paid">Fully Paid</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label>Date *</label>
-                                        <input
-                                            type="date"
-                                            value={formData.date}
-                                            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                                            className="premium-select-v2"
-                                            style={{ width: '100%', backgroundImage: 'none' }}
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Time *</label>
-                                        <input
-                                            type="time"
-                                            value={formData.time}
-                                            onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                                            className="premium-select-v2"
-                                            style={{ width: '100%', backgroundImage: 'none' }}
-                                        />
-                                    </div>
-                                </div>
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label>Total Price (₱)</label>
-                                        <input
-                                            type="number"
-                                            value={formData.price}
-                                            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                            className="premium-input-v2"
-                                            style={{ width: '100%', backgroundImage: 'none' }}
-                                            placeholder="e.g. 35000"
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Manual Paid Adjustment (Cash/Direct) (₱)</label>
-                                        <input
-                                            type="number"
-                                            value={formData.manualPaidAmount}
-                                            onChange={(e) => setFormData({ ...formData, manualPaidAmount: e.target.value })}
-                                            className="premium-input-v2"
-                                            style={{ width: '100%', backgroundImage: 'none' }}
-                                            placeholder="e.g. 5000"
-                                        />
-                                        <div style={{ marginTop: '5px', fontSize: '0.72rem', color: '#64748b' }}>
-                                            Online Payments: ₱{(selectedAppointment?.totalPaid - selectedAppointment?.manualPaidAmount || 0).toLocaleString()}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                                                <span style={{ color: '#64748b' }}>Current: ₱{Number(formData.manualPaidAmount).toLocaleString()}</span>
+                                                <span style={{ fontWeight: '600', color: '#10b981' }}>Method: {formData.manualPaymentMethod || 'Cash'}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="form-group">
+
+                                <div className="form-group" style={{ marginTop: '20px' }}>
                                     <label>Notes</label>
-                                    <textarea
-                                        value={formData.notes}
-                                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                        className="premium-select-v2"
-                                        style={{ width: '100%', height: 'auto', backgroundImage: 'none' }}
-                                        rows="3"
-                                    />
-                                    <button type="button" className="btn btn-secondary" style={{ marginTop: '5px', fontSize: '0.8rem', padding: '5px 10px' }} onClick={handleMultiSession}>
-                                        + Mark as Multi-Session
-                                    </button>
+                                    <textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="premium-select-v2" style={{ width: '100%', height: 'auto', backgroundImage: 'none' }} rows="3" />
                                 </div>
-
-                                {/* Session Photos Gallery */}
-                                {selectedAppointment && (selectedAppointment.beforePhoto || selectedAppointment.afterPhoto) && (
-                                    <div className="form-group" style={{ marginTop: '20px' }}>
-                                        <label>Session Photos</label>
-                                        <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
-                                            {selectedAppointment.beforePhoto && (
-                                                <div style={{ flex: 1 }}>
-                                                    <p style={{ margin: '0 0 5px 0', fontSize: '0.85rem', color: '#64748b' }}>Before</p>
-                                                    <img
-                                                        src={selectedAppointment.beforePhoto}
-                                                        alt="Before Session"
-                                                        style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                                                    />
-                                                </div>
-                                            )}
-                                            {selectedAppointment.afterPhoto && (
-                                                <div style={{ flex: 1 }}>
-                                                    <p style={{ margin: '0 0 5px 0', fontSize: '0.85rem', color: '#64748b' }}>After / Final</p>
-                                                    <img
-                                                        src={selectedAppointment.afterPhoto}
-                                                        alt="After Session"
-                                                        style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                             <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
                                 <div className="footer-left">
@@ -986,6 +860,45 @@ function AdminAppointments() {
                                         Save Appointment
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Manual Payment Sub-Modal */}
+                {manualPaymentModal.isOpen && (
+                    <div className="modal-overlay" style={{ zIndex: 3000 }}>
+                        <div className="modal-content" style={{ maxWidth: '400px' }}>
+                            <div className="modal-header">
+                                <h3>Insert Payment Manually</h3>
+                                <button className="close-btn" onClick={() => setManualPaymentModal({ isOpen: false })}><X size={20} /></button>
+                            </div>
+                            <div className="modal-body">
+                                <div className="form-group">
+                                    <label>Adjustment Amount (₱)</label>
+                                    <input 
+                                        type="number" 
+                                        className="form-input" 
+                                        value={formData.manualPaidAmount} 
+                                        onChange={e => setFormData({ ...formData, manualPaidAmount: e.target.value })} 
+                                    />
+                                </div>
+                                <div className="form-group" style={{ marginTop: '15px' }}>
+                                    <label>Payment Method</label>
+                                    <select 
+                                        className="form-input" 
+                                        value={formData.manualPaymentMethod} 
+                                        onChange={e => setFormData({ ...formData, manualPaymentMethod: e.target.value })}
+                                    >
+                                        <option value="Cash">Cash</option>
+                                        <option value="GCash">GCash</option>
+                                        <option value="Card (Manual)">Card (Direct/POS)</option>
+                                        <option value="Bank Transfer">Bank Transfer</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setManualPaymentModal({ isOpen: false })}>Apply Adjustment</button>
                             </div>
                         </div>
                     </div>
