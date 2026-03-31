@@ -451,17 +451,27 @@ function CustomerBookings(){
                                 <div style={{ textAlign: 'center', padding: '20px' }}>Loading history...</div>
                             ) : modalTransactions.length > 0 ? (
                                 <div className="mini-transactions" style={{ maxHeight: '180px', overflowY: 'auto', paddingRight: '5px' }}>
-                                    {modalTransactions.map(t => (
+                                    {modalTransactions.map(t => {
+                                        let methodLabel = 'Online Payment';
+                                        try {
+                                            const raw = typeof t.raw_event === 'string' ? JSON.parse(t.raw_event) : t.raw_event;
+                                            if (raw?.method) methodLabel = `Manual (${raw.method})`;
+                                        } catch(e) {}
+                                        
+                                        return (
                                         <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '0.95rem' }}>
                                             <div>
-                                                <div style={{ fontWeight: 500, color: '#1e293b' }}>{t.status === 'paid' ? 'Payment Successful' : 'Attempted Payment'}</div>
+                                                <div style={{ fontWeight: 500, color: '#1e293b' }}>
+                                                    {t.status === 'paid' ? `Payment Successful` : 'Attempted Payment'}
+                                                </div>
+                                                <div style={{ color: '#64748b', fontSize: '0.75rem' }}>{methodLabel}</div>
                                                 <div style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{new Date(t.created_at).toLocaleDateString()} at {new Date(t.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                                             </div>
                                             <div style={{ fontWeight: 600, color: t.status === 'paid' ? '#10b981' : '#f59e0b' }}>
                                                 ₱{(t.amount / 100).toLocaleString()}
                                             </div>
                                         </div>
-                                    ))}
+                                    )})}
                                 </div>
                             ) : (
                                 <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8', background: '#f8fafc', borderRadius: '8px' }}>

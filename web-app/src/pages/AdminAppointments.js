@@ -29,7 +29,7 @@ function AdminAppointments() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [appointmentModal, setAppointmentModal] = useState({ mounted: false, visible: false });
-    const [manualPaymentModal, setManualPaymentModal] = useState({ isOpen: false });
+    const [manualPaymentModal, setManualPaymentModal] = useState({ isOpen: false, amount: '', method: 'Cash' });
     const [confirmModal, setConfirmModal] = useState({ open: false, message: '', onConfirm: null });
     const [formData, setFormData] = useState({
         clientId: '',
@@ -284,6 +284,24 @@ function AdminAppointments() {
             selectedAppointment ? 'Save changes to this appointment?' : 'Create this new appointment?',
             doSave
         );
+    };
+
+    const handleApplyManualPayment = async () => {
+        if (!manualPaymentModal.amount || manualPaymentModal.amount <= 0) return;
+        
+        try {
+            const res = await Axios.post(`${API_URL}/api/admin/appointments/${selectedAppointment.id}/manual-payment`, {
+                amount: manualPaymentModal.amount,
+                method: manualPaymentModal.method
+            });
+            if (res.data.success) {
+                setManualPaymentModal({ isOpen: false, amount: '', method: 'Cash' });
+                // Instantly refresh list to update balance display
+                fetchAppointments();
+            }
+        } catch (error) {
+            alert(error.response?.data?.message || "Failed to record payment");
+        }
     };
 
     const handleMultiSession = () => {
@@ -819,8 +837,8 @@ function AdminAppointments() {
                                         
                                         <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '12px', marginTop: '15px', border: '1px solid #e2e8f0' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                                <label style={{ margin: 0 }}>Manual Payment Adjustment</label>
-                                                <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '5px' }} onClick={() => setManualPaymentModal({ isOpen: true })}>
+                                                <label style={{ margin: 0 }}>Financial Summary</label>
+                                                <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '5px' }} onClick={() => setManualPaymentModal({ ...manualPaymentModal, isOpen: true, amount: '' })}>
                                                     <Plus size={14} /> Adjust Manually
                                                 </button>
                                             </div>
@@ -875,20 +893,21 @@ function AdminAppointments() {
                             </div>
                             <div className="modal-body">
                                 <div className="form-group">
-                                    <label>Adjustment Amount (₱)</label>
+                                    <label>Amount to Add (₱)</label>
                                     <input 
                                         type="number" 
                                         className="form-input" 
-                                        value={formData.manualPaidAmount} 
-                                        onChange={e => setFormData({ ...formData, manualPaidAmount: e.target.value })} 
+                                        value={manualPaymentModal.amount} 
+                                        onChange={e => setManualPaymentModal({ ...manualPaymentModal, amount: e.target.value })} 
+                                        placeholder="Enter amount paid in studio"
                                     />
                                 </div>
                                 <div className="form-group" style={{ marginTop: '15px' }}>
                                     <label>Payment Method</label>
                                     <select 
                                         className="form-input" 
-                                        value={formData.manualPaymentMethod} 
-                                        onChange={e => setFormData({ ...formData, manualPaymentMethod: e.target.value })}
+                                        value={manualPaymentModal.method} 
+                                        onChange={e => setManualPaymentModal({ ...manualPaymentModal, method: e.target.value })}
                                     >
                                         <option value="Cash">Cash</option>
                                         <option value="GCash">GCash</option>
@@ -898,7 +917,7 @@ function AdminAppointments() {
                                 </div>
                             </div>
                             <div className="modal-footer">
-                                <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setManualPaymentModal({ isOpen: false })}>Apply Adjustment</button>
+                                <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleApplyManualPayment}>Apply Adjustment</button>
                             </div>
                         </div>
                     </div>

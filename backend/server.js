@@ -2435,6 +2435,48 @@ app.put('/api/admin/appointments/:id', (req, res) => {
   });
 });
 
+// POST record an instant manual payment (Admin)
+app.post('/api/admin/appointments/:id/manual-payment', (req, res) => {
+  const { id } = req.params;
+  const { amount, method } = req.body;
+
+  if (!amount || isNaN(amount) || amount <= 0) {
+    return res.status(400).json({ success: false, message: 'Please enter a valid positive amount.' });
+  }
+
+  const amountCentavos = Math.round(parseFloat(amount) * 100);
+  const paymentId = `MANUAL-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  const rawEvent = JSON.stringify({ 
+    type: 'manual_adjustment', 
+    method: method || 'Cash', 
+    timestamp: new Date().toISOString() 
+  });
+
+  // 1. Record in payments table for history
+  const query = `
+    INSERT INTO payments (appointment_id, paymongo_payment_id, amount, status, raw_event)
+    VALUES (?, ?, ?, 'paid', ?)
+  `;
+
+  db.query(query, [id, paymentId, amountCentavos, rawEvent], (err) => {
+    if (err) {
+      console.error('❌ Error recording manual payment:', err);
+      return res.status(500).json({ success: false, message: 'Database error' });
+    }
+
+    // 2. Auto-update payment status based on new totals
+    const updateStatusQuery = `
+      UPDATE appointments SET payment_status = CASE 
+        WHEN ((SELECT COALESCE(SUM(amount), 0) FROM payments WHERE appointment_id = ? AND status = 'paid') / 100) + manual_paid_amount >= price THEN 'paid'
+        ELSE 'downpayment_paid'
+      END WHERE id = ?
+    `;
+    db.query(updateStatusQuery, [id, id]);
+
+    res.json({ success: true, message: 'Payment recorded successfully' });
+  });
+});
+
 // DELETE (soft) an appointment (Admin)
 app.delete('/api/admin/appointments/:id', (req, res) => {
   const { id } = req.params;
@@ -2454,7 +2496,7 @@ app.delete('/api/admin/appointments/:id', (req, res) => {
 app.get('/api/appointments/:id/materials', (req, res) => {
   const { id } = req.params;
   const query = `
-    SELECT sm.id, sm.inventory_id, sm.quantity, sm.status, i.name as item_name, i.unit, i.cost 
+    SELECT sm.id, sm.inventory_id, sm.quantity, sm.status, i.name as item_name, i.unit, i.cost, raw_event 
     FROM session_materials sm 
     JOIN inventory i ON sm.inventory_id = i.id 
     WHERE sm.appointment_id = ? AND sm.status != 'released'
@@ -3156,7 +3198,7 @@ app.get('/api/payments/status', (req, res) => {
 app.get('/api/appointments/:id/transactions', (req, res) => {
   const appointmentId = req.params.id;
   const query = `
-    SELECT id, amount, status, created_at, session_id 
+    SELECT id, amount, status, created_at, session_id, raw_event 
     FROM payments 
     WHERE appointment_id = ? 
     ORDER BY created_at DESC
