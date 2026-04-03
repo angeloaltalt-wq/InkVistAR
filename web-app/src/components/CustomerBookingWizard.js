@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Axios from 'axios';
 import { CheckCircle, ChevronLeft, ChevronRight, Calendar, User, MessageSquare, Info, Image as ImageIcon, Upload, MapPin, UserPlus, Clock, CalendarCheck, UserCog, Gift } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -9,6 +9,8 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
     const location = useLocation();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false); // For API calls
+    const [activeFeature, setActiveFeature] = useState(0);
+    const [showExitModal, setShowExitModal] = useState(false);
     
     const user = JSON.parse(localStorage.getItem('user'));
     
@@ -28,6 +30,49 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
     const [bookedDates, setBookedDates] = useState({});
 
     const [authView, setAuthView] = useState('register'); // 'login' or 'register'
+    useEffect(() => {
+        let interval;
+        if (step === 5) {
+            interval = setInterval(() => {
+                setActiveFeature((prev) => (prev + 1) % features.length);
+            }, 5000);
+        }
+        return () => clearInterval(interval);
+    }, [step]);
+
+    const features = [
+        {
+            icon: <Clock size={48} color="#C19A6B" />,
+            title: "Track Status",
+            desc: "Monitor your consultation request and appointment progress in real-time.",
+            bgColor: "#fdf2e9"
+        },
+        {
+            icon: <CalendarCheck size={48} color="#C19A6B" />,
+            title: "Manage Appointments",
+            desc: "Easily view, reschedule, or cancel your past and upcoming sessions.",
+            bgColor: "#f8fafc"
+        },
+        {
+            icon: <MessageSquare size={48} color="#C19A6B" />,
+            title: "Direct Communication",
+            desc: "Chat securely with your artist and the studio for any questions or updates.",
+            bgColor: "#f0fdf4"
+        },
+        {
+            icon: <UserCog size={48} color="#C19A6B" />,
+            title: "Personalized Profile",
+            desc: "Manage your personal details, preferences, and tattoo history in one place.",
+            bgColor: "#f5f3ff"
+        },
+        {
+            icon: <Gift size={48} color="#C19A6B" />,
+            title: "Exclusive Benefits",
+            desc: "Receive special offers, loyalty rewards, and early access to new designs.",
+            bgColor: "#fff7ed"
+        }
+    ];
+
     useEffect(() => {
         // Fetch global availability for the studio (Artist 1 / Admin)
         fetchAvailability(1);
@@ -386,6 +431,50 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
         </div>
     );
 
+    const renderExitModal = () => (
+        <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)'
+        }}>
+            <div className="fade-in" style={{
+                backgroundColor: 'white', padding: '40px', borderRadius: '24px',
+                maxWidth: '450px', width: '90%', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
+            }}>
+                <div style={{ backgroundColor: '#fee2e2', width: '64px', height: '64px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                    <Info size={32} color="#dc2626" />
+                </div>
+                <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#1e293b', marginBottom: '12px' }}>Are you sure?</h3>
+                <p style={{ color: '#64748b', marginBottom: '32px', lineHeight: '1.6' }}>
+                    By skipping account creation, you'll miss out on tracking your request, direct artist messaging, and managing future bookings easily.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <button 
+                        onClick={() => navigate('/')}
+                        className="exit-confirm-btn"
+                        style={{
+                            padding: '14px', borderRadius: '12px', border: 'none',
+                            backgroundColor: '#374151', color: 'white', fontWeight: '700',
+                            cursor: 'pointer', transition: 'all 0.3s ease'
+                        }}
+                    >
+                        No thanks.
+                    </button>
+                    <button 
+                        onClick={() => setShowExitModal(false)}
+                        style={{
+                            padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0',
+                            backgroundColor: 'white', color: '#1e293b', fontWeight: '700',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Wait, let me create one
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+
     const renderConsultationCompletedPage = () => (
         <div className="fade-in" style={{
             textAlign: 'center',
@@ -422,63 +511,86 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                     Create an account to unlock these powerful features and enhance your InkVistAR experience:
                 </p>
 
-                {/* Feature Cards Section */}
-                <div style={{
-                    display: 'flex',
-                    overflowX: 'auto', // Enable horizontal scrolling
-                    gap: '20px',
-                    padding: '20px 0',
-                    marginBottom: '30px',
-                    scrollSnapType: 'x mandatory', // Optional: for snapping to cards
-                    WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
-                    scrollbarWidth: 'none', // Hide scrollbar for Firefox
-                    msOverflowStyle: 'none', // Hide scrollbar for IE/Edge
-                    '&::-webkit-scrollbar': { display: 'none' } // Hide scrollbar for Chrome/Safari
-                }}>
-                    {/* Feature Card 1: Track Status */}
+                {/* Widget Carousel Section */}
+                <div style={{ position: 'relative', marginTop: '30px' }}>
                     <div style={{
-                        flex: '0 0 250px', // Fixed width for each card
-                        backgroundColor: '#fdf2e9', // Light bronze background
-                        borderRadius: '16px',
-                        padding: '25px',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                        textAlign: 'left',
-                        scrollSnapAlign: 'start',
-                        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                        cursor: 'pointer',
-                        '&:hover': { transform: 'translateY(-5px)', boxShadow: '0 6px 16px rgba(0,0,0,0.1)' }
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '20px',
+                        minHeight: '220px'
                     }}>
-                        <Clock size={36} color="#C19A6B" style={{ marginBottom: '15px' }} />
-                        <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#1e293b', marginBottom: '8px' }}>Track Status</h4>
-                        <p style={{ fontSize: '0.9rem', color: '#64748b' }}>Monitor your consultation request and appointment progress in real-time.</p>
+                        <button 
+                            onClick={() => setActiveFeature((prev) => (prev - 1 + features.length) % features.length)}
+                            style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '44px', height: '44px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', transition: 'all 0.2s' }}
+                        >
+                            <ChevronLeft size={24} />
+                        </button>
+
+                        <div style={{ 
+                            width: '100%', 
+                            maxWidth: '400px', 
+                            perspective: '1000px',
+                            position: 'relative',
+                            height: '220px'
+                        }}>
+                            {features.map((feature, index) => (
+                                <div 
+                                    key={index}
+                                    style={{
+                                        position: 'absolute',
+                                        top: 0, left: 0, right: 0, bottom: 0,
+                                        backgroundColor: feature.bgColor,
+                                        borderRadius: '24px',
+                                        padding: '32px',
+                                        textAlign: 'center',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                        transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        opacity: activeFeature === index ? 1 : 0,
+                                        transform: activeFeature === index 
+                                            ? 'translateX(0) scale(1)' 
+                                            : index < activeFeature 
+                                                ? 'translateX(-50px) scale(0.9)' 
+                                                : 'translateX(50px) scale(0.9)',
+                                        pointerEvents: activeFeature === index ? 'all' : 'none',
+                                        visibility: activeFeature === index ? 'visible' : 'hidden'
+                                    }}
+                                >
+                                    <div style={{ marginBottom: '16px' }}>{feature.icon}</div>
+                                    <h4 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#1e293b', marginBottom: '8px' }}>{feature.title}</h4>
+                                    <p style={{ color: '#64748b', fontSize: '1rem', lineHeight: '1.5' }}>{feature.desc}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        <button 
+                            onClick={() => setActiveFeature((prev) => (prev + 1) % features.length)}
+                            style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '44px', height: '44px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', transition: 'all 0.2s' }}
+                        >
+                            <ChevronRight size={24} />
+                        </button>
                     </div>
 
-                    {/* Feature Card 2: View Appointments */}
-                    <div style={{ ...featureCardStyle }}>
-                        <CalendarCheck size={36} color="#C19A6B" style={{ marginBottom: '15px' }} />
-                        <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#1e293b', marginBottom: '8px' }}>Manage Appointments</h4>
-                        <p style={{ fontSize: '0.9rem', color: '#64748b' }}>Easily view, reschedule, or cancel your past and upcoming sessions.</p>
-                    </div>
-
-                    {/* Feature Card 3: Communicate Directly */}
-                    <div style={{ ...featureCardStyle }}>
-                        <MessageSquare size={36} color="#C19A6B" style={{ marginBottom: '15px' }} />
-                        <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#1e293b', marginBottom: '8px' }}>Direct Communication</h4>
-                        <p style={{ fontSize: '0.9rem', color: '#64748b' }}>Chat securely with your artist and the studio for any questions or updates.</p>
-                    </div>
-
-                    {/* Feature Card 4: Profile & Preferences */}
-                    <div style={{ ...featureCardStyle }}>
-                        <UserCog size={36} color="#C19A6B" style={{ marginBottom: '15px' }} />
-                        <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#1e293b', marginBottom: '8px' }}>Personalized Profile</h4>
-                        <p style={{ fontSize: '0.9rem', color: '#64748b' }}>Manage your personal details, preferences, and tattoo history in one place.</p>
-                    </div>
-
-                    {/* Feature Card 5: Exclusive Offers */}
-                    <div style={{ ...featureCardStyle }}>
-                        <Gift size={36} color="#C19A6B" style={{ marginBottom: '15px' }} />
-                        <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#1e293b', marginBottom: '8px' }}>Exclusive Benefits</h4>
-                        <p style={{ fontSize: '0.9rem', color: '#64748b' }}>Receive special offers, loyalty rewards, and early access to new designs.</p>
+                    {/* Slide Indicators */}
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '24px' }}>
+                        {features.map((_, i) => (
+                            <div 
+                                key={i}
+                                onClick={() => setActiveFeature(i)}
+                                style={{ 
+                                    width: activeFeature === i ? '24px' : '8px', 
+                                    height: '8px', 
+                                    borderRadius: '4px', 
+                                    backgroundColor: activeFeature === i ? '#C19A6B' : '#e2e8f0',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s ease'
+                                }} 
+                            />
+                        ))}
                     </div>
                 </div>
             </div>
@@ -492,29 +604,16 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                     <UserPlus size={20} /> Create an Account
                 </button>
                 <button
-                    onClick={() => navigate('/')}
+                    onClick={() => setShowExitModal(true)}
                     className="btn btn-secondary"
                     style={{ padding: '12px 32px', fontSize: '1rem' }}
                 >
-                    No thanks, return home
+                    No thanks.
                 </button>
             </div>
+            {showExitModal && renderExitModal()}
         </div>
     );
-
-    // Define a common style for feature cards to reuse
-    const featureCardStyle = {
-        flex: '0 0 250px', // Fixed width for each card
-        backgroundColor: '#fdf2e9', // Light bronze background
-        borderRadius: '16px',
-        padding: '25px',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-        textAlign: 'left',
-        scrollSnapAlign: 'start',
-        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-        cursor: 'pointer',
-        '&:hover': { transform: 'translateY(-5px)', boxShadow: '0 6px 16px rgba(0,0,0,0.1)' }
-    };
 
     if (step === 5) return renderConsultationCompletedPage();
 
