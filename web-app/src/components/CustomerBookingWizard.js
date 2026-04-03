@@ -8,7 +8,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
     const navigate = useNavigate();
     const location = useLocation();
     const [step, setStep] = useState(1);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(false); // For API calls
     
     const user = JSON.parse(localStorage.getItem('user'));
     
@@ -19,7 +19,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
         date: '',
         time: '13:00',
         designTitle: '',
-        notes: '',
+        notes: '', // This will also capture additional details like placement and size
         placement: '',
         referenceImage: null
     });
@@ -28,9 +28,6 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
     const [bookedDates, setBookedDates] = useState({});
 
     const [authView, setAuthView] = useState('register'); // 'login' or 'register'
-    const [authData, setAuthData] = useState({ email: '', password: '', confirmPassword: '', firstName: '', lastName: '', phone: '', countryCode: '+63' });
-    const [authError, setAuthError] = useState('');
-
     useEffect(() => {
         // Fetch global availability for the studio (Artist 1 / Admin)
         fetchAvailability(1);
@@ -63,76 +60,6 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
         }
     };
 
-    const handleAuthAction = async (e) => {
-        e.preventDefault();
-        setAuthError('');
-        setLoading(true);
-
-        // Sanitization
-        const email = authData.email.trim();
-        const firstName = authData.firstName.trim();
-        const lastName = authData.lastName.trim();
-        const phone = authData.phone.trim();
-
-        try {
-            if (authView === 'login') {
-                const res = await Axios.post(`${API_URL}/api/login`, {
-                    email: email,
-                    password: authData.password
-                });
-                if (res.data.success) {
-                    localStorage.setItem('user', JSON.stringify(res.data.user));
-                    setAuthError('');
-                }
-            } else {
-                // Inline Validation & Sanitization for Registration
-                if (!firstName || !lastName) {
-                    setAuthError('First and last names are required');
-                    setLoading(false);
-                    return;
-                }
-                if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                    setAuthError('Please enter a valid email address');
-                    setLoading(false);
-                    return;
-                }
-                if (!phone) {
-                    setAuthError('Phone number is required');
-                    setLoading(false);
-                    return;
-                }
-                if (authData.password.length < 6) {
-                    setAuthError('Password must be at least 6 characters');
-                    setLoading(false);
-                    return;
-                }
-                if (authData.password !== authData.confirmPassword) {
-                    setAuthError('Passwords do not match');
-                    setLoading(false);
-                    return;
-                }
-
-                const res = await Axios.post(`${API_URL}/api/register`, {
-                    firstName,
-                    lastName,
-                    email,
-                    phone: authData.countryCode + phone,
-                    password: authData.password,
-                    type: 'customer'
-                });
-                if (res.data.success) {
-                    alert('Registration successful! Please login to finalize your booking.');
-                    setAuthView('login');
-                    setAuthData(prev => ({ ...prev, password: '', confirmPassword: '' }));
-                }
-            }
-        } catch (err) {
-            setAuthError(err.response?.data?.message || 'Authentication failed');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const handleImageUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -145,17 +72,29 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
     };
 
     const handleSubmit = async () => {
-        if (!formData.date || !formData.designTitle || !formData.placement) {
-            alert('Please fill in all required fields.');
+        if (!formData.date || !formData.designTitle || !formData.placement || !formData.name || !formData.email || !formData.phone) {
+            alert('Please fill in all required fields: Name, Email, Phone, Date, Tattoo Idea, and Placement.');
+            return;
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+            alert('Please enter a valid email address.');
+            return;
+        }
+        if (!/^\+?\d{10,15}$/.test(formData.phone)) { // Basic phone number validation
+            alert('Please enter a valid phone number.');
             return;
         }
 
+        let finalCustomerId;
         const currentUser = JSON.parse(localStorage.getItem('user'));
-        if (!currentUser) {
-            alert('Please complete the account step before submitting.');
-            return;
+
+        if (currentUser) {
+            finalCustomerId = currentUser.id;
+        } else {
+            // For anonymous bookings, use a default artistId (e.g., Studio Admin ID 1) as customerId temporarily
+            finalCustomerId = 1; // This is a workaround to satisfy the backend's NOT NULL constraint for customer_id
         }
-        finalizeBooking(currentUser.id);
+        finalizeBooking(finalCustomerId);
     };
 
     const finalizeBooking = async (uid) => {
@@ -164,13 +103,13 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
             const currentUser = JSON.parse(localStorage.getItem('user'));
 
             const response = await Axios.post(`${API_URL}/api/admin/appointments`, {
-                customerId: uid,
+                customerId: uid, // This will be the actual user ID or the placeholder ID (1)
                 artistId: 1, // Default Studio Account
                 date: formData.date,
                 startTime: formData.time,
                 endTime: formData.time,
                 serviceType: 'Consultation',
-                designTitle: formData.designTitle,
+                designTitle: formData.designTitle, // This is the tattoo idea
                 notes: `DESIGN DETAILS\nIdea: ${formData.designTitle}\nPlacement: ${formData.placement}\nNotes: ${formData.notes || 'No additional notes'}\n\nCLIENT CONTEXT\nName: ${currentUser?.name || formData.name}\nEmail: ${currentUser?.email || formData.email}`,
                 referenceImage: formData.referenceImage,
                 status: 'pending',
@@ -178,7 +117,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
             });
 
             if (response.data.success) {
-                setStep(5); // Show success screen
+                setStep(4); // Show new consultation completed screen
             } else {
                 alert('Request Failed: ' + (response.data.message || 'An unknown error occurred.'));
             }
@@ -292,7 +231,40 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
             <h3 style={{fontSize: '1.5rem', fontWeight: '700', color: '#1e293b', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px'}}>
                 <MessageSquare className="text-bronze" size={24} /> 1. Share Your Vision
             </h3>
-            <p style={{color: '#64748b', marginBottom: '32px'}}>Tell us roughly what you're looking for so we can match you with the right artist.</p>
+            <p style={{color: '#64748b', marginBottom: '32px'}}>Tell us roughly what you're looking for so we can match you with the right artist. All fields are required.</p>
+
+            {/* Customer Contact Information (if not logged in) */}
+            {!user && (
+                <div style={{ marginBottom: '32px', padding: '20px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                    <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#1e293b', marginBottom: '15px' }}>Your Contact Information</h4>
+                    <div className="form-group" style={{ marginBottom: '15px' }}>
+                        <label style={{ fontWeight: '600', color: '#1e293b', marginBottom: '8px', display: 'block' }}>Your Full Name *</label>
+                        <input
+                            type="text"
+                            className="form-input"
+                            placeholder="John Doe"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            required
+                        />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: '15px' }}>
+                        <label style={{ fontWeight: '600', color: '#1e293b', marginBottom: '8px', display: 'block' }}>Your Email *</label>
+                        <input
+                            type="email"
+                            className="form-input"
+                            placeholder="john.doe@example.com"
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            required
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label style={{ fontWeight: '600', color: '#1e293b', marginBottom: '8px', display: 'block' }}>Your Phone Number *</label>
+                        <input type="tel" className="form-input" placeholder="+639171234567" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} required />
+                    </div>
+                </div>
+            )}
             
             <div className="form-group" style={{marginBottom: '24px'}}>
                 <label style={{fontWeight: '600', color: '#1e293b', marginBottom: '8px', display: 'block'}}>Tattoo Idea / Style *</label>
@@ -366,106 +338,6 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
         </div>
     );
 
-    const renderStepAccount = () => {
-        const currentUser = JSON.parse(localStorage.getItem('user'));
-
-        if (currentUser) {
-            return (
-                <div className="fade-in" style={{ textAlign: 'center', padding: '40px 0' }}>
-                    <div style={{ width: '80px', height: '80px', backgroundColor: '#f0fdf4', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-                        <User size={40} color="#16a34a" />
-                    </div>
-                    <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b', marginBottom: '8px' }}>Profile Verified</h3>
-                    <p style={{ color: '#64748b', marginBottom: '24px' }}>You are logged in as <strong>{currentUser.name}</strong>.</p>
-                    <p style={{ fontSize: '0.9rem', color: '#94a3b8' }}>Proceed to the next step to select your consultation date.</p>
-                </div>
-            );
-        }
-
-        return (
-            <div className="fade-in">
-                <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Lock className="text-bronze" size={24} /> 4. Account Information
-                </h3>
-                <p style={{ color: '#64748b', marginBottom: '32px' }}>
-                    {authView === 'register' ? 'Create an account to track your requests and communicate with artists.' : 'Welcome back! Log in to continue with your booking.'}
-                </p>
-
-                {authError && <div style={{ color: '#ef4444', marginBottom: '20px', fontSize: '0.9rem', fontWeight: '600', padding: '12px', background: '#fef2f2', borderRadius: '8px' }}>{authError}</div>}
-
-                <form onSubmit={handleAuthAction} style={{ maxWidth: '400px', margin: '0 auto' }}>
-                    {authView === 'register' && (
-                        <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
-                            <input 
-                                type="text" className="form-input" placeholder="First Name" required
-                                value={authData.firstName} onChange={e => setAuthData({...authData, firstName: e.target.value.replace(/^\s+/, '')})}
-                            />
-                            <input 
-                                type="text" className="form-input" placeholder="Last Name" required
-                                value={authData.lastName} onChange={e => setAuthData({...authData, lastName: e.target.value.replace(/^\s+/, '')})}
-                            />
-                        </div>
-                    )}
-                    <div style={{ marginBottom: '12px' }}>
-                        <input 
-                            type="email" className="form-input" placeholder="Email Address" required
-                            value={authData.email} onChange={e => setAuthData({...authData, email: e.target.value.trim()})}
-                        />
-                    </div>
-                    {authView === 'register' && (
-                        <div style={{ marginBottom: '12px', display: 'flex', gap: '8px' }}>
-                            <select 
-                                className="form-input" 
-                                style={{ width: '100px' }}
-                                value={authData.countryCode}
-                                onChange={e => setAuthData({...authData, countryCode: e.target.value})}
-                            >
-                                <option value="+63">+63 (PH)</option>
-                                <option value="+1">+1 (US)</option>
-                                <option value="+44">+44 (UK)</option>
-                                <option value="+65">+65 (SG)</option>
-                                <option value="+61">+61 (AU)</option>
-                            </select>
-                            <input 
-                                type="tel" className="form-input" style={{ flex: 1 }} placeholder="Phone Number" required
-                                value={authData.phone} onChange={e => setAuthData({...authData, phone: e.target.value.replace(/[^\d]/g, '')})}
-                            />
-                        </div>
-                    )}
-                    <div style={{ marginBottom: authView === 'register' ? '12px' : '24px' }}>
-                        <input 
-                            type="password" className="form-input" placeholder="Password" required
-                            value={authData.password} onChange={e => setAuthData({...authData, password: e.target.value})}
-                        />
-                    </div>
-                    {authView === 'register' && (
-                        <div style={{ marginBottom: '24px' }}>
-                            <input 
-                                type="password" className="form-input" placeholder="Confirm Password" required
-                                value={authData.confirmPassword} onChange={e => setAuthData({...authData, confirmPassword: e.target.value})}
-                            />
-                        </div>
-                    )}
-                    
-                    <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '14px', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }} disabled={loading}>
-                        {loading ? 'Processing...' : (authView === 'login' ? <><LogIn size={18}/> Log In</> : <><UserPlus size={18}/> Create Account</>)}
-                    </button>
-
-                    <p style={{ marginTop: '24px', textAlign: 'center', fontSize: '0.9rem', color: '#64748b' }}>
-                        {authView === 'login' ? "Don't have an account?" : "Already have an account?"}
-                        <button 
-                            type="button"
-                            onClick={() => { setAuthView(authView === 'login' ? 'register' : 'login'); setAuthError(''); }}
-                            style={{ background: 'none', border: 'none', color: '#C19A6B', fontWeight: '700', cursor: 'pointer', marginLeft: '5px' }}
-                        >
-                            {authView === 'login' ? 'Register Now' : 'Log In Instead'}
-                        </button>
-                    </p>
-                </form>
-            </div>
-        );
-    };
-
     const renderStepScheduling = () => (
         <div className="fade-in">
             <h3 style={{fontSize: '1.5rem', fontWeight: '700', color: '#1e293b', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px'}}>
@@ -503,21 +375,66 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
         </div>
     );
 
-    const renderSuccess = () => (
-        <div style={{textAlign: 'center', padding: '60px 40px'}}>
-            <div style={{width: '100px', height: '100px', backgroundColor: '#f0fdf4', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 32px'}}>
+    const renderConsultationCompletedPage = () => (
+        <div className="fade-in" style={{
+            textAlign: 'center',
+            padding: '60px 40px',
+            backgroundColor: 'white',
+            borderRadius: '24px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+        }}>
+            <div style={{
+                width: '100px', height: '100px', backgroundColor: '#f0fdf4', borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 32px'
+            }}>
                 <CheckCircle size={54} color="#16a34a" />
             </div>
-            <h2 style={{fontSize: '2rem', fontWeight: '800', color: '#1e293b', marginBottom: '16px'}}>Consultation Request Sent</h2>
-            <p style={{color: '#64748b', maxWidth: '500px', margin: '0 auto 40px', fontSize: '1.1rem', lineHeight: '1.6'}}>
-                Thank you. We've received your request for a {formData.designTitle} consultation. 
-                Please check your email for confirmation and next steps!
+            <h2 style={{ fontSize: '2rem', fontWeight: '800', color: '#1e293b', marginBottom: '16px' }}>
+                Consultation Request Completed!
+            </h2>
+            <p style={{ color: '#64748b', maxWidth: '600px', margin: '0 auto 20px', fontSize: '1.1rem', lineHeight: '1.6' }}>
+                Thank you for your interest in a {formData.designTitle} consultation. We've received your request and will contact you within the next 24 hours to discuss your vision and schedule your session. Please check your email for a confirmation.
             </p>
-            <button onClick={() => navigate('/')} className="btn btn-primary" style={{padding: '12px 32px', fontSize: '1rem'}}>Return Home</button>
+
+            <div style={{
+                marginTop: '40px', paddingTop: '30px', borderTop: '1px solid #f1f5f9',
+                maxWidth: '600px', margin: '40px auto 0 auto', textAlign: 'left'
+            }}>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: '700', color: '#1e293b', marginBottom: '15px' }}>
+                    Track Your Request & More with an InkVistAR Account!
+                </h3>
+                <p style={{ color: '#64748b', marginBottom: '20px' }}>
+                    Creating an account allows you to:
+                </p>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#475569', fontSize: '1rem', lineHeight: '1.8' }}>
+                    <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}><CheckCircle size={18} color="#10b981" /> Track the status of your consultation request.</li>
+                    <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}><CheckCircle size={18} color="#10b981" /> View your past and upcoming appointments.</li>
+                    <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}><CheckCircle size={18} color="#10b981" /> Communicate directly with your artist.</li>
+                    <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}><CheckCircle size={18} color="#10b981" /> Manage your profile and preferences.</li>
+                    <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}><CheckCircle size={18} color="#10b981" /> Access exclusive offers and updates.</li>
+                </ul>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '50px' }}>
+                <button
+                    onClick={() => navigate('/register', { state: { prefill: { name: formData.name, email: formData.email, phone: formData.phone } } })}
+                    className="btn btn-primary"
+                    style={{ padding: '12px 32px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                    <UserPlus size={20} /> Create an Account
+                </button>
+                <button
+                    onClick={() => navigate('/')}
+                    className="btn btn-secondary"
+                    style={{ padding: '12px 32px', fontSize: '1rem' }}
+                >
+                    No thanks, return home
+                </button>
+            </div>
         </div>
     );
 
-    if (step === 5) return renderSuccess();
+    if (step === 4) return renderConsultationCompletedPage();
 
     return (
         <div className="data-card" style={{border: 'none', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', borderRadius: '24px', position: 'relative'}}>
@@ -527,8 +444,8 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                     <h2 style={{margin: 0, fontSize: '1.4rem', fontWeight: '800', color: '#1e293b'}}>Request Consultation</h2>
                     <span style={{backgroundColor: '#fef3c7', color: '#92400e', fontSize: '0.75rem', fontWeight: '700', padding: '4px 10px', borderRadius: '20px', textTransform: 'uppercase'}}>Studio-Lead Flow</span>
                 </div>
-                <div style={{display: 'flex', gap: '12px'}}>
-                    {[1, 2, 3, 4].map(s => (
+                <div style={{display: 'flex', gap: '12px'}}> {/* Progress bar for 3 steps */}
+                    {[1, 2, 3].map(s => (
                         <div key={s} style={{
                             width: '30px', height: '4px', borderRadius: '2px', 
                             backgroundColor: step >= s ? '#C19A6B' : '#e2e8f0',
@@ -540,11 +457,10 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
 
             <div style={{minHeight: '400px'}}>
                 {step === 1 && renderStep1()}
-                {step === 2 && renderStepPlacement()}
-                {step === 3 && renderStepScheduling()}
-                {step === 4 && renderStepAccount()}
+                {step === 2 && renderStepPlacement()} {/* Step 2: Placement */}
+                {step === 3 && renderStepScheduling()} {/* Step 3: Scheduling */}
             </div>
-
+            
             <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '48px', paddingTop: '32px', borderTop: '1px solid #f1f5f9'}}>
                 <button 
                     onClick={() => setStep(Math.max(1, step - 1))} 
@@ -555,12 +471,12 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                     <ChevronLeft size={20} /> Previous
                 </button>
                 
-                {step < 4 ? (
+                {step < 3 ? ( // Changed from step < 4 to step < 3
                     <button 
                         onClick={() => { 
                             if (step === 1 && !formData.designTitle) return alert('Please tell us about your tattoo idea'); 
                             if (step === 2 && !formData.placement) return alert('Please select a placement area');
-                            if (step === 3 && !formData.date) return alert('Please select a preferred date');
+                            if (step === 3 && (!formData.date || !formData.time)) return alert('Please select a preferred date and time');
                             
                             setStep(step + 1);
                         }} 
