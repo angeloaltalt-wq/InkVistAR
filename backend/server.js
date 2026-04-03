@@ -4113,22 +4113,22 @@ app.get('/api/invoices/:orderId', (req, res) => {
 // Helper: Simple Rule-based Chatbot (Fallback)
 function getFallbackResponse(message) {
   const msg = message.toLowerCase();
-  if (msg.includes('price') || msg.includes('cost') || msg.includes('rate')) {
+  if (msg.includes('price') || msg.includes('cost') || msg.includes('rate') || msg.includes('charge') || msg.includes('fee') || msg.includes('how much') || msg.includes('quote') || msg.includes('estimate') || msg.includes('pricing') || msg.includes('cost') || msg.includes('price range') || msg.includes('how much') || msg.includes('charge')) {
     return "Our tattoo's can usually charge between as low as Php 5,000.00 for minimalist tattoo designs up to Php 400,000.00 for a detailed full back tattoos. It varies by design, size, and complexity.";
   }
   if (msg.includes('book') || msg.includes('appointment') || msg.includes('schedule') || msg.includes('consultation') || msg.includes('session')) {
     return "You can book an appointment by going to the 'Book Consultation' tab on our landing page and go from there or you can log in to your account and book from there as well!";
   }
-  if (msg.includes('location') || msg.includes('where') || msg.includes('address')) {
-    return "We are located at the Ground Floor, W Tower, 32nd Street, corner 9th Ave, Taguig, 1634 Metro Manila, Philippines";
+  if (msg.includes('location') || msg.includes('where') || msg.includes('address') || msg.includes('located') || msg.includes('find you') || msg.includes('how to get there') || msg.includes('directions') || msg.includes('nearby') || msg.includes('close to') || msg.includes('proximity')) {
+    return "We are located at the Ground Floor, W Tower, 32nd Street, corner 9th Ave, Taguig, 1634 Metro Manila, Philippines. Located near the 1000th Jollibee branch.";
   }
-  if (msg.includes('style') || msg.includes('design') ) {
+  if (msg.includes('style') || msg.includes('design') || msg.includes('tattoo ideas') || msg.includes('portfolio') || msg.includes('examples') || msg.includes('artwork') || msg.includes('gallery') || msg.includes('inspiration') || msg.includes('tattoo styles') || msg.includes('tattoo designs') || msg.includes('tattoo examples') || msg.includes('tattoo portfolio') || msg.includes('tattoo gallery') || msg.includes('tattoo inspiration')) {
     return "We specialize in any tattoo design you desire. From traditional to modern, we can bring your vision to life. Check out our 'Portfolio' on our landing page to see examples of our work!";
   }
   if (msg.includes('hello') || msg.includes('hi') || msg.includes('hey') || msg.includes('help') || msg.includes('question') || msg.includes('info') || msg.includes('assist') || msg.includes('support') || msg.includes('inquire') || msg.includes('ask') || msg.includes('greet') || msg.includes('sup') || msg.includes('yo') || msg.includes('what\'s up') || msg.includes('how are you')) {
     return "Hi there! I'm InkVistAR's assistant. How can I help you today?";
   }
-  if (msg.includes('care') || msg.includes('heal') || msg.includes('clean') || msg.includes('after')) {
+  if (msg.includes('care') || msg.includes('heal') || msg.includes('clean') || msg.includes('after') || msg.includes('peeling') || msg.includes('moisturize') || msg.includes('ointment') || msg.includes('wash') || msg.includes('dry') || msg.includes('aftercare') || msg.includes('after care') || msg.includes('tattoo care') || msg.includes('tattoo healing') || msg.includes('tattoo cleaning') || msg.includes('tattoo moisturizing')) {
     return "Keep your fresh ink clean, moisturized, and healing perfectly by following these daily steps:\n\n1. Unwrap: Remove the plastic wrap exactly 3 hours after your session.\n2. Wash Gently: Clean the area using warm water and a mild liquid soap, like Dove or Cetaphil.\n3. Pat Dry: Use only a clean paper towel or tissue to avoid bacteria or fuzz from bath towels.\n4. Apply Ointment: Wash your hands, then apply a very thin layer of tattoo aftercare ointment.\n5. Repeat Daily: Do this routine 2 to 3 times a day for 7 to 10 days until the peeling stops.\n6. Switch to Lotion: Once completely peeled, switch to a daily moisturizer to keep it vibrant.";
   }
   return "I am currently unavailable due to token response limitations. Please try again later.";
