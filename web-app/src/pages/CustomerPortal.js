@@ -103,9 +103,9 @@ function CustomerPortal() {
                     </div>
                 </header>
 
-                <p className="header-subtitle" style={{ marginTop: '-2rem', marginBottom: '2.5rem', textAlign: 'left' }}>Welcome back, {customer.name || 'Inker'}!</p>
+                <p className="header-subtitle" style={{ marginTop: '-4rem', marginBottom: '2.5rem', marginRight: '-6rem', textAlign: 'left' }}>Welcome back, {customer.name || 'Inker'}!</p>
 
-                <div className="portal-content">
+                <div className="portal-content">  
                     {loading ? (
                         <div className="dashboard-loader-container">
                             <div className="premium-loader"></div>
