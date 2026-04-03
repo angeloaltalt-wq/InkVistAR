@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
-import { CheckCircle, ChevronLeft, ChevronRight, Calendar, User, MessageSquare, Info, Image as ImageIcon, Upload, MapPin, Lock, UserPlus, LogIn } from 'lucide-react';
+import { CheckCircle, ChevronLeft, ChevronRight, Calendar, User, MessageSquare, Info, Image as ImageIcon, Upload, MapPin, UserPlus, Clock, CalendarCheck, UserCog, Gift } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { API_URL } from '../config';
 
@@ -404,33 +404,90 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                 Consultation Request Completed!
             </h2>
             <p style={{ color: '#64748b', maxWidth: '600px', margin: '0 auto 20px', fontSize: '1.1rem', lineHeight: '1.6' }}>
-                Thank you for your interest in a {formData.designTitle} consultation. We've received your request and will contact you within the next 24 hours to discuss your vision and schedule your session. Please check your email for a confirmation.
+                Thank you for your interest in a {formData.designTitle} consultation. We've received your request and will contact you within the next 24 hours to discuss your vision and schedule your session. Please check your email for a confirmation. We look forward to bringing your vision to life!
             </p>
 
             <div style={{
-                marginTop: '40px', paddingTop: '30px', borderTop: '1px solid #f1f5f9',
-                maxWidth: '600px', margin: '40px auto 0 auto', textAlign: 'left'
+                marginTop: '50px',
+                paddingTop: '30px',
+                borderTop: '1px solid #f1f5f9',
+                maxWidth: '800px', // Increased max-width for the new layout
+                margin: '40px auto 0 auto',
+                textAlign: 'center'
             }}>
                 <h3 style={{ fontSize: '1.4rem', fontWeight: '700', color: '#1e293b', marginBottom: '15px' }}>
                     Track Your Request & More with an InkVistAR Account!
                 </h3>
                 <p style={{ color: '#64748b', marginBottom: '20px' }}>
-                    Creating an account allows you to:
+                    Create an account to unlock these powerful features and enhance your InkVistAR experience:
                 </p>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#475569', fontSize: '1rem', lineHeight: '1.8' }}>
-                    <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}><CheckCircle size={18} color="#10b981" /> Track the status of your consultation request.</li>
-                    <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}><CheckCircle size={18} color="#10b981" /> View your past and upcoming appointments.</li>
-                    <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}><CheckCircle size={18} color="#10b981" /> Communicate directly with your artist.</li>
-                    <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}><CheckCircle size={18} color="#10b981" /> Manage your profile and preferences.</li>
-                    <li style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}><CheckCircle size={18} color="#10b981" /> Access exclusive offers and updates.</li>
-                </ul>
+
+                {/* Feature Cards Section */}
+                <div style={{
+                    display: 'flex',
+                    overflowX: 'auto', // Enable horizontal scrolling
+                    gap: '20px',
+                    padding: '20px 0',
+                    marginBottom: '30px',
+                    scrollSnapType: 'x mandatory', // Optional: for snapping to cards
+                    WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
+                    scrollbarWidth: 'none', // Hide scrollbar for Firefox
+                    msOverflowStyle: 'none', // Hide scrollbar for IE/Edge
+                    '&::-webkit-scrollbar': { display: 'none' } // Hide scrollbar for Chrome/Safari
+                }}>
+                    {/* Feature Card 1: Track Status */}
+                    <div style={{
+                        flex: '0 0 250px', // Fixed width for each card
+                        backgroundColor: '#fdf2e9', // Light bronze background
+                        borderRadius: '16px',
+                        padding: '25px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                        textAlign: 'left',
+                        scrollSnapAlign: 'start',
+                        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                        cursor: 'pointer',
+                        '&:hover': { transform: 'translateY(-5px)', boxShadow: '0 6px 16px rgba(0,0,0,0.1)' }
+                    }}>
+                        <Clock size={36} color="#C19A6B" style={{ marginBottom: '15px' }} />
+                        <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#1e293b', marginBottom: '8px' }}>Track Status</h4>
+                        <p style={{ fontSize: '0.9rem', color: '#64748b' }}>Monitor your consultation request and appointment progress in real-time.</p>
+                    </div>
+
+                    {/* Feature Card 2: View Appointments */}
+                    <div style={{ ...featureCardStyle }}>
+                        <CalendarCheck size={36} color="#C19A6B" style={{ marginBottom: '15px' }} />
+                        <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#1e293b', marginBottom: '8px' }}>Manage Appointments</h4>
+                        <p style={{ fontSize: '0.9rem', color: '#64748b' }}>Easily view, reschedule, or cancel your past and upcoming sessions.</p>
+                    </div>
+
+                    {/* Feature Card 3: Communicate Directly */}
+                    <div style={{ ...featureCardStyle }}>
+                        <MessageSquare size={36} color="#C19A6B" style={{ marginBottom: '15px' }} />
+                        <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#1e293b', marginBottom: '8px' }}>Direct Communication</h4>
+                        <p style={{ fontSize: '0.9rem', color: '#64748b' }}>Chat securely with your artist and the studio for any questions or updates.</p>
+                    </div>
+
+                    {/* Feature Card 4: Profile & Preferences */}
+                    <div style={{ ...featureCardStyle }}>
+                        <UserCog size={36} color="#C19A6B" style={{ marginBottom: '15px' }} />
+                        <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#1e293b', marginBottom: '8px' }}>Personalized Profile</h4>
+                        <p style={{ fontSize: '0.9rem', color: '#64748b' }}>Manage your personal details, preferences, and tattoo history in one place.</p>
+                    </div>
+
+                    {/* Feature Card 5: Exclusive Offers */}
+                    <div style={{ ...featureCardStyle }}>
+                        <Gift size={36} color="#C19A6B" style={{ marginBottom: '15px' }} />
+                        <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#1e293b', marginBottom: '8px' }}>Exclusive Benefits</h4>
+                        <p style={{ fontSize: '0.9rem', color: '#64748b' }}>Receive special offers, loyalty rewards, and early access to new designs.</p>
+                    </div>
+                </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '50px' }}>
                 <button
                     onClick={() => navigate('/register', { state: { prefill: { name: formData.name, email: formData.email, phone: formData.phone } } })}
                     className="btn btn-primary"
-                    style={{ padding: '12px 32px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    style={{ padding: '14px 36px', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#C19A6B', borderColor: '#C19A6B', color: 'white', fontWeight: '700', boxShadow: '0 4px 12px rgba(193, 154, 107, 0.4)' }}
                 >
                     <UserPlus size={20} /> Create an Account
                 </button>
@@ -444,6 +501,20 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
             </div>
         </div>
     );
+
+    // Define a common style for feature cards to reuse
+    const featureCardStyle = {
+        flex: '0 0 250px', // Fixed width for each card
+        backgroundColor: '#fdf2e9', // Light bronze background
+        borderRadius: '16px',
+        padding: '25px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+        textAlign: 'left',
+        scrollSnapAlign: 'start',
+        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+        cursor: 'pointer',
+        '&:hover': { transform: 'translateY(-5px)', boxShadow: '0 6px 16px rgba(0,0,0,0.1)' }
+    };
 
     if (step === 5) return renderConsultationCompletedPage();
 
