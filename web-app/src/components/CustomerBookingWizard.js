@@ -454,11 +454,11 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                         className="exit-confirm-btn"
                         style={{
                             padding: '14px', borderRadius: '12px', border: 'none',
-                            backgroundColor: '#374151', color: 'white', fontWeight: '700',
+                            backgroundColor: 'red', color: 'white', fontWeight: '700',
                             cursor: 'pointer', transition: 'all 0.3s ease'
                         }}
                     >
-                        No thanks.
+                        No thanks
                     </button>
                     <button 
                         onClick={() => setShowExitModal(false)}
@@ -468,7 +468,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                             cursor: 'pointer'
                         }}
                     >
-                        Wait, let me create one
+                        Create Account
                     </button>
                 </div>
             </div>
@@ -608,7 +608,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                     className="btn btn-secondary"
                     style={{ padding: '12px 32px', fontSize: '1rem' }}
                 >
-                    No thanks.
+                    No Thanks
                 </button>
             </div>
             {showExitModal && renderExitModal()}
