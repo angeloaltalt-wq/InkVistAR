@@ -83,9 +83,9 @@ function CustomerNotifications() {
     const getNotificationStyle = (type) => {
         switch (type) {
             case 'appointment_confirmed': 
-                return { icon: CalendarCheck, color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)', label: 'Confirmed' };
+                return { icon: CalendarCheck, color: 'black', bg: 'rgba(16, 185, 129, 0.1)', label: 'Confirmed' };
             case 'appointment_cancelled': 
-                return { icon: XCircle, color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)', label: 'Cancelled' };
+                return { icon: XCircle, color: 'black', bg: 'rgba(239, 68, 68, 0.1)', label: 'Cancelled' };
             case 'appointment_completed':
                 return { icon: CheckCircle, color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)', label: 'Completed' };
             case 'payment_received':
@@ -132,11 +132,11 @@ function CustomerNotifications() {
 
                 <div className="portal-stats-row" style={{ display: 'flex', gap: '20px', marginBottom: '25px' }}>
                     <div className="glass-card" style={{ flex: 1, padding: '20px', textAlign: 'center' }}>
-                        <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', display: 'block', marginBottom: '5px' }}>Total Updates</span>
-                        <span style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{notifications.length}</span>
+                        <span style={{ fontSize: '0.85rem', color: '#64748b', display: 'block', marginBottom: '5px' }}>Total Updates</span>
+                        <span style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#1e293b' }}>{notifications.length}</span>
                     </div>
                     <div className="glass-card" style={{ flex: 1, padding: '20px', textAlign: 'center', borderLeft: unreadCount > 0 ? '4px solid #f59e0b' : 'none' }}>
-                        <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', display: 'block', marginBottom: '5px' }}>Unread Alerts</span>
+                        <span style={{ fontSize: '0.85rem', color: '#64748b', display: 'block', marginBottom: '5px' }}>Unread Alerts</span>
                         <span style={{ fontSize: '1.8rem', fontWeight: 'bold', color: unreadCount > 0 ? '#f59e0b' : 'inherit' }}>{unreadCount}</span>
                     </div>
                 </div>
@@ -181,12 +181,12 @@ function CustomerNotifications() {
                                                     </div>
                                                     
                                                     <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '20px', overflow: 'hidden' }}>
-                                                        <span className="subject-text" style={{ fontSize: '0.95rem', minWidth: '150px', color: n.is_read ? 'rgba(255,255,255,0.8)' : '#fff' }}>{n.title}</span>
-                                                        <p className="notif-body" style={{ margin: 0, fontSize: '0.9rem', color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.message}</p>
+                                                        <span className="subject-text" style={{ fontSize: '0.95rem', minWidth: '150px', color: n.is_read ? '#64748b' : '#1e293b' }}>{n.title}</span>
+                                                        <p className="notif-body" style={{ margin: 0, fontSize: '0.9rem', color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.message}</p>
                                                     </div>
 
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexShrink: 0 }}>
-                                                        <span className="notif-time" style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', minWidth: '80px', textAlign: 'right' }}>
+                                                        <span className="notif-time" style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '80px', textAlign: 'right' }}>
                                                             {new Date(n.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                                                         </span>
                                                         
@@ -252,7 +252,7 @@ const filterButtonStyle = (isActive) => ({
     borderRadius: '20px',
     border: '1px solid rgba(255,255,255,0.1)',
     background: isActive ? '#daa520' : 'rgba(255,255,255,0.05)',
-    color: isActive ? 'white' : 'rgba(255,255,255,0.7)',
+    color: isActive ? 'white' : '#64748b',
     cursor: 'pointer',
     fontSize: '0.9rem',
     fontWeight: '600',
