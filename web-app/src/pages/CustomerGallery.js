@@ -132,7 +132,7 @@ function CustomerGallery(){
                     </div>
                 </header>
 
-                <p className="header-subtitle" style={{ marginTop: '-3.5rem', marginBottom: '2.5rem', marginRight: '-5.5rem', textAlign: 'left' }}>Explore verified artwork and save your favorites</p>
+                <p className="header-subtitle" style={{ marginTop: '-4rem', marginBottom: '2.5rem', marginRight: '-5.5rem', textAlign: 'left' }}>Explore verified artwork and save your favorites</p>
 
                 <div className="portal-content">
                     {/* View Tabs */}

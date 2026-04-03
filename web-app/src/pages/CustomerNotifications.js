@@ -129,7 +129,7 @@ function CustomerNotifications() {
                     </div>
                 </header>
 
-                <p className="header-subtitle" style={{ marginTop: '-3.5rem', marginBottom: '2.5rem', marginRight: '-5.5rem', textAlign: 'left' }}>Stay informed about your tattoo journey</p>
+                <p className="header-subtitle" style={{ marginTop: '-4rem', marginBottom: '2.5rem', marginRight: '-5.5rem', textAlign: 'left' }}>Stay informed about your tattoo journey</p>
 
                 <div className="portal-stats-row" style={{ display: 'flex', gap: '20px', marginBottom: '25px' }}>
                     <div className="glass-card" style={{ flex: 1, padding: '20px', textAlign: 'center' }}>
