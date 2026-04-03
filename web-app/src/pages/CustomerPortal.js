@@ -149,7 +149,7 @@ function CustomerPortal() {
                             <div className="data-card-v2">
                                 <div className="card-header-v2">
                                     <h2>Upcoming Sessions</h2>
-                                    <button className="action-btn" onClick={() => navigate('/customer/book')}>Book New Session</button>
+                                    <button className="action-btn" onClick={() => navigate('/customer/bookings')}>Book New Session</button>
                                 </div>
                                 <div className="modern-table-wrapper">
                                     {appointments.length > 0 ? (
