@@ -44,10 +44,10 @@ export const AdminDashboard = ({ onLogout, navigation }) => {
         <View style={styles.menuGrid}>
           <MenuButton title="Calendar" icon="calendar" color="#f59e0b" onPress={() => navigation.navigate('Bookings')} />
           <MenuButton title="Clients" icon="people" color="#3b82f6" onPress={() => navigation.navigate('Users')} />
-          <MenuButton title="Services" icon="list" color="#8b5cf6" onPress={() => navigation.navigate('admin-services')} />
+          <MenuButton title="POS & Billing" icon="cash" color="#8b5cf6" onPress={() => navigation.navigate('admin-pos')} />
+          <MenuButton title="Support Chat" icon="chatbubbles" color="#0ea5e9" onPress={() => navigation.navigate('admin-chat')} />
           <MenuButton title="Staff" icon="time" color="#10b981" onPress={() => navigation.navigate('admin-staff')} />
           <MenuButton title="Inventory" icon="cube" color="#ec4899" onPress={() => navigation.navigate('admin-inventory')} />
-          <MenuButton title="Tasks" icon="checkbox" color="#6366f1" onPress={() => navigation.navigate('admin-tasks')} />
           <MenuButton title="Notifications" icon="notifications" color="#f43f5e" onPress={() => navigation.navigate('admin-notifications')} />
           <MenuButton title="Analytics" icon="bar-chart" color="#0ea5e9" onPress={() => navigation.navigate('admin-analytics')} />
           <MenuButton title="Settings" icon="settings" color="#64748b" onPress={() => navigation.navigate('admin-settings')} />

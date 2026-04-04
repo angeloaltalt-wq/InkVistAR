@@ -48,6 +48,8 @@ import { AdminTasks } from './screens/AdminTasks.jsx';
 import { AdminNotifications } from './screens/AdminNotifications.jsx';
 import { AdminAnalytics } from './screens/AdminAnalytics.jsx';
 import { AdminSettings } from './screens/AdminSettings.jsx';
+import { AdminChat } from './screens/AdminChat.jsx';
+import { AdminPOS } from './screens/AdminPOS.jsx';
 
 // Import SIMPLE components (no dependency conflicts)
 import { SimpleARPreview } from './components/Mobile/SimpleARPreview';
@@ -554,6 +556,8 @@ export default function App() {
               <Stack.Screen name="admin-notifications" component={AdminNotifications} />
               <Stack.Screen name="admin-analytics" component={AdminAnalytics} />
               <Stack.Screen name="admin-settings" component={AdminSettings} />
+              <Stack.Screen name="admin-chat" component={AdminChat} />
+              <Stack.Screen name="admin-pos" component={AdminPOS} />
               </>
             
             ) : user.type === 'artist' ? (

@@ -520,3 +520,58 @@ export const isAuthenticated = async () => {
   const token = await getAuthToken();
   return !!token;
 };
+
+// Admin: Inventory
+export const getAdminInventory = async () => {
+  return fetchAPI('/admin/inventory');
+};
+
+export const createAdminInventory = async (data) => {
+  return fetchAPI('/admin/inventory', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+export const updateAdminInventory = async (id, data) => {
+  return fetchAPI(`/admin/inventory/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+};
+
+export const deleteAdminInventory = async (id) => {
+  return fetchAPI(`/admin/inventory/${id}`, {
+    method: 'DELETE',
+  });
+};
+
+// Admin: Staff Scheduling & Roles
+export const getAdminStaff = async () => {
+  return fetchAPI('/admin/users/roles/artist');
+};
+
+// Admin: Analytics
+export const getAdminAnalytics = async () => {
+  return fetchAPI('/admin/analytics');
+};
+
+// Admin: Point of Sale (POS) & Billing
+export const createAdminManualPayment = async (appointmentId, data) => {
+  return fetchAPI(`/admin/appointments/${appointmentId}/manual-payment`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+// Admin: Settings
+export const getAdminSettings = async () => {
+  return fetchAPI('/admin/settings');
+};
+
+export const updateAdminSettings = async (data) => {
+  return fetchAPI('/admin/settings', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};

@@ -2140,12 +2140,12 @@ app.post('/api/customer/appointments', (req, res) => {
     const notifDate = date || 'an upcoming date';
     createNotification(currentArtistId, 'New Booking Request', `New request from client for ${notifDate}. Please assign an artist.`, 'appointment_request', result.insertId);
 
-    res.json({
-      // NEW: Notify Customer
-      const appointmentDate = new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-      const appointmentTime = finalStartTime ? new Date(`2000-01-01T${finalStartTime}`).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'a time to be determined';
-      createNotification(customerId, 'Booking Request Received', `Your request for a ${designTitle || serviceType} session on ${appointmentDate} at ${appointmentTime} has been received. We will review it shortly!`, 'appointment_request', result.insertId);
+    // NEW: Notify Customer
+    const appointmentDate = new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const appointmentTime = finalStartTime ? new Date(`2000-01-01T${finalStartTime}`).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'a time to be determined';
+    createNotification(customerId, 'Booking Request Received', `Your request for a ${designTitle || serviceType} session on ${appointmentDate} at ${appointmentTime} has been received. We will review it shortly!`, 'appointment_request', result.insertId);
 
+    res.json({
       success: true,
       message: 'Appointment booked successfully',
       appointmentId: result.insertId
@@ -4347,8 +4347,18 @@ io.on('connection', (socket) => {
         timestamp: new Date(),
         messages: []
       };
+      
       // Broadcast new session to all admins listening to 'admin_room'
       io.to('admin_room').emit('support_sessions_update', Object.values(activeSupportSessions));
+
+      // Push Notification to all Admins
+      db.query('SELECT id FROM users WHERE user_type IN ("admin", "manager")', (err, admins) => {
+        if (!err && admins.length > 0) {
+          admins.forEach(admin => {
+            createNotification(admin.id, 'New Support Live Chat', `${name || 'A customer'} started a new support session.`, 'support_session', null);
+          });
+        }
+      });
     }
   });
 
@@ -4375,6 +4385,35 @@ io.on('connection', (socket) => {
 
       // Broadcast the fresh stats to all admins
       io.to('admin_room').emit('support_sessions_update', Object.values(activeSupportSessions));
+
+      // Push Notification Logic for Chat
+      // Case A: Support (Admin/Artist) replies to Customer in customer_{id} room
+      const customerRoomMatch = data.room.match(/^customer_(\d+)$/);
+      const isFromSupport = data.sender.toLowerCase().includes('admin') || 
+                           data.sender.toLowerCase().includes('artist') || 
+                           data.sender.toLowerCase().includes('agent') || 
+                           data.sender.toLowerCase().includes('staff');
+
+      if (customerRoomMatch && isFromSupport) {
+        const customerId = customerRoomMatch[1];
+        createNotification(
+          customerId, 
+          'New Support Message', 
+          `Support: ${data.text.substring(0, 50)}${data.text.length > 50 ? '...' : ''}`, 
+          'chat_message', 
+          null
+        );
+      } 
+      // Case B: Customer sends message to Support - notify admins
+      else if (customerRoomMatch && !isFromSupport) {
+         db.query('SELECT id FROM users WHERE user_type IN ("admin", "manager")', (err, admins) => {
+          if (!err && admins.length > 0) {
+            admins.forEach(admin => {
+              createNotification(admin.id, 'New Message from Client', `${data.sender}: ${data.text.substring(0, 50)}`, 'chat_message', null);
+            });
+          }
+        });
+      }
     }
 
     // Broadcast the message to the other user in the room
