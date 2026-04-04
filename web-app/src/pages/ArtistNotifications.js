@@ -121,7 +121,7 @@ function ArtistNotifications() {
                     </div>
                 </header>
 
-                <p className="header-subtitle" style={{ marginTop: '-3.5rem', marginBottom: '2.5rem', marginRight: '-5.5rem', textAlign: 'left' }}>Stay updated with your latest sessions and requests</p>
+                <p className="header-subtitle" style={{ marginTop: '-3rem', marginBottom: '2.5rem', marginRight: '-5.5rem', textAlign: 'left' }}>Stay updated with your latest sessions and requests</p>
 
                 <div className="portal-stats-row" style={{ display: 'flex', gap: '20px', marginBottom: '25px' }}>
                     <div className="glass-card" style={{ flex: 1, padding: '20px', textAlign: 'center' }}>
