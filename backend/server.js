@@ -2645,14 +2645,17 @@ app.put('/api/appointments/:id/status', (req, res) => {
       if (updateErr) return res.status(500).json({ success: false, message: 'Database error' });
 
       // Send Notifications
+      const dateStr = appointment.appointment_date ? new Date(appointment.appointment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'your scheduled date';
+      const designTitle = appointment.design_title || 'your tattoo session';
+
       if (status === 'confirmed') {
-        createNotification(appointment.customer_id, 'Appointment Confirmed', 'Your appointment has been confirmed!', 'appointment_confirmed', id);
-        createNotification(appointment.artist_id, 'Appointment Confirmed', 'You have confirmed the appointment.', 'appointment_confirmed', id);
+        createNotification(appointment.customer_id, 'Session Confirmed! ✅', `Great news! Your appointment on ${dateStr} for "${designTitle}" is now officially confirmed. We look forward to seeing you!`, 'appointment_confirmed', id);
+        createNotification(appointment.artist_id, 'Appointment Confirmed', `Appointment #${id} for ${designTitle} is now confirmed.`, 'appointment_confirmed', id);
       } else if (status === 'cancelled') {
-        createNotification(appointment.customer_id, 'Appointment Cancelled', 'Your appointment has been cancelled.', 'appointment_cancelled', id);
-        createNotification(appointment.artist_id, 'Appointment Cancelled', 'An appointment has been cancelled.', 'appointment_cancelled', id);
+        createNotification(appointment.customer_id, 'Appointment Cancelled ❌', `Notice: Your appointment scheduled for ${dateStr} has been cancelled. Please contact the studio if you have any questions.`, 'appointment_cancelled', id);
+        createNotification(appointment.artist_id, 'Appointment Cancelled', `Appointment #${id} has been cancelled.`, 'appointment_cancelled', id);
       } else if (status === 'completed') {
-        createNotification(appointment.customer_id, 'Appointment Completed', 'Thanks for visiting! Please leave a review.', 'appointment_completed', id);
+        createNotification(appointment.customer_id, 'Tattoo Journey Complete! ✨', `Your session for "${designTitle}" is finished! We hope you love your new ink. Don't forget to follow your aftercare instructions!`, 'appointment_completed', id);
 
         // 🚀 SYNC: Automatically create a manual invoice for Admin Billing
         db.query('SELECT name FROM users WHERE id = ?', [appointment.customer_id], (uErr, uRes) => {

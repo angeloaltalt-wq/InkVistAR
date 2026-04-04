@@ -83,11 +83,11 @@ function CustomerNotifications() {
     const getNotificationStyle = (type) => {
         switch (type) {
             case 'appointment_confirmed': 
-                return { icon: CalendarCheck, color: 'black', bg: 'rgba(16, 185, 129, 0.1)', label: 'Confirmed' };
+                return { icon: CalendarCheck, color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)', label: 'Confirmed' };
             case 'appointment_cancelled': 
-                return { icon: XCircle, color: 'black', bg: 'rgba(239, 68, 68, 0.1)', label: 'Cancelled' };
+                return { icon: XCircle, color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)', label: 'Cancelled' };
             case 'appointment_completed':
-                return { icon: CheckCircle, color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)', label: 'Completed' };
+                return { icon: CheckCircle, color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)', label: 'Completed' };
             case 'payment_received':
                 return { icon: Check, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)', label: 'Payment' };
             case 'system':

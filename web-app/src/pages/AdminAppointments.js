@@ -194,9 +194,12 @@ function AdminAppointments() {
         setConfirmDialog({ isOpen: true, title, message, type, isAlert: true, onConfirm: () => setConfirmDialog(prev => ({...prev, isOpen: false})) });
     };
 
-    const handleStatusUpdate = async (id, status) => {
+    const handleStatusUpdate = async (id, status, clientName = 'this client') => {
+        const actionVerb = status === 'confirmed' ? 'confirm' : status === 'completed' ? 'complete' : 'cancel';
+        
         showConfirm(
-            `Are you sure you want to mark this appointment as "${status}"?`,
+            `Confirm ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+            `Are you sure you want to ${actionVerb} this appointment for ${clientName}? A notification will be sent to them.`,
             async () => {
                 try {
                     await Axios.put(`${API_URL}/api/appointments/${id}/status`, { status });
@@ -688,10 +691,10 @@ function AdminAppointments() {
                                                         {/* Consultation-specific pending: Approve + Reject */}
                                                         {appointment.serviceType?.toLowerCase() === 'consultation' && appointment.status === 'pending' && (
                                                             <>
-                                                                <button className="action-btn view-btn" style={{ backgroundColor: '#10b981', marginRight: '5px' }} onClick={() => handleStatusUpdate(appointment.id, 'confirmed')} title="Approve Consultation">
+                                                                <button className="action-btn view-btn" style={{ backgroundColor: '#10b981', marginRight: '5px' }} onClick={() => handleStatusUpdate(appointment.id, 'confirmed', appointment.clientName)} title="Approve Consultation">
                                                                     Approve
                                                                 </button>
-                                                                <button className="action-btn delete-btn" style={{ marginRight: '5px' }} onClick={() => handleStatusUpdate(appointment.id, 'cancelled')}>
+                                                                <button className="action-btn delete-btn" style={{ marginRight: '5px' }} onClick={() => handleStatusUpdate(appointment.id, 'cancelled', appointment.clientName)}>
                                                                     Reject
                                                                 </button>
                                                             </>
@@ -701,7 +704,7 @@ function AdminAppointments() {
                                                             <button
                                                                 className="action-btn view-btn"
                                                                 style={{ backgroundColor: '#8b5cf6', marginRight: '5px' }}
-                                                                onClick={() => handleStatusUpdate(appointment.id, 'completed')}
+                                                                onClick={() => handleStatusUpdate(appointment.id, 'completed', appointment.clientName)}
                                                                 title="Mark Consultation as Done"
                                                             >
                                                                 <Check size={14} /> Done
@@ -709,7 +712,7 @@ function AdminAppointments() {
                                                         )}
                                                         {/* Non-consultation pending: only Reject */}
                                                         {appointment.serviceType?.toLowerCase() !== 'consultation' && appointment.status === 'pending' && (
-                                                            <button className="action-btn delete-btn" style={{ marginRight: '5px' }} onClick={() => handleStatusUpdate(appointment.id, 'cancelled')}>
+                                                            <button className="action-btn delete-btn" style={{ marginRight: '5px' }} onClick={() => handleStatusUpdate(appointment.id, 'cancelled', appointment.clientName)}>
                                                                 Reject
                                                             </button>
                                                         )}
