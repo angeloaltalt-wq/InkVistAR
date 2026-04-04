@@ -2446,7 +2446,7 @@ app.put('/api/admin/appointments/:id', (req, res) => {
     // Notify users of the update
     db.query('SELECT customer_id, artist_id FROM appointments WHERE id = ?', [id], (e, r) => {
       if (!e && r.length) {
-        createNotification(r[0].customer_id, 'Appointment Update', `An administrator has updated your appointment details.`, 'system', id);
+        createNotification(r[0].customer_id, 'Appointment Update', `An administrator has reviewed your request and has updated your appointment details to ${status}.`, 'system', id);
         createNotification(r[0].artist_id, 'Appointment Update', `An administrator has updated appointment details for your session.`, 'system', id);
       }
     });
