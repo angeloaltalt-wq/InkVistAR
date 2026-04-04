@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AdminSideNav from '../components/AdminSideNav';
+import Pagination from '../components/Pagination';
 import './AdminDashboard.css';
 import { API_URL } from '../config';
 
@@ -27,6 +28,8 @@ function AdminNotifications() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeFilter, setActiveFilter] = useState('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -149,6 +152,13 @@ function AdminNotifications() {
         return matchesSearch && matchesFilter;
     });
 
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, activeFilter]);
+
+    const totalPages = Math.ceil(filteredNotifs.length / itemsPerPage);
+    const currentItems = filteredNotifs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
     return (
         <div className="admin-page-with-sidenav">
             <AdminSideNav />
@@ -227,7 +237,7 @@ function AdminNotifications() {
                             </div>
                         ) : (
                             <div className="notifications-stream">
-                                {filteredNotifs.length > 0 ? filteredNotifs.map((n) => (
+                                {currentItems.length > 0 ? currentItems.map((n) => (
                                     <div key={n.id} className={`notification-record ${n.is_read ? 'read' : 'unread'} ${n.severity}`}>
                                         <div className="notif-id-marker"></div>
                                         <div className="notif-main">
@@ -280,6 +290,21 @@ function AdminNotifications() {
                                     </div>
                                 )}
                             </div>
+                        )}
+
+                        {!loading && filteredNotifs.length > 0 && (
+                            <Pagination 
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                onPageChange={setCurrentPage}
+                                itemsPerPage={itemsPerPage}
+                                onItemsPerPageChange={(newVal) => {
+                                    setItemsPerPage(newVal);
+                                    setCurrentPage(1);
+                                }}
+                                totalItems={filteredNotifs.length}
+                                unit="notifications"
+                            />
                         )}
                     </div>
                 </main>

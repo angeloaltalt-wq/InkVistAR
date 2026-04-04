@@ -245,12 +245,16 @@
 .admin-page-with-sidenav .admin-page {
     flex: 1;
     margin-left: 260px;
-    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: calc(100% - 260px);
+    max-width: calc(100% - 260px);
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* When sidenav collapsed, reduce left margin */
 body.sidenav-collapsed .admin-page-with-sidenav .admin-page {
     margin-left: 80px;
+    width: calc(100% - 80px);
+    max-width: calc(100% - 80px);
 }
 
 /* Collapsed State */

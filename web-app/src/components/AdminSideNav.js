@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard,
@@ -96,6 +96,19 @@ function AdminSideNav() {
         const next = !userManagementOpen;
         setUserManagementOpen(next);
         localStorage.setItem('userManagementOpen', next ? 'true' : 'false');
+    };
+
+    const menuRef = useRef(null);
+
+    useEffect(() => {
+        const savedScroll = sessionStorage.getItem('adminSidebarScroll');
+        if (savedScroll && menuRef.current) {
+            menuRef.current.scrollTop = parseInt(savedScroll, 10);
+        }
+    }, [location.pathname]); // Restore on path change
+
+    const handleMenuScroll = (e) => {
+        sessionStorage.setItem('adminSidebarScroll', e.target.scrollTop);
     };
 
     const isActive = (path) => location.pathname === path;
@@ -213,7 +226,7 @@ function AdminSideNav() {
             </div>
 
             <nav className="sidenav-menu">
-                <div className="menu-section">
+                <div className="menu-section" ref={menuRef} onScroll={handleMenuScroll}>
                     <p className="menu-label">Main Menu</p>
                     <ul className="menu-list">
                         {quickActions.map((action, index) => {
