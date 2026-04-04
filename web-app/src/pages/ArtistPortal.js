@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, DollarSign, Users, BarChart3, Clock, LogOut, Bell, CheckCircle, AlertCircle } from 'lucide-react';
@@ -19,6 +19,9 @@ function ArtistPortal() {
     const [todaysAppointments, setTodaysAppointments] = useState([]);
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+    const notifRef = useRef(null);
     
     const [user] = useState(() => {
         const saved = localStorage.getItem('user');
@@ -28,7 +31,31 @@ function ArtistPortal() {
 
     useEffect(() => {
         fetchArtistData();
+        fetchNotifications();
     }, [artistId]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (notifRef.current && !notifRef.current.contains(event.target)) {
+                setShowNotifDropdown(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const fetchNotifications = async () => {
+        try {
+            const res = await Axios.get(`${API_URL}/api/notifications/${artistId}`);
+            if (res.data.success) {
+                const sortedNotifs = res.data.notifications.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                setNotifications(sortedNotifs.slice(0, 5));
+                setUnreadCount(sortedNotifs.filter(n => !n.is_read).length);
+            }
+        } catch (error) {
+            console.error("Error fetching notifications:", error);
+        }
+    };
 
     const fetchArtistData = async () => {
         try {
@@ -73,11 +100,47 @@ function ArtistPortal() {
             <ArtistSideNav />
             <div className="portal-container artist-portal">
             <header className="portal-header">
-                <h1>Artist Dashboard</h1>
-                <button className="logout-btn" onClick={() => navigate('/login')}>
-                    <LogOut size={20} />
-                    Logout
-                </button>
+                <div className="header-title">
+                    <h1>Artist Dashboard</h1>
+                </div>
+                <div className="header-actions" style={{ display: 'flex', alignItems: 'center' }}>
+                    <div className="notif-btn-wrapper" ref={notifRef} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                        <button className="notif-trigger-btn" onClick={() => setShowNotifDropdown(!showNotifDropdown)}>
+                            <Bell size={22} />
+                            {unreadCount > 0 && <span className="notif-badge-dot"></span>}
+                        </button>
+                        
+                        {showNotifDropdown && (
+                            <div className="notif-dropdown-v2 glass-card">
+                                <div className="notif-dropdown-header">
+                                    <h3>Notifications</h3>
+                                </div>
+                                <div className="notif-dropdown-list">
+                                    {notifications.length > 0 ? (
+                                        notifications.map(n => (
+                                            <div key={n.id} className={`notif-dropdown-item ${!n.is_read ? 'unread' : ''}`} onClick={() => { setShowNotifDropdown(false); navigate('/artist/notifications'); }}>
+                                                <div className="notif-item-content">
+                                                    <span className="notif-item-title">{n.title}</span>
+                                                    <span className="notif-item-msg">{n.message}</span>
+                                                    <span className="notif-item-time">{new Date(n.created_at).toLocaleDateString()}</span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="notif-empty">No notifications yet</div>
+                                    )}
+                                </div>
+                                <div className="notif-dropdown-footer">
+                                    <button onClick={() => { setShowNotifDropdown(false); navigate('/artist/notifications'); }}>See All Updates</button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <button className="logout-btn" onClick={() => navigate('/login')} style={{ marginLeft: '15px' }}>
+                        <LogOut size={20} />
+                        Logout
+                    </button>
+                </div>
             </header>
 
             <div className="portal-content">
@@ -195,6 +258,65 @@ function ArtistPortal() {
                         </div>
                     </>
                 )}
+                <style jsx>{`
+                    .notif-trigger-btn {
+                        background: none;
+                        border: none;
+                        color: #64748b;
+                        cursor: pointer;
+                        padding: 8px;
+                        border-radius: 50%;
+                        transition: all 0.2s;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    .notif-trigger-btn:hover { background: rgba(0,0,0,0.05); color: #1e293b; }
+                    .notif-badge-dot {
+                        position: absolute;
+                        top: 5px;
+                        right: 5px;
+                        width: 10px;
+                        height: 10px;
+                        background-color: #ef4444;
+                        border-radius: 50%;
+                        border: 2px solid white;
+                    }
+                    .notif-dropdown-v2 {
+                        position: absolute;
+                        top: 100%;
+                        right: 0;
+                        width: 320px;
+                        background: white;
+                        border-radius: 12px;
+                        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+                        z-index: 1000;
+                        margin-top: 10px;
+                        border: 1px solid #e2e8f0;
+                        animation: slideDown 0.2s ease-out;
+                    }
+                    @keyframes slideDown { 
+                        from { opacity: 0; transform: translateY(-10px); } 
+                        to { opacity: 1; transform: translateY(0); } 
+                    }
+                    .notif-dropdown-header { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; }
+                    .notif-dropdown-header h3 { margin: 0; font-size: 1rem; color: #1e293b; }
+                    .notif-dropdown-list { max-height: 350px; overflow-y: auto; }
+                    .notif-dropdown-item { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.2s; }
+                    .notif-dropdown-item:hover { background: #f8fafc; }
+                    .notif-dropdown-item.unread { background: #f0f9ff; }
+                    .notif-item-content { display: flex; flex-direction: column; gap: 4px; }
+                    .notif-item-title { font-weight: 600; font-size: 0.9rem; color: #1e293b; text-align: left; }
+                    .notif-item-msg { font-size: 0.8rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+                    .notif-item-time { font-size: 0.7rem; color: #94a3b8; text-align: left; }
+                    .notif-empty { padding: 30px; text-align: center; color: #94a3b8; font-size: 0.9rem; }
+                    .notif-dropdown-footer { padding: 10px; border-top: 1px solid #f1f5f9; text-align: center; }
+                    .notif-dropdown-footer button { 
+                        background: none; border: none; color: #daa520; font-weight: 600; font-size: 0.85rem; 
+                        cursor: pointer; transition: color 0.2s; 
+                    }
+                    .notif-dropdown-footer button:hover { color: #b8860b; text-decoration: underline; }
+                `}</style>
             </div>
             </div>
         </div>
