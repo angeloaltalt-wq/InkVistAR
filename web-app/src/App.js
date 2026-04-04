@@ -2,7 +2,6 @@ import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-ro
 import './App.css';
 import './styles/premium-transitions.css';
 import Home from './pages/Home';
-import About from './pages/About';
 import Login from './pages/Login';
 import Artists from './pages/Artists';
 import Register from './pages/Register';
@@ -85,7 +84,6 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
           <Route path="/artists" element={<Artists />} />
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/contact" element={<Contact />} />

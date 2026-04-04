@@ -4,9 +4,11 @@ import { MapPin, Clock, Users, Power, Trash2, Edit2, Plus, X, Search, Filter, Sl
 import AdminSideNav from '../components/AdminSideNav';
 import { API_URL } from '../config';
 import ConfirmModal from '../components/ConfirmModal';
+import AdminTestimonials from '../components/AdminTestimonials';
 import './AdminUsers.css'; // Reusing styles
 
 function AdminStudio() {
+    const [activeTab, setActiveTab] = useState('branches');
     const [branches, setBranches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [branchModal, setBranchModal] = useState({ mounted: false, visible: false });
@@ -137,11 +139,30 @@ function AdminStudio() {
             <AdminSideNav />
             <div className="admin-page page-container-enter">
                 <header className="admin-header" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb', boxShadow: 'none' }}>
-                    <h1>Studio & Branch Management</h1>
-                    <button className="btn btn-primary" onClick={openAddModal}><Plus size={18} style={{marginRight:'5px'}}/> Add Branch</button>
+                    <h1>Studio Settings</h1>
+                    {activeTab === 'branches' && (
+                        <button className="btn btn-primary" onClick={openAddModal}><Plus size={18} style={{marginRight:'5px'}}/> Add Branch</button>
+                    )}
                 </header>
 
-                <div className="premium-filter-bar" style={{ margin: '0 2rem 1.5rem 2rem' }}>
+                <div style={{ display: 'flex', gap: '2rem', padding: '0 2rem', borderBottom: '1px solid #e5e7eb', marginBottom: '1.5rem', background: '#fff' }}>
+                    <button 
+                        style={{ padding: '1rem 0', background: 'transparent', border: 'none', borderBottom: activeTab === 'branches' ? '2px solid #C19A6B' : '2px solid transparent', color: activeTab === 'branches' ? '#1e293b' : '#64748b', fontWeight: 'bold', cursor: 'pointer', outline: 'none' }}
+                        onClick={() => setActiveTab('branches')}
+                    >
+                        Branches Directory
+                    </button>
+                    <button 
+                        style={{ padding: '1rem 0', background: 'transparent', border: 'none', borderBottom: activeTab === 'testimonials' ? '2px solid #C19A6B' : '2px solid transparent', color: activeTab === 'testimonials' ? '#1e293b' : '#64748b', fontWeight: 'bold', cursor: 'pointer', outline: 'none' }}
+                        onClick={() => setActiveTab('testimonials')}
+                    >
+                        Customer Testimonials
+                    </button>
+                </div>
+
+                {activeTab === 'branches' ? (
+                    <>
+                        <div className="premium-filter-bar" style={{ margin: '0 2rem 1.5rem 2rem' }}>
                     <div className="premium-search-box">
                         <Search size={18} className="text-muted" />
                         <input
@@ -292,6 +313,10 @@ function AdminStudio() {
                             </form>
                         </div>
                     </div>
+                )}
+                </>
+                ) : (
+                    <AdminTestimonials />
                 )}
 
                 <ConfirmModal 

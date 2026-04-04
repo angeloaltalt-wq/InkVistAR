@@ -42,7 +42,7 @@ const Navbar = () => {
         <nav className={`home-nav ${isScrolled ? 'is-scrolled' : ''}`}>
             <Link to="/" className="home-logo">INKVICTUS</Link>
             <div className="home-nav-links">
-                <Link to="/about" className={isActive('/about') ? 'active-link' : ''}>About</Link>
+                <a href="/#about" className="nav-anchor">About</a>
                 <Link to="/artists" className={isActive('/artists') ? 'active-link' : ''}>Artists</Link>
                 <Link to="/gallery" className={isActive('/gallery') ? 'active-link' : ''}>Gallery</Link>
                 <Link to="/book" className={isActive('/book') ? 'active-link' : ''}>Book Consultation</Link>

@@ -678,6 +678,21 @@ db.getConnection((err, connection) => {
     `;
     db.query(favoritesTableQuery, (err) => { if (err) console.error('⚠️ Error checking favorites table:', err.message); else console.log('❤️ Favorites table ready'); });
 
+    // Create Testimonials table
+    const testimonialsTableQuery = `
+      CREATE TABLE IF NOT EXISTS testimonials (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        customer_name VARCHAR(255) NOT NULL,
+        content TEXT,
+        rating INT DEFAULT 5,
+        media_url LONGTEXT,
+        media_type ENUM('none', 'image', 'video') DEFAULT 'none',
+        is_active BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    db.query(testimonialsTableQuery, (err) => { if (err) console.error('⚠️ Error checking testimonials table:', err.message); else console.log('💬 Testimonials table ready'); });
+
   }
 });
 
@@ -4375,6 +4390,77 @@ io.on('connection', (socket) => {
   // Handle disconnection
   socket.on('disconnect', () => {
     console.log('❌ User disconnected:', socket.id);
+  });
+});
+
+// ========== TESTIMONIALS API ==========
+
+// GET /api/testimonials (Public, fetch active testimonials)
+app.get('/api/testimonials', (req, res) => {
+  const query = 'SELECT * FROM testimonials WHERE is_active = 1 ORDER BY created_at DESC';
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Error fetching testimonials:', err);
+      return res.status(500).json({ success: false, message: 'Server error' });
+    }
+    res.json({ success: true, testimonials: results });
+  });
+});
+
+// GET /api/admin/testimonials (Admin, fetch all)
+app.get('/api/admin/testimonials', (req, res) => {
+  const query = 'SELECT * FROM testimonials ORDER BY created_at DESC';
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Error fetching testimonials:', err);
+      return res.status(500).json({ success: false, message: 'Server error' });
+    }
+    res.json({ success: true, testimonials: results });
+  });
+});
+
+// POST /api/admin/testimonials
+app.post('/api/admin/testimonials', (req, res) => {
+  const { customer_name, content, rating, media_url, media_type, is_active } = req.body;
+  if (!customer_name) {
+    return res.status(400).json({ success: false, message: 'Customer name is required' });
+  }
+
+  const query = 'INSERT INTO testimonials (customer_name, content, rating, media_url, media_type, is_active) VALUES (?, ?, ?, ?, ?, ?)';
+  db.query(query, [customer_name, content || '', rating || 5, media_url || '', media_type || 'none', is_active !== undefined ? is_active : 1], (err, result) => {
+    if (err) {
+      console.error('Error creating testimonial:', err);
+      return res.status(500).json({ success: false, message: 'Server error adding testimonial' });
+    }
+    res.json({ success: true, message: 'Testimonial added successfully', id: result.insertId });
+  });
+});
+
+// PUT /api/admin/testimonials/:id
+app.put('/api/admin/testimonials/:id', (req, res) => {
+  const { id } = req.params;
+  const { customer_name, content, rating, media_url, media_type, is_active } = req.body;
+  
+  const query = 'UPDATE testimonials SET customer_name = ?, content = ?, rating = ?, media_url = ?, media_type = ?, is_active = ? WHERE id = ?';
+  db.query(query, [customer_name, content, rating, media_url, media_type, is_active, id], (err, result) => {
+    if (err) {
+      console.error('Error updating testimonial:', err);
+      return res.status(500).json({ success: false, message: 'Server error updating testimonial' });
+    }
+    res.json({ success: true, message: 'Testimonial updated successfully' });
+  });
+});
+
+// DELETE /api/admin/testimonials/:id
+app.delete('/api/admin/testimonials/:id', (req, res) => {
+  const { id } = req.params;
+  const query = 'DELETE FROM testimonials WHERE id = ?';
+  db.query(query, [id], (err, result) => {
+    if (err) {
+      console.error('Error deleting testimonial:', err);
+      return res.status(500).json({ success: false, message: 'Server error deleting testimonial' });
+    }
+    res.json({ success: true, message: 'Testimonial deleted successfully' });
   });
 });
 
