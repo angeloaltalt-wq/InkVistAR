@@ -393,7 +393,7 @@ function CustomerPortal() {
                                 background: none; border: none; color: #daa520; font-weight: 600; font-size: 0.85rem; 
                                 cursor: pointer; transition: color 0.2s; 
                             }
-                            .notif-dropdown-footer button:hover { color: #b8860b; text-decoration: underline; }
+                            .notif-dropdown-footer button:hover { color: #b8860b; text-decoration: underline; } /* This is a duplicate, but keeping for now */
                         `}</style>
 
                             {/* Favorite Artists */}

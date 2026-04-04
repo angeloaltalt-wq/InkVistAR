@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { Users, Calendar, DollarSign, Palette, Settings, Package, BarChart3, AlertTriangle, Bell, Clock, CheckCircle, FileText, Search, ChevronLeft, ChevronRight, X, ShoppingCart } from 'lucide-react';
+import { Users, Calendar, DollarSign, Palette, Settings, Package, BarChart3, AlertTriangle, Bell, Clock, CheckCircle, FileText, Search, ChevronLeft, ChevronRight, X, ShoppingCart, Info } from 'lucide-react';
 import './AdminDashboard.css';
 import AdminSideNav from '../components/AdminSideNav';
 import { API_URL } from '../config';
@@ -51,7 +51,7 @@ function AdminDashboard() {
             const [usersResponse, appointmentsResponse, logsResponse, inventoryResponse, notificationsResponse] = await Promise.all([
                 Axios.get(`${API_URL}/api/debug/users`),
                 Axios.get(`${API_URL}/api/admin/appointments`),
-                Axios.get(`${API_URL}/api/admin/audit-logs`),
+                Axios.get(`${API_URL}/api/admin/audit-logs?limit=5`), // Limit logs for dashboard
                 Axios.get(`${API_URL}/api/admin/inventory?status=active`),
                 user.id ? Axios.get(`${API_URL}/api/notifications/${user.id}`) : Promise.resolve({ data: { unreadCount: 0 } })
             ]);
@@ -167,7 +167,7 @@ function AdminDashboard() {
                 if (pendingAppointments.length > 0) {
                     generatedAlerts.push({
                         id: alertId++,
-                        type: 'staff',
+                        type: 'appointment', // Changed to 'appointment' for consistency with AdminNotifications
                         message: `You have ${pendingAppointments.length} pending appointment requests.`,
                         severity: 'medium'
                     });
@@ -176,7 +176,7 @@ function AdminDashboard() {
                 setAlerts(generatedAlerts);
             }
 
-            if (logsResponse && logsResponse.data.success) {
+            if (logsResponse?.data?.success) {
                 setAuditLogs(logsResponse.data.data);
             }
 
@@ -217,7 +217,7 @@ function AdminDashboard() {
     };
 
     // Filter and paginate logs
-    const filteredLogs = auditLogs.filter(log =>
+    const filteredLogs = auditLogs.filter(log => // Audit logs are already limited by the API call
         (log.user_name || 'System').toLowerCase().includes(auditSearch.toLowerCase()) ||
         (log.action || '').toLowerCase().includes(auditSearch.toLowerCase()) ||
         (log.details || '').toLowerCase().includes(auditSearch.toLowerCase())
@@ -267,7 +267,7 @@ function AdminDashboard() {
                         <div className="header-search">
                             <Search size={18} />
                             <input type="text" placeholder="Search things..." />
-                        </div>
+                        </div> {/* This search is for the overall dashboard, not specific tables */}
                         <div className="notification-bell" style={{ position: 'relative', cursor: 'pointer' }} onClick={() => navigate('/admin/notifications')}>
                             <Bell size={20} />
                             {unreadNotifications > 0 && (
@@ -575,7 +575,7 @@ function AdminDashboard() {
                                     <div className="card-header-v2">
                                         <div className="header-title">
                                             <Bell size={20} />
-                                            <h2>Priority Alerts</h2>
+                                            <h2>System Alerts</h2>
                                         </div>
                                     </div>
                                     <div className="alerts-stack">

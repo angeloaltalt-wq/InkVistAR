@@ -5,16 +5,19 @@ import {
     AlertTriangle, 
     CheckCircle, 
     Package, 
-    CalendarDays, 
+    CalendarDays,
+    CalendarCheck, // Added for appointment_confirmed
+    XCircle, // Added for appointment_cancelled
     Settings, 
     Clock, 
     ArrowRight,
     Search,
     Filter,
     Check, // Keep Check for "Mark as Read"
-    // Removed duplicate import of Bell
     Trash2,
-    CheckCheck
+    CheckCheck,
+    Info, // Added for system notifications
+    RotateCcw, // Added for mark as unread
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AdminSideNav from '../components/AdminSideNav';
@@ -26,6 +29,7 @@ function AdminNotifications() {
     const [notifications, setNotifications] = useState([]);
     const [systemAlerts, setSystemAlerts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [unreadCount, setUnreadCount] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeFilter, setActiveFilter] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
@@ -93,12 +97,15 @@ function AdminNotifications() {
                     severity: n.type === 'system' ? 'medium' : 'low'
                 }))
             ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
+            
             setNotifications(combined);
+            setUnreadCount(combined.filter(n => !n.is_read).length);
             setLoading(false);
         } catch (error) {
             console.error("Error fetching notifications:", error);
             setLoading(false);
+            setNotifications([]);
+            setUnreadCount(0);
         }
     };
 
@@ -107,6 +114,12 @@ function AdminNotifications() {
             case 'inventory': return <Package size={20} className="text-orange" />;
             case 'appointment': return <CalendarDays size={20} className="text-blue" />;
             case 'system': return <Settings size={20} className="text-purple" />;
+            case 'appointment_confirmed': return <CalendarCheck size={20} className="text-green" />;
+            case 'appointment_cancelled': return <XCircle size={20} className="text-red" />;
+            case 'appointment_completed': return <CheckCircle size={20} className="text-green" />;
+            case 'payment_success': return <CheckCircle size={20} className="text-green" />;
+            case 'pos_invoice': return <Info size={20} className="text-blue" />;
+            case 'appointment_request': return <CalendarDays size={20} className="text-orange" />;
             default: return <Bell size={20} />;
         }
     };
@@ -119,7 +132,10 @@ function AdminNotifications() {
         }
         try {
             await Axios.put(`${API_URL}/api/notifications/${id}/read`);
-            setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: 1 } : n));
+            setNotifications(prev => {
+                const updated = prev.map(n => n.id === id ? { ...n, is_read: 1 } : n);
+                return updated;
+            });
         } catch (e) {
             console.error(e);
         }
@@ -137,11 +153,30 @@ function AdminNotifications() {
             // The backend endpoint `/api/notifications/:id/read` supports a body with `is_read`.
             // Sending `is_read: 0` will mark it as unread.
             await Axios.put(`${API_URL}/api/notifications/${id}/read`, { is_read: 0 });
-            setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: 0 } : n));
+            setNotifications(prev => {
+                const updated = prev.map(n => n.id === id ? { ...n, is_read: 0 } : n);
+                return updated;
+            });
         } catch (e) {
             console.error("Error marking notification as unread:", e);
             // Optionally, show a user-friendly error message
         }
+    };
+
+    const markAllRead = async () => {
+        try {
+            const unreadIds = notifications.filter(n => !n.is_read && !n.id.toString().startsWith('inv-') && n.id !== 'apt-pending').map(n => n.id);
+            if (unreadIds.length > 0) {
+                await Promise.all(unreadIds.map(id => Axios.put(`${API_URL}/api/notifications/${id}/read`)));
+                setNotifications(notifications.map(n => ({ ...n, is_read: 1 })));
+                setUnreadCount(0);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+    const filterButtonStyle = (isActive) => {
+        return { background: isActive ? '#daa520' : 'rgba(255,255,255,0.05)', color: isActive ? 'white' : 'rgba(255,255,255,0.6)' };
     };
 
 
@@ -162,40 +197,60 @@ function AdminNotifications() {
     return (
         <div className="admin-page-with-sidenav">
             <AdminSideNav />
-            <div className="admin-page notifications-container">
-                <header className="dashboard-top-nav">
-                    <div className="top-nav-left">
+            <div className="admin-page portal-container">
+                <header className="portal-header">
+                    <div className="header-title">
                         <h1>Notification Center</h1>
-                        <p className="subtitle">System alerts and direct updates</p>
                     </div>
-                    <div className="header-actions" style={{ display: 'flex', gap: '12px' }}>
+                    <div className="header-actions">
                         <button 
-                            className="premium-btn secondary" 
+                            className="premium-btn primary"
+                            onClick={markAllRead}
+                        >
+                            <CheckCheck size={18} /> Mark All Read
+                        </button>
+                        <button 
+                            className="premium-btn secondary"
                             onClick={async () => {
                                 // Clear computed alerts (Inventory/Bookings)
                                 setNotifications(notifications.filter(n => !n.id.toString().startsWith('inv-') && n.id !== 'apt-pending'));
+                                setUnreadCount(notifications.filter(n => !n.is_read && !n.id.toString().startsWith('inv-') && n.id !== 'apt-pending').length);
                             }}
                             title="Clear system alerts"
                         >
                             <Trash2 size={16} /> Clear Alerts
                         </button>
-                        <button 
-                            className="premium-btn primary"
-                            onClick={async () => {
-                                // Mark all direct notifs as read
-                                try {
-                                    const unreadIds = notifications.filter(n => !n.is_read && !n.id.toString().startsWith('inv-') && n.id !== 'apt-pending').map(n => n.id);
-                                    if (unreadIds.length > 0) {
-                                        await Promise.all(unreadIds.map(id => Axios.put(`${API_URL}/api/notifications/${id}/read`)));
-                                        setNotifications(notifications.map(n => ({ ...n, is_read: true })));
-                                    }
-                                } catch (e) { console.error(e); }
-                            }}
-                        >
-                            <CheckCheck size={16} /> Mark all read
-                        </button>
                     </div>
                 </header>
+                <p className="header-subtitle" style={{ marginTop: '-2.5rem', marginBottom: '2.5rem', marginRight: '-5.5rem', textAlign: 'left' }}>System alerts and direct updates</p>
+
+                <div className="portal-stats-row" style={{ display: 'flex', gap: '20px', marginBottom: '25px' }}>
+                    <div className="glass-card" style={{ flex: 1, padding: '20px', textAlign: 'center' }}>
+                        <span style={{ fontSize: '0.85rem', color: '#64748b', display: 'block', marginBottom: '5px' }}>Total Updates</span>
+                        <span style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#1e293b' }}>{notifications.length}</span>
+                    </div>
+                    <div className="glass-card" style={{ flex: 1, padding: '20px', textAlign: 'center', borderLeft: unreadCount > 0 ? '4px solid #f59e0b' : 'none' }}>
+                        <span style={{ fontSize: '0.85rem', color: '#64748b', display: 'block', marginBottom: '5px' }}>Unread Alerts</span>
+                        <span style={{ fontSize: '1.8rem', fontWeight: 'bold', color: unreadCount > 0 ? '#f59e0b' : 'inherit' }}>{unreadCount}</span>
+                    </div>
+                </div>
+
+                <div className="filter-bar" style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
+                    <button 
+                        className={`filter-btn ${activeFilter === 'all' ? 'active' : ''}`}
+                        onClick={() => setActiveFilter('all')}
+                        style={filterButtonStyle(activeFilter === 'all')}
+                    >
+                        All
+                    </button>
+                    <button 
+                        className={`filter-btn ${activeFilter === 'unread' ? 'active' : ''}`}
+                        onClick={() => setActiveFilter('unread')}
+                        style={filterButtonStyle(activeFilter === 'unread')}
+                    >
+                        Unread
+                    </button>
+                </div>
 
                 <main className="dashboard-main-content">
                     <div className="glass-card table-card-v2 full-width">
@@ -219,7 +274,11 @@ function AdminNotifications() {
                                 <select 
                                     value={activeFilter} 
                                     onChange={(e) => setActiveFilter(e.target.value)}
-                                    className="premium-select-v2"
+                                    className="premium-select-v2" // Keep this class for existing styling
+                                    // Override some styles to match filterButtonStyle
+                                    // This is a temporary fix, ideally these styles should be in CSS
+                                    // and the select should be a custom component or styled consistently.
+                                    // For now, it's a quick way to make it look similar to the buttons.
                                     style={{ background: 'rgba(255,255,255,0.1)', color: 'white', borderColor: 'rgba(255,255,255,0.2)' }}
                                 >
                                     <option value="all">All Notifications</option>
@@ -237,50 +296,53 @@ function AdminNotifications() {
                             </div>
                         ) : (
                             <div className="notifications-stream">
-                                {currentItems.length > 0 ? currentItems.map((n) => (
-                                    <div key={n.id} className={`notification-record ${n.is_read ? 'read' : 'unread'} ${n.severity}`}>
-                                        <div className="notif-id-marker"></div>
-                                        <div className="notif-main">
-                                            <div className="notif-header">
-                                                <div className="notif-subject">
-                                                    {getIcon(n.type)}
-                                                    <span className="subject-text">{n.title}</span>
-                                                    {!n.is_read && <span className="unread-dot"></span>}
+                                {currentItems.length > 0 ? (
+                                    <div className="notifications-stream" style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                                        {currentItems.map((n) => {
+                                            const Icon = getIcon(n.type);
+                                            return (
+                                                <div key={n.id} className={`glass-card notification-record ${n.is_read ? 'read' : 'unread'}`} style={{ padding: '12px 20px', borderLeft: !n.is_read ? `4px solid ${getNotificationStyle(n.type).color}` : '1px solid rgba(255,255,255,0.1)', fontWeight: n.is_read ? 'normal' : '600' }}>
+                                                    <div className="notif-id-marker"></div>
+                                                    <div className="notif-main" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                                        <div className="icon-badge" style={{ background: getNotificationStyle(n.type).bg, padding: '6px', borderRadius: '6px', flexShrink: 0 }}>
+                                                            {Icon}
+                                                        </div>
+                                                        
+                                                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '20px', overflow: 'hidden' }}>
+                                                            <span className="subject-text" style={{ fontSize: '0.95rem', minWidth: '150px', color: n.is_read ? '#64748b' : '#1e293b' }}>{n.title}</span>
+                                                            <p className="notif-body" style={{ margin: 0, fontSize: '0.9rem', color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.message}</p>
+                                                        </div>
+
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexShrink: 0 }}>
+                                                            <span className="notif-time" style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '80px', textAlign: 'right' }}>
+                                                                {new Date(n.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                                            </span>
+                                                            
+                                                            <div className="notif-actions" style={{ display: 'flex', gap: '8px' }}>
+                                                                {n.path && (
+                                                                    <button 
+                                                                        className="notif-btn primary" 
+                                                                        onClick={() => navigate(n.path)}
+                                                                        style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+                                                                    >
+                                                                        Take Action <ArrowRight size={14} />
+                                                                    </button>
+                                                                )}
+                                                                {!n.is_read ? (
+                                                                    <button className="notif-btn ghost" onClick={() => markAsRead(n.id)} style={{ padding: '4px' }} title="Mark as Read">
+                                                                        <Check size={14}/>
+                                                                    </button>
+                                                                ) : (
+                                                                    <button className="notif-btn ghost" onClick={() => markAsUnread(n.id)} style={{ padding: '4px' }} title="Mark as Unread">
+                                                                        <RotateCcw size={14}/>
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <span className="notif-time">
-                                                    <Clock size={12} />
-                                                    {new Date(n.created_at).toLocaleString()}
-                                                </span>
-                                            </div>
-                                            <p className="notif-body">{n.message}</p>
-                                            <div className="notif-actions">
-                                                {n.path && (
-                                                    <button 
-                                                        className="notif-btn primary" 
-                                                        onClick={() => navigate(n.path)}
-                                                    >
-                                                        Take Action <ArrowRight size={14} />
-                                                    </button>
-                                                )}
-                                                {!n.is_read && (
-                                                    <button 
-                                                        className="notif-btn ghost"
-                                                        onClick={() => markAsRead(n.id)}
-                                                    >
-                                                        <Check size={14} /> Mark as Read
-                                                    </button>
-                                                )}
-                                                {n.is_read && ( // Only show "Mark as Unread" for read notifications
-                                                    <button 
-                                                        className="notif-btn ghost"
-                                                        onClick={() => markAsUnread(n.id)}
-                                                        title="Mark as Unread"
-                                                    >
-                                                        <Bell size={14} /> Mark as Unread
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
+                                            );
+                                        })}
                                     </div>
                                 )) : (
                                     <div className="all-clear" style={{ padding: '100px 0' }}>
@@ -309,139 +371,6 @@ function AdminNotifications() {
                     </div>
                 </main>
             </div>
-            
-            <style>{`
-                .filter-chip {
-                    padding: 8px 16px;
-                    border-radius: 20px;
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    font-size: 0.9rem;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                    color: rgba(255, 255, 255, 0.7);
-                }
-                .filter-chip:hover {
-                    background: rgba(255, 165, 0, 0.1);
-                    color: orange;
-                }
-                .filter-chip.active {
-                    background: orange;
-                    color: white;
-                    border-color: orange;
-                }
-                .notifications-stream {
-                    padding: 20px;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 15px;
-                }
-                .notification-record {
-                    display: flex;
-                    gap: 20px;
-                    padding: 20px;
-                    background: rgba(255, 255, 255, 0.03);
-                    border: 1px solid rgba(255, 255, 255, 0.06);
-                    border-radius: 12px;
-                    transition: transform 0.2s, background 0.2s;
-                }
-                .notification-record:hover {
-                    background: rgba(255, 255, 255, 0.05);
-                    transform: translateX(5px);
-                }
-                .notification-record.unread {
-                    background: rgba(59, 130, 246, 0.05);
-                    border-left: 4px solid #3b82f6;
-                }
-                .notification-record.high.unread {
-                    background: rgba(239, 68, 68, 0.05);
-                    border-left-color: #ef4444;
-                }
-                .notif-main {
-                    flex: 1;
-                }
-                .notif-header {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 8px;
-                }
-                .notif-subject {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    font-weight: 600;
-                    color: white;
-                }
-                .subject-text {
-                    font-size: 1.05rem;
-                }
-                .unread-dot {
-                    width: 8px;
-                    height: 8px;
-                    background: #ef4444;
-                    border-radius: 50%;
-                }
-                .notif-time {
-                    font-size: 0.8rem;
-                    color: rgba(255, 255, 255, 0.4);
-                    display: flex;
-                    align-items: center;
-                    gap: 5px;
-                }
-                .notif-body {
-                    color: rgba(255, 255, 255, 0.7);
-                    font-size: 0.95rem;
-                    line-height: 1.5;
-                    margin-bottom: 15px;
-                }
-                .notif-actions {
-                    display: flex;
-                    gap: 12px;
-                }
-                .notif-btn {
-                    padding: 8px 16px;
-                    border-radius: 6px;
-                    font-size: 0.85rem;
-                    font-weight: 600;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    transition: all 0.2s;
-                }
-                .notif-btn.primary {
-                    background: orange;
-                    color: white;
-                    border: none;
-                }
-                .notif-btn.primary:hover {
-                    background: #ff8c00;
-                    box-shadow: 0 4px 12px rgba(255, 140, 0, 0.3);
-                }
-                .notif-btn.ghost {
-                    background: transparent;
-                    color: rgba(255, 255, 255, 0.6);
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                }
-                .notif-btn.ghost:hover {
-                    background: rgba(255, 255, 255, 0.05);
-                    color: white;
-                    border-color: rgba(255, 255, 255, 0.3);
-                }
-                .text-orange { color: #f97316; }
-                .text-blue { color: #3b82f6; }
-                .text-purple { color: #a855f7; }
-                
-                .all-clear {
-                    text-align: center;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 15px;
-                    color: rgba(255, 255, 255, 0.5);
-                }
-                .all-clear h3 { color: white; margin: 0; }
-            `}</style>
         </div>
     );
 }

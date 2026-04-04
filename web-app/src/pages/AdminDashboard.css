@@ -890,6 +890,153 @@
     }
 }
 
+/* --- Styles from CustomerNotifications.js / PortalStyles.css --- */
+.portal-layout {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f8fafc; /* Light background for portal */
+}
+
+.portal-container {
+    flex: 1;
+    margin-left: 260px; /* Adjust for side nav */
+    padding: 2rem;
+    transition: margin-left 0.3s ease;
+}
+
+.portal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2.5rem;
+}
+
+.portal-header .header-title h1 {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    letter-spacing: -0.025em;
+}
+
+.portal-header .header-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.portal-stats-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.filter-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.filter-btn {
+    padding: 8px 20px;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    color: #64748b;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.filter-btn.active {
+    background: #daa520;
+    color: white;
+    border-color: #daa520;
+}
+
+.filter-btn:hover {
+    background: #f1f5f9;
+}
+
+.notifications-stream {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.notification-record {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 20px;
+    border-radius: 12px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s;
+}
+
+.notification-record.unread {
+    border-left: 4px solid #f59e0b; /* Example color for unread */
+    background: #fffbeb;
+}
+
+.notification-record:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.icon-badge {
+    padding: 6px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.notif-main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    overflow: hidden;
+}
+
+.subject-text {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1e293b;
+    min-width: 150px;
+}
+
+.notif-body {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #475569;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.notif-time {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    min-width: 80px;
+    text-align: right;
+}
+
+.notif-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Specific colors for icons */
+.text-orange { color: #f97316; }
+.text-blue { color: #3b82f6; }
+.text-purple { color: #a855f7; }
+.text-green { color: #10b981; }
+.text-red { color: #ef4444; }
+
 /* Responsive adjustments */
 @media (max-width: 1200px) {
     .dashboard-layout-grid {
