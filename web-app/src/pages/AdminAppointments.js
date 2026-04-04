@@ -46,6 +46,7 @@ function AdminAppointments() {
         manualPaidAmount: 0,
         manualPaymentMethod: 'Cash'
     });
+    const [dayViewModal, setDayViewModal] = useState({ isOpen: false, date: '', appointments: [] });
 
     // Modal animation handlers
     const openModal = () => {
@@ -111,7 +112,16 @@ function AdminAppointments() {
         } catch (error) {
             console.error("Error fetching appointments:", error);
             setLoading(false);
+            return []; // Return empty on error
         }
+    };
+
+    const handleDayClick = (dateString) => {
+        const dayAppts = appointments.filter(apt => {
+            const aptDate = apt.date ? (apt.date.includes('T') ? apt.date.split('T')[0] : apt.date.substring(0, 10)) : '';
+            return aptDate === dateString;
+        });
+        setDayViewModal({ isOpen: true, date: dateString, appointments: dayAppts });
     };
 
     useEffect(() => {
@@ -437,7 +447,7 @@ function AdminAppointments() {
                                         transition: 'all 0.2s ease'
                                     }}
                                         className="calendar-day-cell"
-                                        onClick={() => handleAddNew(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`)}>
+                                        onClick={() => handleDayClick(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`)}>
                                         <div style={{ fontWeight: 'bold', marginBottom: '5px', color: isToday ? '#6366f1' : '#334155', display: 'flex', justifyContent: 'space-between' }}>
                                             <span>{day}</span>
                                             <Plus size={12} style={{ opacity: 0.5 }} />
@@ -943,6 +953,85 @@ function AdminAppointments() {
                             </div>
                             <div className="modal-footer">
                                 <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleApplyManualPayment}>Apply Adjustment</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Calendar Day View Modal */}
+                {dayViewModal.isOpen && (
+                    <div className="modal-overlay" style={{ zIndex: 2000 }} onClick={() => setDayViewModal({ ...dayViewModal, isOpen: false })}>
+                        <div className="modal-content glass-modal" style={{ maxWidth: '500px', border: '1px solid rgba(255,255,255,0.4)' }} onClick={e => e.stopPropagation()}>
+                            <div className="modal-header-v2">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div style={{ background: '#f1f5f9', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyCenter: 'center', color: '#6366f1' }}>
+                                        <Calendar size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 style={{ margin: 0 }}>{new Date(dayViewModal.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</h3>
+                                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>Daily Schedule Summary</p>
+                                    </div>
+                                </div>
+                                <button className="modal-close-btn" onClick={() => setDayViewModal({ ...dayViewModal, isOpen: false })}><X size={20} /></button>
+                            </div>
+                            <div className="modal-body" style={{ maxHeight: '60vh', overflowY: 'auto', padding: '20px' }}>
+                                {dayViewModal.appointments.length > 0 ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                        {dayViewModal.appointments.map(apt => (
+                                            <div 
+                                                key={apt.id} 
+                                                className="glass-card" 
+                                                style={{ 
+                                                    padding: '16px', 
+                                                    cursor: 'pointer', 
+                                                    borderLeft: `4px solid ${apt.status === 'confirmed' ? '#10b981' : (apt.status === 'pending' ? '#f59e0b' : '#6366f1')}`,
+                                                    background: 'rgba(255,255,255,0.5)',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center'
+                                                }}
+                                                onClick={() => {
+                                                    setDayViewModal({ ...dayViewModal, isOpen: false });
+                                                    handleEdit(apt);
+                                                }}
+                                            >
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                        <Clock size={14} style={{ color: '#64748b' }} />
+                                                        <span style={{ fontWeight: '700', color: '#1e293b' }}>{apt.time.slice(0, 5)}</span>
+                                                        <span style={{ color: '#64748b', fontSize: '0.9rem' }}>• {apt.clientName}</span>
+                                                    </div>
+                                                    <div style={{ fontSize: '0.85rem', color: '#475569', marginLeft: '22px' }}>
+                                                        {apt.serviceType} with {apt.artistName}
+                                                    </div>
+                                                </div>
+                                                <div className={`badge status-${getStatusColor(apt.status)}`} style={{ fontSize: '0.7rem', padding: '4px 8px' }}>
+                                                    {apt.status}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+                                        <div style={{ background: '#f8fafc', width: '64px', height: '64px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px auto', color: '#cbd5e1' }}>
+                                            <Calendar size={32} />
+                                        </div>
+                                        <p style={{ fontWeight: 600, margin: 0 }}>No Appointments Yet</p>
+                                        <p style={{ fontSize: '0.85rem', marginTop: '4px' }}>The schedule for this day is currently clear.</p>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="modal-footer" style={{ borderTop: '1px solid #f1f5f9', padding: '20px' }}>
+                                <button 
+                                    className="btn btn-primary" 
+                                    style={{ width: '100%', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                    onClick={() => {
+                                        setDayViewModal({ ...dayViewModal, isOpen: false });
+                                        handleAddNew(dayViewModal.date);
+                                    }}
+                                >
+                                    <Plus size={18} /> Schedule New Appointment
+                                </button>
                             </div>
                         </div>
                     </div>
