@@ -4,7 +4,6 @@ import { useParams, Link } from 'react-router-dom';
 import { Star, ArrowLeft, ArrowRight, CheckCircle, Image as ImageIcon } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import './PublicStyles.css'; // Assuming this exists or using inline styles
 import { API_URL } from '../config';
 
 const PublicArtistProfile = () => {
