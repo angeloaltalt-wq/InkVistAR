@@ -801,26 +801,45 @@ function AdminAppointments() {
                                             <User size={16} /> Client & Artist
                                         </h3>
                                         <div className="form-group" style={{ position: 'relative' }}>
-                                            <label>Client Search *</label>
-                                            <div className="premium-search-box" style={{ maxWidth: '100%', marginBottom: '5px' }}>
-                                                <Search size={16} />
-                                                <input
-                                                    type="text"
-                                                    placeholder="Search clients..."
-                                                    value={clientSearch}
-                                                    onChange={(e) => setClientSearch(e.target.value)}
-                                                />
-                                            </div>
-                                            {clientSearch && !formData.clientId && (
-                                                <div className="glass-card" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, maxHeight: '150px', overflowY: 'auto', background: 'white' }}>
-                                                    {clients.filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase())).map(c => (
-                                                        <div key={c.id} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }} onClick={() => { setFormData({ ...formData, clientId: c.id }); setClientSearch(c.name); }}>
-                                                            <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{c.name}</div>
+                                            <label>Client Selection *</label>
+                                            {formData.clientId ? (
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', borderRadius: '12px', border: '2px solid #10b981', width: '100%' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        <div style={{ background: '#d1fae5', padding: '6px', borderRadius: '50%' }}>
+                                                            <User size={16} color="#10b981" />
                                                         </div>
-                                                    ))}
+                                                        <span style={{ fontWeight: 700, color: '#1e293b' }}>{clients.find(c => c.id == formData.clientId)?.name || clientSearch}</span>
+                                                    </div>
+                                                    <button type="button" onClick={() => { setFormData(prev => ({...prev, clientId: null})); setClientSearch(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', transition: 'color 0.2s' }} onMouseEnter={e => e.currentTarget.style.color = '#ef4444'} onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}>
+                                                        <X size={18} />
+                                                    </button>
                                                 </div>
+                                            ) : (
+                                                <>
+                                                    <div className="premium-search-box" style={{ maxWidth: '100%', marginBottom: '5px' }}>
+                                                        <Search size={16} />
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Search clients..."
+                                                            value={clientSearch}
+                                                            onChange={(e) => setClientSearch(e.target.value)}
+                                                        />
+                                                    </div>
+                                                    {clientSearch && (
+                                                        <div className="glass-card" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, maxHeight: '150px', overflowY: 'auto', background: 'white' }}>
+                                                            {clients.filter(c => c.name && c.name.toLowerCase().includes(clientSearch.toLowerCase())).map(c => (
+                                                                <div key={c.id} style={{ padding: '10px 12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => { setFormData({ ...formData, clientId: c.id }); setClientSearch(c.name); }}>
+                                                                    <User size={14} color="#C19A6B" />
+                                                                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{c.name}</div>
+                                                                </div>
+                                                            ))}
+                                                            {clients.filter(c => c.name && c.name.toLowerCase().includes(clientSearch.toLowerCase())).length === 0 && (
+                                                                <div style={{ padding: '10px 12px', color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center' }}>No clients found</div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </>
                                             )}
-                                            {formData.clientId && <div style={{ fontSize: '0.75rem', color: '#10b981', marginTop: '4px' }}>✓ Selected: {clients.find(c => c.id === formData.clientId)?.name}</div>}
                                         </div>
                                         <div className="form-group" style={{ marginTop: '15px' }}>
                                             <label>Assign Primary Artist *</label>
