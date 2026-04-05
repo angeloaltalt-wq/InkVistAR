@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import { Save, Download, Upload, RefreshCw, FileText, Bell, Database, Info, Shield } from 'lucide-react';
-import AdminSideNav from '../components/AdminSideNav';
 import ConfirmModal from '../components/ConfirmModal';
 import './AdminSettings.css';
 import { API_URL } from '../config';
 
 function AdminSettings() {
-    const navigate = useNavigate();
     const [settings, setSettings] = useState({
         studio: {
             name: 'InkVistAR Studio',
@@ -109,17 +106,12 @@ function AdminSettings() {
     };
 
     return (
-        <div className="admin-page-with-sidenav">
-            <AdminSideNav />
-            <div className="admin-page page-container-enter">
-            <header className="admin-header" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb', boxShadow: 'none' }}>
-                <h1>System Settings</h1>
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button className="btn btn-primary" onClick={handleSave}>
-                        <Save size={18} style={{marginRight:'8px'}}/> Save Changes
-                    </button>
-                </div>
-            </header>
+        <div>
+            <div style={{ padding: '0 2rem', display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
+                <button className="btn btn-primary" onClick={handleSave}>
+                    <Save size={18} style={{marginRight:'8px'}}/> Save Changes
+                </button>
+            </div>
 
             {isSaved && (
                 <div className="success-message">
@@ -410,7 +402,6 @@ function AdminSettings() {
                         </div>
                     )}
                 </div>
-            </div>
             </div>
             <ConfirmModal {...confirmDialog} onClose={() => setConfirmDialog(prev => ({...prev, isOpen: false}))} />
         </div>
