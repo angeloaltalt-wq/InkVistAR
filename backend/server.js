@@ -11,6 +11,7 @@ const fetch = global.fetch || require('node-fetch');
 require('dotenv').config();
 
 const app = express();
+const { sendResendEmail } = require('./utils/emailService');
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
@@ -2144,6 +2145,22 @@ app.post('/api/customer/appointments', (req, res) => {
     const appointmentDate = new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const appointmentTime = finalStartTime ? new Date(`2000-01-01T${finalStartTime}`).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'a time to be determined';
     createNotification(customerId, 'Booking Request Received', `Your request for a ${designTitle || serviceType} session on ${appointmentDate} at ${appointmentTime} has been received. We will review it shortly!`, 'appointment_request', result.insertId);
+
+    db.query('SELECT email, name FROM users WHERE id = ?', [customerId], (err, users) => {
+      if (!err && users && users.length > 0 && users[0].email) {
+        const html = `
+          <div style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2 style="color: #1e293b;">Booking Request Received!</h2>
+            <p style="font-size: 16px;">Hello ${users[0].name},</p>
+            <p style="font-size: 16px;">Your request for a <strong>${designTitle || serviceType}</strong> session on <strong>${appointmentDate}</strong> at <strong>${appointmentTime}</strong> has been received perfectly.</p>
+            <p style="font-size: 16px;">Our team will review your request and get back to you shortly to confirm the details and answer any questions!</p>
+            <br/><br/>
+            <p style="color: #64748b; font-size: 14px;">- The InkVistAR Studio Team</p>
+          </div>
+        `;
+        sendResendEmail(users[0].email, 'InkVistAR: Booking Request Received', html);
+      }
+    });
 
     res.json({
       success: true,
@@ -4535,11 +4552,12 @@ function startAppointmentReminders() {
       const localTomorrow = new Date(now.getTime() - timezoneOffsetMs + 86400000);
       const tomorrowStr = localTomorrow.toISOString().split('T')[0];
       
-      const query = `
-        SELECT id, customer_id, artist_id, appointment_date, start_time, design_title 
-        FROM appointments 
-        WHERE is_deleted = 0 AND status = 'confirmed' 
-        AND appointment_date LIKE ?
+        const query = `
+        SELECT a.id, a.customer_id, a.artist_id, a.appointment_date, a.start_time, a.design_title, u.email as customer_email, u.name as customer_name
+        FROM appointments a
+        LEFT JOIN users u ON a.customer_id = u.id
+        WHERE a.is_deleted = 0 AND a.status = 'confirmed' 
+        AND a.appointment_date LIKE ?
       `;
       db.query(query, [`${tomorrowStr}%`], (err, appointments) => {
         if (err) return console.error('Error finding reminders:', err);
@@ -4549,6 +4567,19 @@ function startAppointmentReminders() {
           const message = `Reminder: Your tattoo session for "${appt.design_title}" is coming up tomorrow at ${appt.start_time}! Get plenty of rest and stay hydrated.`;
           createNotification(appt.customer_id, title, message, 'appointment_reminder', appt.id);
           
+          if (appt.customer_email) {
+             const html = `
+               <div style="font-family: Arial, sans-serif; padding: 20px;">
+                 <h2 style="color: #1e293b;">Hello ${appt.customer_name},</h2>
+                 <p style="font-size: 16px;">This is a quick reminder that your tattoo session for <strong>${appt.design_title}</strong> is scheduled for tomorrow at <strong>${appt.start_time}</strong>.</p>
+                 <p style="font-size: 16px;">Please arrive 10 minutes early. Stay hydrated and get plenty of rest!</p>
+                 <br/><br/>
+                 <p style="color: #64748b; font-size: 14px;">- The InkVistAR Team</p>
+               </div>
+             `;
+             sendResendEmail(appt.customer_email, `Reminder: Upcoming Tattoo Session Tomorrow!`, html);
+          }
+
           const artistMsg = `Reminder: You have a scheduled session tomorrow at ${appt.start_time} for "${appt.design_title}".`;
           createNotification(appt.artist_id, title, artistMsg, 'appointment_reminder', appt.id);
         });
