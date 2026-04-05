@@ -90,13 +90,15 @@ function Register() {
     if (!validate()) return;
 
     try {
+      const orphanAppointmentId = sessionStorage.getItem('orphanAppointmentId');
       const response = await Axios.post(`${API_URL}/api/register`, {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         email: formData.email.trim(),
         phone: formData.countryCode + formData.phone.trim(),
         password: formData.password,
-        type: 'customer' // Defaulting to customer for public registration
+        type: 'customer', // Defaulting to customer for public registration
+        orphanAppointmentId: orphanAppointmentId
       });
 
       if (response.data.success) {

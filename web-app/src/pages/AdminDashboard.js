@@ -331,7 +331,7 @@ function AdminDashboard() {
                     <div className="dashboard-content">
                         {/* Stats Section */}
                         <div className="stats-section">
-                            <div className="stat-card-v2 glass-card">
+                            <div className="stat-card-v2 glass-card clickable" onClick={() => navigate('/admin/users')}>
                                 <div className="stat-icon-wrapper blue">
                                     <Users size={24} />
                                 </div>
@@ -342,7 +342,7 @@ function AdminDashboard() {
                                 </div>
                             </div>
 
-                            <div className="stat-card-v2 glass-card">
+                            <div className="stat-card-v2 glass-card clickable" onClick={() => navigate('/admin/appointments')}>
                                 <div className="stat-icon-wrapper purple">
                                     <Calendar size={24} />
                                 </div>
@@ -353,7 +353,7 @@ function AdminDashboard() {
                                 </div>
                             </div>
 
-                            <div className="stat-card-v2 glass-card">
+                            <div className="stat-card-v2 glass-card clickable" onClick={() => navigate('/admin/billing')}>
                                 <div className="stat-icon-wrapper green">
                                     <DollarSign size={24} />
                                 </div>
@@ -366,7 +366,7 @@ function AdminDashboard() {
                                 </div>
                             </div>
 
-                            <div className="stat-card-v2 glass-card">
+                            <div className="stat-card-v2 glass-card clickable" onClick={() => navigate('/admin/staff')}>
                                 <div className="stat-icon-wrapper orange">
                                     <Palette size={24} />
                                 </div>

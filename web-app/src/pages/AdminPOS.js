@@ -27,7 +27,8 @@ function AdminPOS() {
     };
 
     const showConfirm = (title, message, onConfirm) => {
-        setConfirmDialog({ isOpen: true, title, message, onConfirm, type: 'warning', isAlert: !onConfirm });
+        const confirmHandler = onConfirm || (() => setConfirmDialog(prev => ({ ...prev, isOpen: false })));
+        setConfirmDialog({ isOpen: true, title, message, onConfirm: confirmHandler, type: 'warning', isAlert: !onConfirm });
     };
 
     useEffect(() => {

@@ -68,9 +68,11 @@ function Login() {
         setResendMessage({ text: '' });
         setLoading(true);
         try {
+            const orphanAppointmentId = sessionStorage.getItem('orphanAppointmentId');
             const response = await Axios.post(`${API_URL}/api/login`, {
                 email: email,
-                password: password
+                password: password,
+                orphanAppointmentId: orphanAppointmentId
             });
 
             if (response.data.success) {
@@ -83,7 +85,11 @@ function Login() {
                 else if (role === 'artist') navigate('/artist', { replace: true });
                 else {
                     const pendingBooking = sessionStorage.getItem('pendingBooking');
-                    if (pendingBooking) {
+                    if (sessionStorage.getItem('orphanAppointmentId')) {
+                        sessionStorage.removeItem('orphanAppointmentId');
+                        navigate('/customer', { replace: true });
+                    }
+                    else if (pendingBooking) {
                         navigate('/customer/book', { replace: true });
                     } else {
                         navigate('/customer', { replace: true });

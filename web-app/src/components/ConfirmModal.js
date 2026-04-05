@@ -1,5 +1,5 @@
 import React from 'react';
-import { TriangleAlert, Trash2, CheckCircle2, Info } from 'lucide-react';
+import { TriangleAlert, Trash2, CheckCircle2, Info, LogOut } from 'lucide-react';
 import '../pages/PortalStyles.css'; // Leverage existing glassmorphism classes
 
 const ConfirmModal = ({ 
@@ -18,8 +18,10 @@ const ConfirmModal = ({
     const isDanger = type === "danger";
     const isSuccess = type === "success";
     const isInfo = type === "info";
+    const isLogout = type === "logout";
 
     const getIcon = () => {
+        if (isLogout) return <LogOut size={32} />;
         if (isDanger) return <Trash2 size={32} />;
         if (isSuccess) return <CheckCircle2 size={32} />;
         if (isInfo) return <Info size={32} />;
@@ -27,14 +29,14 @@ const ConfirmModal = ({
     };
 
     const getIconBg = () => {
-        if (isDanger) return '#fee2e2';
+        if (isLogout || isDanger) return '#fee2e2';
         if (isSuccess) return '#dcfce7';
         if (isInfo) return '#eff6ff';
         return '#fef3c7';
     };
 
     const getIconColor = () => {
-        if (isDanger) return '#dc2626';
+        if (isLogout || isDanger) return '#dc2626';
         if (isSuccess) return '#16a34a';
         if (isInfo) return '#3b82f6';
         return '#d97706';

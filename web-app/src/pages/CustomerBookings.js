@@ -43,6 +43,7 @@ function CustomerBookings(){
     const [selectedApt, setSelectedApt] = useState(null);
     const [modalTransactions, setModalTransactions] = useState([]);
     const [modalLoading, setModalLoading] = useState(false);
+    const [showAftercare, setShowAftercare] = useState(false);
     const [confirmModal, setConfirmModal] = useState({ 
         isOpen: false, 
         title: '', 
@@ -178,7 +179,7 @@ function CustomerBookings(){
         for (let i = 1; i <= daysInMonth; i++) {
             const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
             const dateObj = new Date(dateStr);
-            const isPast = dateObj < today;
+            const isPast = dateObj <= today;
             const isSelected = bookingData.date === dateStr;
 
             days.push(
@@ -325,6 +326,14 @@ function CustomerBookings(){
                                                                     onClick={() => handlePay(a, 'balance')}
                                                                 >
                                                                     <CreditCard size={14}/> Pay Balance
+                                                                </button>
+                                                            ) : a.status === 'completed' ? (
+                                                                <button 
+                                                                    className="btn btn-primary" 
+                                                                    style={{padding: '6px 14px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#10b981', border: 'none'}}
+                                                                    onClick={() => { setSelectedApt(a); setShowAftercare(true); }}
+                                                                >
+                                                                    <Heart size={14}/> Aftercare
                                                                 </button>
                                                             ) : (
                                                                 <span style={{color: '#9ca3af', fontSize: '0.9rem'}}>-</span>
@@ -485,6 +494,55 @@ function CustomerBookings(){
                                     <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', marginTop: '10px' }}> Secure checkout powered by PayMongo </p>
                                 </div>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showAftercare && selectedApt && (
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ maxWidth: '600px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div className="modal-header">
+                            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#10b981' }}><Heart size={20} /> Aftercare Instructions</h3>
+                            <button className="close-btn" onClick={() => setShowAftercare(false)}><X size={20} /></button>
+                        </div>
+                        <div className="modal-body">
+                            <p style={{ color: '#475569', marginBottom: '20px' }}>Congratulations on your new tattoo! Proper aftercare is crucial for vibrant colors and smooth healing. Please follow these steps carefully:</p>
+                            
+                            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
+                                <h4 style={{ color: '#1e293b', marginBottom: '8px' }}>1. The First 24 Hours</h4>
+                                <ul style={{ paddingLeft: '20px', color: '#475569', margin: 0 }}>
+                                    <li style={{ marginBottom: '4px' }}>Leave the bandage on for 2-4 hours, or overnight if your artist recommended it.</li>
+                                    <li>Wash gently with warm water and fragrance-free antibacterial soap. Do not scrub.</li>
+                                </ul>
+                            </div>
+                            
+                            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
+                                <h4 style={{ color: '#1e293b', marginBottom: '8px' }}>2. Days 2 to 14 (Healing Phase)</h4>
+                                <ul style={{ paddingLeft: '20px', color: '#475569', margin: 0 }}>
+                                    <li style={{ marginBottom: '4px' }}>Apply a very thin layer of tattoo specific ointment or unscented lotion 2-3 times a day.</li>
+                                    <li style={{ marginBottom: '4px' }}>Do NOT pick, scratch, or peel the scabs. Let them fall off naturally.</li>
+                                    <li>Avoid direct sunlight, swimming, saunas, and soaking in tubs.</li>
+                                </ul>
+                            </div>
+                            
+                            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                <h4 style={{ color: '#1e293b', marginBottom: '8px' }}>3. Long-Term Care</h4>
+                                <ul style={{ paddingLeft: '20px', color: '#475569', margin: 0 }}>
+                                    <li style={{ marginBottom: '4px' }}>Always apply sunscreen (SPF 50+) when exposed to the sun to prevent fading.</li>
+                                    <li>Keep your skin moisturized to keep the ink looking fresh.</li>
+                                </ul>
+                            </div>
+                            
+                            <div style={{ marginTop: '24px', padding: '16px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px' }}>
+                                <p style={{ margin: 0, fontSize: '0.9rem', color: '#166534' }}>
+                                    <strong>Questions or concerns?</strong> If your tattoo is extremely red, swollen, or hot to the touch after several days, please reach out to your artist immediately.
+                                </p>
+                            </div>
+                            
+                            <div style={{ marginTop: '20px' }}>
+                                <button className="btn btn-secondary" onClick={() => setShowAftercare(false)} style={{ width: '100%' }}>Close</button>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -111,6 +111,10 @@ function CustomerNotifications() {
             case 'pos_invoice':
                 return { icon: Check, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)', label: 'Invoice' };
 
+            case 'aftercare_reminder':
+                return { icon: Info, color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.1)', label: 'Aftercare' };
+            case 'review_prompt':
+                return { icon: CheckCheck, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)', label: 'Review' };
             default:
                 return { icon: Bell, color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.1)', label: 'Notification' };
         }
@@ -145,14 +149,14 @@ function CustomerNotifications() {
                     </div>
                 </header>
 
-                <p className="header-subtitle" style={{ marginTop: '-2.5rem', marginBottom: '2.5rem', marginRight: '-5.5rem', textAlign: 'left' }}>Stay informed about your tattoo journey</p>
+                <p className="header-subtitle" style={{ marginTop: '-1.5rem', marginBottom: '2rem', textAlign: 'left', maxWidth: '100%' }}>Stay informed about your tattoo journey</p>
 
-                <div className="portal-stats-row" style={{ display: 'flex', gap: '20px', marginBottom: '25px' }}>
-                    <div className="glass-card" style={{ flex: 1, padding: '20px', textAlign: 'center' }}>
+                <div className="portal-stats-row" style={{ display: 'flex', gap: '20px', marginBottom: '25px', flexWrap: 'wrap' }}>
+                    <div className="glass-card" style={{ flex: '1 1 200px', padding: '20px', textAlign: 'center' }}>
                         <span style={{ fontSize: '0.85rem', color: '#64748b', display: 'block', marginBottom: '5px' }}>Total Updates</span>
                         <span style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#1e293b' }}>{notifications.length}</span>
                     </div>
-                    <div className="glass-card" style={{ flex: 1, padding: '20px', textAlign: 'center', borderLeft: unreadCount > 0 ? '4px solid #f59e0b' : 'none' }}>
+                    <div className="glass-card" style={{ flex: '1 1 200px', padding: '20px', textAlign: 'center', borderLeft: unreadCount > 0 ? '4px solid #f59e0b' : 'none' }}>
                         <span style={{ fontSize: '0.85rem', color: '#64748b', display: 'block', marginBottom: '5px' }}>Unread Alerts</span>
                         <span style={{ fontSize: '1.8rem', fontWeight: 'bold', color: unreadCount > 0 ? '#f59e0b' : 'inherit' }}>{unreadCount}</span>
                     </div>

@@ -98,7 +98,8 @@ function AdminNotifications() {
                 ...alerts,
                 ...directNotifs.map(n => ({
                     ...n,
-                    severity: n.type === 'system' ? 'medium' : 'low'
+                    severity: n.type === 'system' ? 'medium' : 'low',
+                    path: n.type === 'payment_success' ? '/admin/billing' : undefined
                 }))
             ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 

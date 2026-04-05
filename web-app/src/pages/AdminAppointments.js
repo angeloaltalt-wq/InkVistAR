@@ -198,7 +198,8 @@ function AdminAppointments() {
     };
 
     const showConfirm = (message, onConfirm) => {
-        setConfirmDialog({ isOpen: true, title: 'Confirm Action', message, onConfirm, type: 'info', isAlert: !onConfirm });
+        const confirmHandler = onConfirm || (() => setConfirmDialog(prev => ({ ...prev, isOpen: false })));
+        setConfirmDialog({ isOpen: true, title: 'Confirm Action', message, onConfirm: confirmHandler, type: 'info', isAlert: !onConfirm });
     };
 
     const showAlert = (title, message, type = 'info') => {
@@ -314,7 +315,8 @@ function AdminAppointments() {
                 fetchAppointments();
             } catch (error) {
                 console.error('Error saving appointment:', error);
-                alert('Failed to save appointment. Please check if your data was filled correctly.');
+                const msg = error.response?.data?.message || 'Failed to save appointment. Please check if your data was filled correctly.';
+                showAlert('Save Failed', msg, 'danger');
             } finally {
                 setConfirmDialog(prev => ({ ...prev, isOpen: false }));
             }
@@ -897,6 +899,14 @@ function AdminAppointments() {
                                             <label>Design Title / Idea</label>
                                             <input type="text" value={formData.designTitle} onChange={(e) => setFormData({ ...formData, designTitle: e.target.value })} className="premium-input-v2" placeholder="e.g. Neo-Traditional Dagger" style={{ width: '100%' }} />
                                         </div>
+                                        {formData.beforePhoto && (
+                                            <div className="form-group" style={{ marginTop: '15px' }}>
+                                                <label>Reference Image / Sketches</label>
+                                                <div style={{ marginTop: '8px', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px', background: '#f8fafc' }}>
+                                                    <img src={formData.beforePhoto} alt="Reference Data" style={{ maxWidth: '100%', maxHeight: '400px', objectFit: 'contain', borderRadius: '8px' }} />
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Right Column: Schedule & Pricing */}

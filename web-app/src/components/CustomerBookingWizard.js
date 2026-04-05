@@ -24,7 +24,8 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
         designTitle: '',
         notes: '', // This will also capture additional details like placement and size
         placement: '',
-        referenceImage: null
+        referenceImage: null,
+        phoneCode: '+63'
     });
 
     const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -159,13 +160,16 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                 endTime: formData.time,
                 serviceType: 'Consultation',
                 designTitle: formData.designTitle, // This is the tattoo idea
-                notes: `DESIGN DETAILS\nIdea: ${formData.designTitle}\nPlacement: ${formData.placement}\nNotes: ${formData.notes || 'No additional notes'}\n\nCLIENT CONTEXT\nName: ${currentUser?.name || formData.name}\nEmail: ${currentUser?.email || formData.email}`,
+                notes: `DESIGN DETAILS\nIdea: ${formData.designTitle}\nPlacement: ${formData.placement}\nNotes: ${formData.notes || 'No additional notes'}\n\nCLIENT CONTEXT\nName: ${currentUser?.name || formData.name}\nEmail: ${currentUser?.email || formData.email}\nPhone: ${formData.phoneCode || '+63'}${formData.phone}`,
                 referenceImage: formData.referenceImage,
                 status: 'pending',
                 price: 0 // Free consultation
             });
 
             if (response.data.success) {
+                if (!currentUser && response.data.id) {
+                    sessionStorage.setItem('orphanAppointmentId', response.data.id);
+                }
                 setStep(5); // Show consultation completed screen on step 5
             } else {
                 alert('Request Failed: ' + (response.data.message || 'An unknown error occurred.'));
@@ -434,13 +438,30 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                 </div>
                 <div className="form-group" style={{ position: 'relative' }}>
                     <label style={{ fontWeight: '600', color: '#1e293b', marginBottom: '8px', display: 'block' }}>Phone Number *</label>
-                    <input 
-                        type="tel" 
-                        className={`form-input ${errors.phone ? 'error' : ''}`} 
-                        placeholder="+639171234567" 
-                        value={formData.phone} 
-                        onChange={(e) => handleInputChange('phone', e.target.value)} 
-                    />
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <select 
+                            className="form-input" 
+                            style={{ width: '110px', flexShrink: 0, appearance: 'menulist' }}
+                            value={formData.phoneCode || '+63'} 
+                            onChange={(e) => handleInputChange('phoneCode', e.target.value)}
+                        >
+                            <option value="+63">+63 (PH)</option>
+                            <option value="+1">+1 (US)</option>
+                            <option value="+44">+44 (UK)</option>
+                            <option value="+61">+61 (AU)</option>
+                            <option value="+81">+81 (JP)</option>
+                            <option value="+82">+82 (KR)</option>
+                            <option value="+65">+65 (SG)</option>
+                        </select>
+                        <input 
+                            type="tel" 
+                            className={`form-input ${errors.phone ? 'error' : ''}`} 
+                            placeholder="9171234567" 
+                            value={formData.phone} 
+                            onChange={(e) => handleInputChange('phone', e.target.value.replace(/[^0-9]/g, ''))} 
+                            style={{ flex: 1 }}
+                        />
+                    </div>
                     {errors.phone && <small style={{color: '#ef4444', display: 'block', marginTop: '4px', fontSize: '0.8rem'}}>{errors.phone}</small>}
                 </div>
             </div>
@@ -697,7 +718,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                             else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Please enter a valid email format';
                             
                             if (!formData.phone) newErrors.phone = 'Phone Number is required';
-                            else if (!/^\+?\d{10,15}$/.test(formData.phone)) newErrors.phone = 'Please enter a valid phone number';
+                            else if (!/^\+?\d{10,15}$/.test((formData.phoneCode || '+63') + formData.phone)) newErrors.phone = 'Please enter a valid phone number';
                             
                             if (Object.keys(newErrors).length > 0) {
                                 setErrors(newErrors);

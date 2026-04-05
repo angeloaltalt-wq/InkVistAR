@@ -150,7 +150,7 @@ function ArtistPortal() {
                         <>
                             {/* Stats Grid */}
                             <div className="stats-grid">
-                                <div className="stat-card">
+                                <div className="stat-card clickable" onClick={() => navigate('/artist/earnings')} style={{ cursor: 'pointer' }}>
                                     <DollarSign className="stat-icon" size={32} />
                                     <div className="stat-info">
                                         <p className="stat-label">Total Earnings</p>
@@ -158,7 +158,7 @@ function ArtistPortal() {
                                     </div>
                                 </div>
 
-                                <div className="stat-card">
+                                <div className="stat-card clickable" onClick={() => navigate('/artist/appointments')} style={{ cursor: 'pointer' }}>
                                     <Calendar className="stat-icon" size={32} />
                                     <div className="stat-info">
                                         <p className="stat-label">Appointments</p>

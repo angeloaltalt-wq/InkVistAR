@@ -66,6 +66,19 @@ function ArtistNotifications() {
         }
     };
 
+    const handleAssignmentAction = async (notifId, appointmentId, action) => {
+        try {
+            const res = await Axios.put(`${API_URL}/api/artist/appointments/${appointmentId}/${action}`);
+            if (res.data.success) {
+                // Mark this notification as read and hide buttons
+                await markRead(notifId);
+                fetchNotifications(); // Refresh list to get latest state
+            }
+        } catch (e) {
+            console.error("Failed to process assignment action", e);
+        }
+    };
+
     const markAllRead = async () => {
         try {
             const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
@@ -104,6 +117,8 @@ function ArtistNotifications() {
                 return { icon: XCircle, color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)', label: 'Cancelled' };
             case 'appointment_completed':
                 return { icon: Check, color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)', label: 'Completed' };
+            case 'action_required':
+                return { icon: AlertTriangle, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)', label: 'Action Needed' };
             case 'system':
                 return { icon: Info, color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)', label: 'System' };
             default:
@@ -199,6 +214,13 @@ function ArtistNotifications() {
                                                             {formatNotificationTime(n.created_at)}
                                                         </span>
                                                         
+                                                        {n.type === 'action_required' && !n.is_read && (
+                                                            <div className="notif-actions" style={{ display: 'flex', gap: '8px', marginRight: '10px' }}>
+                                                                <button className="btn btn-primary" onClick={() => handleAssignmentAction(n.id, n.related_id, 'accept')} style={{ padding: '6px 12px', fontSize: '0.8rem', background: '#10b981' }}>Accept</button>
+                                                                <button className="btn btn-secondary" onClick={() => handleAssignmentAction(n.id, n.related_id, 'reject')} style={{ padding: '6px 12px', fontSize: '0.8rem' }}>Decline</button>
+                                                            </div>
+                                                        )}
+
                                                         <div className="notif-actions" style={{ display: 'flex', gap: '8px' }}>
                                                             {!n.is_read ? (
                                                                 <button className="notif-btn ghost" onClick={() => markRead(n.id)} style={{ padding: '4px' }} title="Mark as Read">

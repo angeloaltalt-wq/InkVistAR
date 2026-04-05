@@ -1090,6 +1090,12 @@ app.post('/api/login', async (req, res) => {
       const device = ua.length > 40 ? ua.substring(0, 40) + '...' : ua;
       logAction(user.id, 'LOGIN', `Logged in as ${user.user_type} on ${device}`, req.ip || '::1');
 
+      if (req.body.orphanAppointmentId) {
+        db.query('UPDATE appointments SET customer_id = ? WHERE id = ?', [user.id, req.body.orphanAppointmentId], (updateErr) => {
+          if (updateErr) console.error('Error claiming orphan appointment:', updateErr);
+        });
+      }
+
       // Successful login
       res.json({
         success: true,
@@ -1402,7 +1408,7 @@ app.post('/api/register', async (req, res) => {
     console.log('\n📝 ========== REGISTER REQUEST ==========');
     console.log('📤 Request body:', req.body);
 
-    const { firstName, lastName, name, email, password, type, phone, preferences } = req.body;
+    const { firstName, lastName, name, email, password, type, phone, preferences, orphanAppointmentId } = req.body;
 
     // Handle combined name if firstName/lastName not provided (backward compatibility)
     const fullName = (firstName && lastName) ? `${firstName} ${lastName}` : (name || 'Unknown User');
@@ -1507,6 +1513,12 @@ app.post('/api/register', async (req, res) => {
         }
 
         function sendSuccessResponse(userId) {
+          if (orphanAppointmentId) {
+            db.query('UPDATE appointments SET customer_id = ? WHERE id = ?', [userId, orphanAppointmentId], (updateErr) => {
+              if (updateErr) console.error('Error claiming orphan appointment during registration:', updateErr);
+            });
+          }
+
           res.json({
             success: true,
             message: 'Account created! Please check your email to verify.',
@@ -2396,7 +2408,7 @@ app.get('/api/admin/appointments', (req, res) => {
 
 // POST create a new appointment (Admin)
 app.post('/api/admin/appointments', (req, res) => {
-  const { customerId, artistId, secondaryArtistId, commissionSplit, serviceType, designTitle, date, startTime, status, notes, price, manualPaidAmount } = req.body;
+  const { customerId, artistId, secondaryArtistId, commissionSplit, serviceType, designTitle, date, startTime, status, notes, price, manualPaidAmount, referenceImage } = req.body;
 
   if (!customerId || !artistId || !date) {
     return res.status(400).json({ success: false, message: 'customerId, artistId, and date are required.' });
@@ -2405,18 +2417,39 @@ app.post('/api/admin/appointments', (req, res) => {
   const combinedTitle = serviceType && designTitle ? `${serviceType}: ${designTitle}` : (designTitle || serviceType || 'Appointment');
   const finalStatus = status || 'confirmed';
 
-  const query = `
-    INSERT INTO appointments 
-      (customer_id, artist_id, secondary_artist_id, commission_split, appointment_date, start_time, design_title, service_type, status, notes, price, manual_paid_amount, payment_status, is_deleted)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 0)
+  // Double Booking Check
+  const checkQuery = `
+    SELECT id FROM appointments 
+    WHERE appointment_date = ? AND start_time = ? AND status != 'cancelled' AND is_deleted = 0
+    AND (
+      (artist_id = ? AND artist_id != 1) OR 
+      (customer_id = ? AND customer_id != 1)
+    )
   `;
-  db.query(query, [customerId, artistId, secondaryArtistId || null, commissionSplit || 50, date, startTime || null, combinedTitle, serviceType || 'General Session', finalStatus, notes || '', price || 0, manualPaidAmount || 0], (err, result) => {
-    if (err) {
-      console.error('❌ Error creating admin appointment:', err);
-      return res.status(500).json({ success: false, message: 'Database error: ' + err.message });
+
+  db.query(checkQuery, [date, startTime, artistId, customerId], (checkErr, results) => {
+    if (checkErr) {
+      console.error('❌ Error checking double booking:', checkErr);
+      return res.status(500).json({ success: false, message: 'Database error' });
     }
-    createNotification(customerId, 'Appointment Scheduled', `Your appointment has been scheduled for ${date}.`, 'appointment_confirmed', result.insertId);
-    res.json({ success: true, message: 'Appointment created successfully', id: result.insertId });
+
+    if (results.length > 0) {
+      return res.status(400).json({ success: false, message: 'Scheduling Conflict: The artist or client already has an appointment at this date and time.' });
+    }
+
+    const query = `
+      INSERT INTO appointments 
+        (customer_id, artist_id, secondary_artist_id, commission_split, appointment_date, start_time, design_title, service_type, status, notes, price, manual_paid_amount, payment_status, is_deleted, before_photo)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 0, ?)
+    `;
+    db.query(query, [customerId, artistId, secondaryArtistId || null, commissionSplit || 50, date, startTime || null, combinedTitle, serviceType || 'General Session', finalStatus, notes || '', price || 0, manualPaidAmount || 0, referenceImage || null], (err, result) => {
+      if (err) {
+        console.error('❌ Error creating admin appointment:', err);
+        return res.status(500).json({ success: false, message: 'Database error: ' + err.message });
+      }
+      createNotification(customerId, 'Appointment Scheduled', `Your appointment has been scheduled for ${date}.`, 'appointment_confirmed', result.insertId);
+      res.json({ success: true, message: 'Appointment created successfully', id: result.insertId });
+    });
   });
 });
 
@@ -2463,14 +2496,46 @@ app.put('/api/admin/appointments/:id', (req, res) => {
     }
 
     // Notify users of the update
-    db.query('SELECT customer_id, artist_id FROM appointments WHERE id = ?', [id], (e, r) => {
+    db.query('SELECT customer_id, artist_id, status FROM appointments WHERE id = ?', [id], (e, r) => {
       if (!e && r.length) {
-        createNotification(r[0].customer_id, 'Appointment Update', `An administrator has reviewed your request and has updated your appointment details to ${status}.`, 'system', id);
-        createNotification(r[0].artist_id, 'Appointment Update', `An administrator has updated appointment details for your session.`, 'system', id);
+        createNotification(r[0].customer_id, 'Appointment Update', `Your appointment has been updated to ${r[0].status}.`, 'system', id);
+        
+        // If the appointment is pending or just created and assigned to an artist, require their action
+        if (r[0].status === 'pending' && r[0].artist_id !== 1) {
+             createNotification(r[0].artist_id, 'Action Required: New Assignment', `You have been assigned a new session. Please accept or decline.`, 'action_required', id);
+        } else {
+             createNotification(r[0].artist_id, 'Appointment Update', `Appointment details for your session have been updated.`, 'system', id);
+        }
       }
     });
 
     res.json({ success: true, message: 'Appointment updated successfully' });
+  });
+});
+
+// PUT artist accept appointment
+app.put('/api/artist/appointments/:id/accept', (req, res) => {
+  const { id } = req.params;
+  db.query("UPDATE appointments SET status = 'confirmed' WHERE id = ?", [id], (err, result) => {
+    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+    if (result.affectedRows === 0) return res.status(404).json({ success: false, message: 'Not found' });
+    
+    // Notify admin
+    createNotification(1, 'Assignment Accepted', `Artist accepted the appointment #${id}.`, 'system', id);
+    res.json({ success: true, message: 'Accepted successfully' });
+  });
+});
+
+// PUT artist reject appointment
+app.put('/api/artist/appointments/:id/reject', (req, res) => {
+  const { id } = req.params;
+  db.query("UPDATE appointments SET status = 'pending', artist_id = 1 WHERE id = ?", [id], (err, result) => {
+    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+    if (result.affectedRows === 0) return res.status(404).json({ success: false, message: 'Not found' });
+    
+    // Notify admin that artist rejected the assignment
+    createNotification(1, 'Assignment Declined', `Artist declined the appointment #${id}. Reverted to Admin mapping.`, 'system', id);
+    res.json({ success: true, message: 'Declined successfully' });
   });
 });
 
@@ -2592,7 +2657,26 @@ app.post('/api/appointments/:id/materials', (req, res) => {
     });
 });
 
-// Update appointment status (Modified with Inventory Logic)
+// Release a material hold back to inventory
+app.post('/api/appointments/:id/release-material', (req, res) => {
+  const { id } = req.params;
+  const { materialId } = req.body;
+
+  db.query('SELECT inventory_id, quantity FROM session_materials WHERE id = ? AND appointment_id = ? AND status = "hold"', [materialId, id], (err, results) => {
+    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+    if (results.length === 0) return res.status(400).json({ success: false, message: 'Material not found or not on hold' });
+    
+    const mat = results[0];
+    db.query('UPDATE session_materials SET status = "released" WHERE id = ?', [materialId], (updErr) => {
+      if (updErr) return res.status(500).json({ success: false, message: 'Database error' });
+      db.query('UPDATE inventory SET current_stock = current_stock + ? WHERE id = ?', [mat.quantity, mat.inventory_id], (invErr) => {
+        if (invErr) return res.status(500).json({ success: false, message: 'Database error' });
+        res.json({ success: true, message: 'Material released back to inventory' });
+      });
+    });
+  });
+});
+
 // Update appointment status
 app.put('/api/appointments/:id/status', (req, res) => {
   const { id } = req.params;
@@ -2675,7 +2759,14 @@ app.put('/api/appointments/:id/status', (req, res) => {
         createNotification(appointment.artist_id, 'Appointment Cancelled', `Appointment #${id} has been cancelled.`, 'appointment_cancelled', id);
       } else if (status === 'completed') {
         if (isFullyComplete || isFullyComplete === undefined) {
-          createNotification(appointment.customer_id, 'Tattoo Journey Complete! ✨', `Your session for "${designTitle}" is finished! We hope you love your new ink. Don't forget to follow your aftercare instructions!`, 'appointment_completed', id);
+          createNotification(appointment.customer_id, 'Tattoo Journey Complete! ✨', `Your session for "${designTitle}" is finished! We hope you love your new ink.`, 'appointment_completed', id);
+          
+          // Trigger Aftercare Reminder
+          createNotification(appointment.customer_id, 'Don\'t forget your Aftercare! 🧼', `Proper healing is key! Review the aftercare instructions for your new "${designTitle}" tattoo to keep it looking fresh.`, 'aftercare_reminder', id);
+          
+          // Trigger Review Prompt
+          createNotification(appointment.customer_id, 'How did we do? ⭐', `Please take a moment to leave a review for your artist! We value your feedback on your latest session.`, 'review_prompt', id);
+
         } else {
           createNotification(appointment.customer_id, 'Session Complete! ⏳', `Your session for "${designTitle}" today is finished. We will coordinate with you soon for your next session to continue your piece!`, 'appointment_partial_complete', id);
         }

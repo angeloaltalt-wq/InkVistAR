@@ -305,7 +305,7 @@ function AdminSideNav() {
                 message="Are you sure you want to sign out of your account?"
                 confirmText="Yes, Logout"
                 cancelText="Cancel"
-                type="warning"
+                type="logout"
                 onConfirm={handleLogout}
                 onClose={() => setShowLogoutConfirm(false)}
             />
