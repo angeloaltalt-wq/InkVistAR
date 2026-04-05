@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
 import ManagerSideNav from '../components/ManagerSideNav';
+import Pagination from '../components/Pagination';
 import './PortalStyles.css';
 import { API_URL } from '../config';
 
 function ManagerAppointments() {
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
 
     useEffect(() => {
         const fetch = async () => {
@@ -57,7 +60,7 @@ function ManagerAppointments() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {appointments.map(a => (
+                                        {appointments.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(a => (
                                             <tr key={a.id}>
                                                 <td>{a.client}</td>
                                                 <td>{a.artist}</td>
@@ -68,6 +71,20 @@ function ManagerAppointments() {
                                     </tbody>
                                 </table>
                             </div>
+                            {appointments.length > 0 && (
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={Math.ceil(appointments.length / itemsPerPage)}
+                                    onPageChange={setCurrentPage}
+                                    itemsPerPage={itemsPerPage}
+                                    onItemsPerPageChange={(newVal) => {
+                                        setItemsPerPage(newVal);
+                                        setCurrentPage(1);
+                                    }}
+                                    totalItems={appointments.length}
+                                    unit="appointments"
+                                />
+                            )}
                         </div>
                     )}
                 </div>

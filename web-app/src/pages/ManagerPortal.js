@@ -5,6 +5,7 @@ import { Users, Calendar, TrendingUp, AlertCircle, LogOut } from 'lucide-react';
 import './PortalStyles.css';
 import { API_URL } from '../config';
 import ManagerSideNav from '../components/ManagerSideNav';
+import Pagination from '../components/Pagination';
 
 function ManagerPortal() {
     const navigate = useNavigate();
@@ -17,6 +18,8 @@ function ManagerPortal() {
     const [artists, setArtists] = useState([]);
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [artistPage, setArtistPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(5);
     
     useEffect(() => {
         fetchManagerData();
@@ -131,7 +134,7 @@ function ManagerPortal() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {artists.map((artist) => (
+                                            {artists.slice((artistPage - 1) * itemsPerPage, artistPage * itemsPerPage).map((artist) => (
                                                 <tr key={artist.id}>
                                                     <td>{artist.name}</td>
                                                     <td>{artist.appointments}</td>
@@ -146,6 +149,20 @@ function ManagerPortal() {
                                     </table>
                                 ) : (
                                     <p className="no-data">No artists found</p>
+                                )}
+                                {artists.length > 0 && (
+                                    <Pagination
+                                        currentPage={artistPage}
+                                        totalPages={Math.ceil(artists.length / itemsPerPage)}
+                                        onPageChange={setArtistPage}
+                                        itemsPerPage={itemsPerPage}
+                                        onItemsPerPageChange={(newVal) => {
+                                            setItemsPerPage(newVal);
+                                            setArtistPage(1);
+                                        }}
+                                        totalItems={artists.length}
+                                        unit="artists"
+                                    />
                                 )}
                             </div>
                         </div>

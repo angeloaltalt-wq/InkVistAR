@@ -3,12 +3,15 @@ import Axios from 'axios';
 import { Play, CheckCircle, Upload, Save, X, Package, FileText, Image as ImageIcon, Clock, Search, Calendar } from 'lucide-react';
 import ArtistSideNav from '../components/ArtistSideNav';
 import ConfirmModal from '../components/ConfirmModal';
+import Pagination from '../components/Pagination';
 import './PortalStyles.css';
 import { API_URL } from '../config';
 
 function ArtistSessions() {
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
     const [activeSession, setActiveSession] = useState(null);
     const [sessionData, setSessionData] = useState({
         notes: '',
@@ -364,8 +367,9 @@ function ArtistSessions() {
                                 <span className={`status-badge-v2 pending`}>{sessions.length} Appointments</span>
                             </div>
                             {sessions.length > 0 ? (
-                                <div className="table-responsive">
-                                    <table className="portal-table">
+                                <>
+                                    <div className="table-responsive">
+                                        <table className="portal-table">
                                         <thead>
                                             <tr>
                                                 <th>Time</th>
@@ -376,7 +380,7 @@ function ArtistSessions() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {sessions.map(session => (
+                                            {sessions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(session => (
                                                 <tr key={session.id}>
                                                     <td>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' }}>
@@ -397,6 +401,19 @@ function ArtistSessions() {
                                         </tbody>
                                     </table>
                                 </div>
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={Math.ceil(sessions.length / itemsPerPage)}
+                                    onPageChange={setCurrentPage}
+                                    itemsPerPage={itemsPerPage}
+                                    onItemsPerPageChange={(newVal) => {
+                                        setItemsPerPage(newVal);
+                                        setCurrentPage(1);
+                                    }}
+                                    totalItems={sessions.length}
+                                    unit="sessions"
+                                />
+                                </>
                             ) : (
                                 <div className="no-data-container" style={{ flex: 1 }}>
                                     <Calendar size={48} className="no-data-icon" />

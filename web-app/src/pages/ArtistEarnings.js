@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
 import { DollarSign, TrendingUp, CreditCard, Download } from 'lucide-react';
 import ArtistSideNav from '../components/ArtistSideNav';
+import Pagination from '../components/Pagination';
 import './PortalStyles.css';
 import { API_URL } from '../config';
 
@@ -14,6 +15,8 @@ function ArtistEarnings() {
     const [sessionEarnings, setSessionEarnings] = useState([]);
     const [payoutHistory, setPayoutHistory] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
 
     const [user] = useState(() => {
         const saved = localStorage.getItem('user');
@@ -106,7 +109,7 @@ function ArtistEarnings() {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {sessionEarnings.map((session) => (
+                                                    {sessionEarnings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((session) => (
                                                         <tr key={session.id}>
                                                             <td>{new Date(session.appointment_date).toLocaleDateString()}</td>
                                                             <td>{session.client_name}</td>
@@ -124,6 +127,20 @@ function ArtistEarnings() {
                                             </table>
                                         </div>
                                     ) : <p className="no-data">No completed sessions yet.</p>}
+                                    {sessionEarnings.length > 0 && (
+                                        <Pagination
+                                            currentPage={currentPage}
+                                            totalPages={Math.ceil(sessionEarnings.length / itemsPerPage)}
+                                            onPageChange={setCurrentPage}
+                                            itemsPerPage={itemsPerPage}
+                                            onItemsPerPageChange={(newVal) => {
+                                                setItemsPerPage(newVal);
+                                                setCurrentPage(1);
+                                            }}
+                                            totalItems={sessionEarnings.length}
+                                            unit="sessions"
+                                        />
+                                    )}
                                 </div>
 
                                 {/* Payout History */}

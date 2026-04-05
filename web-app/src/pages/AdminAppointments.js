@@ -300,9 +300,11 @@ function AdminAppointments() {
                 }
                 closeModal();
                 fetchAppointments();
-                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
             } catch (error) {
                 console.error('Error saving appointment:', error);
+                alert('Failed to save appointment. Please check if your data was filled correctly.');
+            } finally {
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
             }
         };
 

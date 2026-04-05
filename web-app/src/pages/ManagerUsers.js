@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
 import ManagerSideNav from '../components/ManagerSideNav';
+import Pagination from '../components/Pagination';
 import './PortalStyles.css';
 import { API_URL } from '../config';
 
 function ManagerUsers() {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
 
     useEffect(() => {
         const fetch = async () => {
@@ -48,7 +51,7 @@ function ManagerUsers() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {users.map(u => (
+                                        {users.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(u => (
                                             <tr key={u.id}>
                                                 <td>#{u.id}</td>
                                                 <td>{u.name}</td>
@@ -59,6 +62,20 @@ function ManagerUsers() {
                                     </tbody>
                                 </table>
                             </div>
+                            {users.length > 0 && (
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={Math.ceil(users.length / itemsPerPage)}
+                                    onPageChange={setCurrentPage}
+                                    itemsPerPage={itemsPerPage}
+                                    onItemsPerPageChange={(newVal) => {
+                                        setItemsPerPage(newVal);
+                                        setCurrentPage(1);
+                                    }}
+                                    totalItems={users.length}
+                                    unit="users"
+                                />
+                            )}
                         </div>
                     )}
                 </div>

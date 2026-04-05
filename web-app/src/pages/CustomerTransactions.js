@@ -13,12 +13,15 @@ import {
     Clock,
     AlertCircle
 } from 'lucide-react';
+import Pagination from '../components/Pagination';
 import './PortalStyles.css'; // Reusing some table styles
 
 function CustomerTransactions() {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
     const user = JSON.parse(localStorage.getItem('user') || '{}');
 
     useEffect(() => {
@@ -62,6 +65,12 @@ function CustomerTransactions() {
         t.appointment_id?.toString().includes(searchTerm)
     );
 
+    const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+    const paginatedTransactions = filteredTransactions.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
     if (loading) {
         return (
             <div className="bookings-container">
@@ -87,7 +96,10 @@ function CustomerTransactions() {
                             type="text" 
                             placeholder="Search by title, ID..." 
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value);
+                                setCurrentPage(1);
+                            }}
                         />
                     </div>
                 </div>
@@ -107,8 +119,8 @@ function CustomerTransactions() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredTransactions.length > 0 ? (
-                                filteredTransactions.map((t) => {
+                            {paginatedTransactions.length > 0 ? (
+                                paginatedTransactions.map((t) => {
                                     const statusStyle = getStatusStyle(t.status);
                                     const StatusIcon = statusStyle.icon;
                                     
@@ -174,6 +186,19 @@ function CustomerTransactions() {
                         </tbody>
                     </table>
                 </div>
+
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={itemsPerPage}
+                    onItemsPerPageChange={(newVal) => {
+                        setItemsPerPage(newVal);
+                        setCurrentPage(1);
+                    }}
+                    totalItems={filteredTransactions.length}
+                    unit="transactions"
+                />
             </div>
             
             <footer style={{ marginTop: '24px', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
