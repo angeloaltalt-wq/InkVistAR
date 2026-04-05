@@ -26,6 +26,7 @@ function CustomerBookings(){
     const [artists, setArtists] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [bookedDates, setBookedDates] = useState({});
     const serviceOptions = ['Tattoo Session', 'Consultation', 'Piercing', 'Follow-up', 'Touch-up'];
     
     const [bookingData, setBookingData] = useState({
@@ -71,7 +72,28 @@ function CustomerBookings(){
                 if (res.data.success) setArtists(res.data.artists);
             } catch (e) { console.error("Error fetching artists:", e); }
         };
+        const fetchAvailability = async () => {
+            try {
+                const response = await Axios.get(`${API_URL}/api/artist/1/availability`);
+                if (response.data.success) {
+                    const bookings = {};
+                    response.data.bookings.forEach(b => {
+                        const dateStr = typeof b.appointment_date === 'string' 
+                            ? b.appointment_date.substring(0, 10) 
+                            : new Date(b.appointment_date).toISOString().split('T')[0];
+                        if (!bookings[dateStr]) bookings[dateStr] = { count: 0, times: [] };
+                        bookings[dateStr].count += 1;
+                        if (b.start_time) bookings[dateStr].times.push(b.start_time.substring(0, 5));
+                    });
+                    setBookedDates(bookings);
+                }
+            } catch (error) {
+                console.error('Error fetching availability:', error);
+            }
+        };
+
         fetchArtists();
+        fetchAvailability();
 
         // Handle auto-open from Gallery
         if (location.state?.autoOpenBooking) {
@@ -174,21 +196,45 @@ function CustomerBookings(){
         const today = new Date();
         today.setHours(0,0,0,0);
 
+        const maxDate = new Date();
+        maxDate.setMonth(today.getMonth() + 3);
+        maxDate.setHours(23, 59, 59, 999);
+
         for (let i = 0; i < firstDayOfMonth; i++) days.push(<div key={`empty-${i}`} className="calendar-day empty"></div>);
         
         for (let i = 1; i <= daysInMonth; i++) {
             const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
             const dateObj = new Date(dateStr);
-            const isPast = dateObj <= today;
             const isSelected = bookingData.date === dateStr;
+            const isPast = dateObj <= today;
+            const isTooFar = dateObj > maxDate;
+
+            const dateData = bookedDates[dateStr] || { count: 0, times: [] };
+            const isFull = dateData.count >= 7; // Up to 7 time blocks maximum
+            const isBusy = dateData.count >= 4;
+
+            let statusColor = '#10b981'; 
+            if (isFull) statusColor = '#ef4444';
+            else if (isBusy) statusColor = '#f59e0b';
 
             days.push(
                 <div 
                     key={i} 
-                    className={`calendar-day ${isPast ? 'disabled' : ''} ${isSelected ? 'selected' : ''}`}
-                    onClick={() => !isPast && setBookingData({...bookingData, date: dateStr})}
+                    className={`calendar-day ${isPast || isTooFar ? 'disabled' : ''} ${isSelected ? 'selected' : ''}`}
+                    onClick={() => {
+                        if (isPast || isTooFar) return;
+                        if (isFull) {
+                            showAlert("Fully Booked", "This date is fully booked. Please choose another date.", "warning");
+                            return;
+                        }
+                        setBookingData({...bookingData, date: dateStr});
+                    }}
+                    style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
                 >
-                    {i}
+                    <span style={{ zIndex: 1 }}>{i}</span>
+                    {!isPast && !isTooFar && (
+                        <div style={{ width: '4px', height: '4px', borderRadius: '2px', backgroundColor: statusColor, marginTop: '2px' }} />
+                    )}
                 </div>
             );
         }
@@ -322,7 +368,7 @@ function CustomerBookings(){
                                                             ) : a.payment_status === 'downpayment_paid' ? (
                                                                 <button 
                                                                     className="btn btn-primary" 
-                                                                    style={{padding: '6px 14px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#3b82f6', border: 'none'}}
+                                                                    style={{padding: '6px 14px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: 'white', border: 'none', boxShadow: '0 4px 10px rgba(245, 158, 11, 0.3)'}}
                                                                     onClick={() => handlePay(a, 'balance')}
                                                                 >
                                                                     <CreditCard size={14}/> Pay Balance
@@ -609,6 +655,7 @@ function CustomerBookings(){
                                             <input 
                                                 type="text" className="form-input" placeholder="e.g. Traditional Dagger with Flowers" 
                                                 value={bookingData.designTitle} onChange={e => setBookingData({...bookingData, designTitle: e.target.value})}
+                                                minLength={3} maxLength={100}
                                             />
                                         </div>
                                         <div className="form-group" style={{ marginTop: '16px' }}>
@@ -690,20 +737,34 @@ function CustomerBookings(){
                                             <div className="time-slots">
                                                 <label style={{ fontWeight: '600', marginBottom: '12px', display: 'block' }}>Preferred Time Slot</label>
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
-                                                    {['13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'].map(t => (
+                                                    {['13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'].map(t => {
+                                                        let isDisabled = false;
+                                                        if (bookingData.date) {
+                                                            const checkDate = new Date(`${bookingData.date}T${t}:00`);
+                                                            if (checkDate <= new Date()) isDisabled = true;
+                                                            if (bookedDates[bookingData.date] && bookedDates[bookingData.date].times.includes(t)) isDisabled = true;
+                                                        } else {
+                                                            isDisabled = true; // Wait for date selection
+                                                        }
+
+                                                        return (
                                                         <div 
                                                             key={t}
-                                                            onClick={() => setBookingData({...bookingData, startTime: t})}
+                                                            onClick={() => {
+                                                                if (!isDisabled) setBookingData({...bookingData, startTime: t});
+                                                            }}
                                                             style={{
                                                                 padding: '12px', borderRadius: '8px', border: `1px solid ${bookingData.startTime === t ? '#daa520' : '#e2e8f0'}`,
-                                                                background: bookingData.startTime === t ? '#daa520' : 'white',
-                                                                color: bookingData.startTime === t ? 'white' : '#1e293b',
-                                                                textAlign: 'center', cursor: 'pointer', fontWeight: '600', fontSize: '0.9rem'
+                                                                background: bookingData.startTime === t ? '#daa520' : (isDisabled ? '#f8fafc' : 'white'),
+                                                                color: bookingData.startTime === t ? 'white' : (isDisabled ? '#cbd5e1' : '#1e293b'),
+                                                                textAlign: 'center', cursor: isDisabled ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '0.9rem',
+                                                                opacity: isDisabled ? 0.6 : 1
                                                             }}
                                                         >
                                                             {parseInt(t) > 12 ? (parseInt(t)-12) + ':00 PM' : t + ':00 PM'}
                                                         </div>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
                                         </div>

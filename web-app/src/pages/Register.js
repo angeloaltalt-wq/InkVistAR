@@ -29,6 +29,8 @@ function Register() {
       sanitizedValue = value.replace(/[^a-zA-Z\s-]/g, '').replace(/^\s+/, '');
     } else if (name === 'email') {
       sanitizedValue = value.replace(/\s/g, ''); // No spaces in email
+    } else if (name === 'phone') {
+      sanitizedValue = value.replace(/[^0-9]/g, ''); // Only numbers
     } else {
       sanitizedValue = value.replace(/^\s+/, '');
     }
@@ -54,10 +56,10 @@ function Register() {
     }
 
     if (name === 'password') {
-      const strongRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/;
+      const strongRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
       if (!value) errorMsg = "Password is required";
       else if (value.length < 8) errorMsg = "Password must be at least 8 characters";
-      else if (!strongRegex.test(value)) errorMsg = "Password needs at least 1 letter and 1 number";
+      else if (!strongRegex.test(value)) errorMsg = "Password needs uppercase, lowercase, number, and symbol";
     }
 
     if (name === 'confirmPassword') {
@@ -152,9 +154,14 @@ function Register() {
                     value={formData.countryCode}
                     onChange={handleChange}
                 >
-                    <option value="+63">PH +63</option>
-                    <option value="+1">US +1</option>
-                    <option value="+65">SG +65</option>
+                    <option value="+63">PH (+63)</option>
+                    <option value="+1">US/CA (+1)</option>
+                    <option value="+44">UK (+44)</option>
+                    <option value="+61">AU (+61)</option>
+                    <option value="+81">JP (+81)</option>
+                    <option value="+82">KR (+82)</option>
+                    <option value="+65">SG (+65)</option>
+                    <option value="+64">NZ (+64)</option>
                 </select>
                 <input type="tel" name="phone" className="form-input" style={{ flex: 1 }} value={formData.phone} onChange={handleChange} placeholder="Phone Number" />
             </div>

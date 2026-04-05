@@ -25,6 +25,7 @@ function ArtistSessions() {
     const [serviceKits, setServiceKits] = useState({});
     const [addingMaterial, setAddingMaterial] = useState(false);
     const [inventorySearch, setInventorySearch] = useState('');
+    const [isCompletingSession, setIsCompletingSession] = useState(false);
 
     const [sessionModal, setSessionModal] = useState({ mounted: false, visible: false });
     const [inventoryModal, setInventoryModal] = useState({ mounted: false, visible: false });
@@ -265,26 +266,31 @@ function ArtistSessions() {
 
     const handleUpdateStatus = async (newStatus) => {
         if (newStatus === 'completed') {
-            setConfirmModal({
-                isOpen: true,
-                title: 'Session Completion Status',
-                message: `Does this piece need another session, or is the tattoo fully complete? (Total material cost: ₱${sessionCost.toLocaleString()} will be recorded).`,
-                confirmText: 'Fully Complete ✨',
-                cancelText: 'Needs Another Session',
-                type: 'info',
-                onConfirm: async () => {
-                    await processStatusUpdate(newStatus, true);
-                    setConfirmModal({ ...confirmModal, isOpen: false });
-                },
-                onClose: async () => {
-                    // Custom mapping for cancel button to mean "Needs Another Session"
-                    await processStatusUpdate(newStatus, false);
-                    setConfirmModal({ ...confirmModal, isOpen: false });
-                }
-            });
+            setIsCompletingSession(true);
         } else {
             await processStatusUpdate(newStatus);
         }
+    };
+
+    const confirmCompletion = () => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Session Completion Status',
+            message: `Does this piece need another session, or is the tattoo fully complete? (Total material cost: ₱${sessionCost.toLocaleString()} will be recorded).`,
+            confirmText: 'Fully Complete ✨',
+            cancelText: 'Needs Another Session',
+            type: 'info',
+            onConfirm: async () => {
+                await processStatusUpdate('completed', true);
+                setConfirmModal({ ...confirmModal, isOpen: false });
+                setIsCompletingSession(false);
+            },
+            onClose: async () => {
+                await processStatusUpdate('completed', false);
+                setConfirmModal({ ...confirmModal, isOpen: false });
+                setIsCompletingSession(false);
+            }
+        });
     };
 
     const processStatusUpdate = async (newStatus, isFullyComplete = true) => {
@@ -461,9 +467,14 @@ function ArtistSessions() {
                                             <Play size={16} style={{ marginRight: '5px' }} /> Start Session
                                         </button>
                                     )}
-                                    {activeSession.status === 'in_progress' && (
+                                    {activeSession.status === 'in_progress' && !isCompletingSession && (
                                         <button className="btn btn-primary" style={{ backgroundColor: '#10b981' }} onClick={() => handleUpdateStatus('completed')}>
                                             <CheckCircle size={16} style={{ marginRight: '5px' }} /> Complete Session
+                                        </button>
+                                    )}
+                                    {isCompletingSession && (
+                                        <button className="btn btn-secondary" onClick={() => setIsCompletingSession(false)}>
+                                            <X size={16} style={{ marginRight: '5px' }} /> Cancel Completion
                                         </button>
                                     )}
                                 </div>
@@ -513,7 +524,7 @@ function ArtistSessions() {
                                 <div className="form-group" style={{ display: 'flex', flexDirection: 'column' }}>
                                     <label><Package size={16} style={{ verticalAlign: 'middle' }} /> Dynamic Supply Log</label>
 
-                                    {activeSession.status === 'in_progress' ? (
+                                    {isCompletingSession ? (
                                         <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '15px', flex: 1, display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                                                 <strong>Items Held/Consumed</strong>
@@ -587,10 +598,17 @@ function ArtistSessions() {
                                                     </div>
                                                 </div>
                                             </div>
+                                            <button 
+                                                className="btn btn-primary" 
+                                                onClick={confirmCompletion}
+                                                style={{ marginTop: '15px', width: '100%', justifyContent: 'center' }}
+                                            >
+                                                Finalize & Complete Session
+                                            </button>
                                         </div>
                                     ) : (
                                         <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '20px', textAlign: 'center', background: '#f8fafc', color: '#64748b', fontStyle: 'italic' }}>
-                                            {activeSession.status === 'confirmed' ? 'Start session to begin logging materials.' : 'Session ended. Supplies finalized.'}
+                                            {activeSession.status === 'confirmed' ? 'Start session to begin logging materials.' : activeSession.status === 'in_progress' ? 'Click "Complete Session" above to log supplies and finalize session.' : 'Session ended. Supplies finalized.'}
                                         </div>
                                     )}
                                 </div>

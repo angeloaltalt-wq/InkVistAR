@@ -99,17 +99,16 @@ function AdminBilling() {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [invRes, settingsRes, artistRes, payoutRes] = await Promise.all([
+            const [invRes, settingsRes, artistRes] = await Promise.all([
                 Axios.get(`${API_URL}/api/admin/invoices`),
                 Axios.get(`${API_URL}/api/admin/settings`),
-                Axios.get(`${API_URL}/api/admin/users`),
-                Axios.get(`${API_URL}/api/admin/invoices`) // Placeholder or real payouts endpoint? I'll use a new one.
+                Axios.get(`${API_URL}/api/customer/artists`)
             ]);
 
             if (invRes.data.success) setInvoices(invRes.data.data);
             if (settingsRes.data.success && settingsRes.data.data.billing) setConfig(prev => ({ ...prev, ...settingsRes.data.data.billing }));
             if (artistRes.data.success) {
-                setArtists(artistRes.data.users.filter(u => u.user_type === 'artist'));
+                setArtists(artistRes.data.artists);
             }
             
             // Real payouts fetch
@@ -253,7 +252,7 @@ function AdminBilling() {
                                 />
                             </div>
 
-                            <div className="premium-filters-group">
+                            <div className="premium-filters-group" style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
                                 <div className="filter-label-group">
                                     <Filter size={16} />
                                     <span>Status:</span>
@@ -278,7 +277,7 @@ function AdminBilling() {
                                     <option value="amount">Amount</option>
                                 </select>
 
-                                <button className="btn btn-primary" onClick={openModal}>
+                                <button className="btn btn-primary" onClick={openModal} style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
                                     <Plus size={18} style={{ marginRight: '5px' }} /> Create Invoice
                                 </button>
                             </div>

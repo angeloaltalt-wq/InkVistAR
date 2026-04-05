@@ -95,12 +95,7 @@ function CustomerPortal() {
                 setActiveAppointment(firstActiveAppointment);
             }
 
-            // Fetch all artists
-            const artistsResponse = await Axios.get(`${API_URL}/api/customer/artists`);
-            if (artistsResponse.data.success) {
-                setArtists(artistsResponse.data.artists || []);
-            }
-
+            // Artist fetch removed as widget was replaced
             setLoading(false);
         } catch (error) {
             console.error("Error fetching customer data:", error);
@@ -396,23 +391,20 @@ function CustomerPortal() {
                             .notif-dropdown-footer button:hover { color: #b8860b; text-decoration: underline; } /* This is a duplicate, but keeping for now */
                         `}</style>
 
-                            {/* Favorite Artists */}
-                            <div className="data-card-v2" style={{ marginTop: '2rem' }}> {/* Added margin-top for spacing */}
+                            {/* Tattoo Inspiration Banner */}
+                            <div className="data-card-v2" style={{ marginTop: '2rem' }}>
                                 <div className="card-header-v2">
-                                    <h2>Our Artists</h2>
-                                    <button className="view-more-btn" onClick={() => navigate('/artists')}>Meet the Team</button>
+                                    <h2>Tattoo Inspiration</h2>
+                                    <button className="view-more-btn" onClick={() => navigate('/customer/gallery')}>Browse Gallery</button>
                                 </div>
-                                <div className="artists-grid" style={{ padding: '1.5rem' }}>
-                                    {artists.length > 0 ? (
-                                        artists.slice(0, 4).map((artist) => (
-                                            <div key={artist.id} className="artist-card-v2 glass-card" style={{ padding: '1.5rem', borderRadius: '16px' }}>
-                                                <h3 style={{ margin: '0 0 5px 0', fontSize: '1.1rem' }}>{artist.name}</h3>
-                                                <p className="specialty" style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>{artist.specialization || 'Professional Artist'}</p>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <p className="no-data">No artists found</p>
-                                    )}
+                                <div style={{ padding: '1.5rem' }}>
+                                    <div className="glass-card" style={{ padding: '2.5rem', textAlign: 'center', borderRadius: '16px', background: 'linear-gradient(135deg, rgba(193, 154, 107, 0.1), rgba(0, 0, 0, 0.2))', border: '1px solid rgba(193, 154, 107, 0.2)' }}>
+                                        <h3 style={{ margin: '0 0 10px 0', color: '#C19A6B', fontSize: '1.5rem', fontFamily: 'Playfair Display, serif' }}>Discover Your Next Piece</h3>
+                                        <p style={{ color: '#a3a3a3', marginBottom: '20px', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.6' }}>
+                                            Browse our extensive gallery of traditional, realism, and custom tattoo designs created by our expert artists. Find the perfect inspiration for your next session.
+                                        </p>
+                                        <button className="btn btn-primary" onClick={() => navigate('/customer/gallery')} style={{ padding: '0.75rem 2rem' }}>Explore Designs</button>
+                                    </div>
                                 </div>
                             </div>
                         </>

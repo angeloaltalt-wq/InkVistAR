@@ -222,14 +222,22 @@ db.getConnection((err, connection) => {
           db.query("ALTER TABLE users ADD COLUMN is_deleted BOOLEAN DEFAULT 0");
           console.log('✅ Added is_deleted column for soft delete support');
         }
+      });
 
-         // MIGRATION: Check if 'profile_image' column exists in customers
+      // MIGRATION: Check if 'phone' column exists in customers
+      db.query("SHOW COLUMNS FROM customers LIKE 'phone'", (err, results) => {
+        if (!err && results.length === 0) {
+          console.log('🔄 Migrating customers table: Adding phone, location, notes columns...');
+          db.query("ALTER TABLE customers ADD COLUMN phone VARCHAR(20) NULL, ADD COLUMN location VARCHAR(255) NULL, ADD COLUMN notes TEXT NULL");
+        }
+      });
+
+      // MIGRATION: Check if 'profile_image' column exists in customers
       db.query("SHOW COLUMNS FROM customers LIKE 'profile_image'", (err, results) => {
         if (!err && results.length === 0) {
           console.log('🔄 Migrating customers table: Adding profile_image column...');
           db.query("ALTER TABLE customers ADD COLUMN profile_image LONGTEXT NULL");
         }
-      });
       });
     });
 
@@ -650,6 +658,24 @@ db.getConnection((err, connection) => {
     `;
     db.query(serviceKitsTableQuery, (err) => { if (err) console.error('⚠️ Error checking service_kits table:', err.message); else console.log('🎒 Service Kits table ready'); });
 
+    // Create Reviews Table
+    const reviewsTableQuery = `
+      CREATE TABLE IF NOT EXISTS reviews (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        customer_id INT NOT NULL,
+        artist_id INT NOT NULL,
+        appointment_id INT NOT NULL,
+        rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+        comment TEXT,
+        status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (artist_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE CASCADE
+      )
+    `;
+    db.query(reviewsTableQuery, (err) => { if (err) console.error('⚠️ Error checking reviews table:', err.message); else console.log('⭐ Reviews table ready'); });
+
     // Create Session Materials Table
     const sessionMaterialsTableQuery = `
       CREATE TABLE IF NOT EXISTS session_materials (
@@ -746,8 +772,9 @@ function paymongoAuthHeader() {
 
 // Helper: Create Notification
 function createNotification(userId, title, message, type, relatedId = null) {
-  const insertQuery = 'INSERT INTO notifications (user_id, title, message, type, related_id, created_at, is_read) VALUES (?, ?, ?, ?, ?, NOW(), 0)';
-  db.query(insertQuery, [userId, title, message, type, relatedId], (err, result) => {
+  const utcNow = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const insertQuery = 'INSERT INTO notifications (user_id, title, message, type, related_id, created_at, is_read) VALUES (?, ?, ?, ?, ?, ?, 0)';
+  db.query(insertQuery, [userId, title, message, type, relatedId, utcNow], (err, result) => {
     if (err) {
       console.error('❌ Error creating DB notification:', err.message);
       return;
@@ -2137,6 +2164,31 @@ app.post('/api/customer/appointments', (req, res) => {
   // If no time provided (Tattoo Session), set status to pending_schedule
   const bookingStatus = startTime ? 'pending' : 'pending_schedule';
 
+  // Double Booking Check (only if they picked a time)
+  if (finalStartTime) {
+    const checkQuery = `
+      SELECT id FROM appointments 
+      WHERE appointment_date = ? AND start_time = ? AND status != 'cancelled' AND is_deleted = 0
+      AND (artist_id = ? OR customer_id = ?)
+    `;
+
+    db.query(checkQuery, [date, finalStartTime, currentArtistId, customerId], (checkErr, checkResults) => {
+      if (checkErr) {
+        console.error('❌ Error checking double booking:', checkErr);
+        return res.status(500).json({ success: false, message: 'Database error' });
+      }
+
+      if (checkResults.length > 0) {
+        return res.status(400).json({ success: false, message: 'Scheduling Conflict: This time slot is already taken. Please select a different time.' });
+      }
+
+      insertAppointment();
+    });
+  } else {
+    insertAppointment();
+  }
+
+  function insertAppointment() {
   const query = `
     INSERT INTO appointments 
     (customer_id, artist_id, appointment_date, start_time, end_time, design_title, notes, reference_image, status, price, service_type)
@@ -2180,6 +2232,7 @@ app.post('/api/customer/appointments', (req, res) => {
       appointmentId: result.insertId
     });
   });
+  }
   }
 });
 
@@ -2421,10 +2474,7 @@ app.post('/api/admin/appointments', (req, res) => {
   const checkQuery = `
     SELECT id FROM appointments 
     WHERE appointment_date = ? AND start_time = ? AND status != 'cancelled' AND is_deleted = 0
-    AND (
-      (artist_id = ? AND artist_id != 1) OR 
-      (customer_id = ? AND customer_id != 1)
-    )
+    AND (artist_id = ? OR customer_id = ?)
   `;
 
   db.query(checkQuery, [date, startTime, artistId, customerId], (checkErr, results) => {
@@ -2495,16 +2545,32 @@ app.put('/api/admin/appointments/:id', (req, res) => {
       return res.status(404).json({ success: false, message: 'Appointment not found.' });
     }
 
+    // Auto-recalculate payment_status based on updated price and manual_paid_amount
+    const recalculateStatusQuery = `
+      UPDATE appointments 
+      SET payment_status = CASE 
+        WHEN price > 0 AND (((SELECT COALESCE(SUM(amount), 0) FROM payments WHERE appointment_id = id AND status = 'paid') / 100) + manual_paid_amount) >= price THEN 'paid'
+        WHEN price = 0 OR price IS NULL THEN 'paid'
+        ELSE payment_status
+      END 
+      WHERE id = ? AND payment_status != 'paid'
+    `;
+    db.query(recalculateStatusQuery, [id]);
+
     // Notify users of the update
     db.query('SELECT customer_id, artist_id, status FROM appointments WHERE id = ?', [id], (e, r) => {
       if (!e && r.length) {
-        createNotification(r[0].customer_id, 'Appointment Update', `Your appointment has been updated to ${r[0].status}.`, 'system', id);
+        if (price !== undefined) {
+          createNotification(r[0].customer_id, 'Session Fee Update', `The total price for your session #${id} has been set to ₱${parseFloat(price).toLocaleString()}. Please review your balance.`, 'system', id);
+        } else {
+          createNotification(r[0].customer_id, 'Appointment Update', `Your appointment #${id} has been updated to ${r[0].status}.`, 'system', id);
+        }
         
         // If the appointment is pending or just created and assigned to an artist, require their action
         if (r[0].status === 'pending' && r[0].artist_id !== 1) {
-             createNotification(r[0].artist_id, 'Action Required: New Assignment', `You have been assigned a new session. Please accept or decline.`, 'action_required', id);
+             createNotification(r[0].artist_id, 'Action Required: New Assignment', `You have been assigned a new session #${id}. Please accept or decline.`, 'action_required', id);
         } else {
-             createNotification(r[0].artist_id, 'Appointment Update', `Appointment details for your session have been updated.`, 'system', id);
+             createNotification(r[0].artist_id, 'Appointment Update', `Appointment details for your session #${id} have been updated.`, 'system', id);
         }
       }
     });
@@ -2577,12 +2643,21 @@ app.post('/api/admin/appointments/:id/manual-payment', (req, res) => {
 
       const updateStatusQuery = `
         UPDATE appointments SET payment_status = CASE
-          WHEN ((SELECT COALESCE(SUM(amount), 0) FROM payments WHERE appointment_id = ? AND status = 'paid') / 100) + manual_paid_amount >= price THEN 'paid'
+          WHEN price > 0 AND ((SELECT COALESCE(SUM(amount), 0) FROM payments WHERE appointment_id = ? AND status = 'paid') / 100) + manual_paid_amount >= price THEN 'paid'
+          WHEN price = 0 OR price IS NULL THEN 'paid'
           ELSE 'downpayment_paid'
         END WHERE id = ?
       `;
-      db.query(updateStatusQuery, [id, id]);
-      res.json({ success: true, message: 'Payment recorded successfully' });
+      db.query(updateStatusQuery, [id, id], (upErr) => {
+        if (!upErr) {
+          db.query('SELECT customer_id FROM appointments WHERE id = ?', [id], (ce, cr) => {
+            if (!ce && cr.length) {
+              createNotification(cr[0].customer_id, 'Payment Recorded', `We have recorded a manual payment of ₱${parseFloat(amount).toLocaleString()} for your session #${id}.`, 'payment_success', id);
+            }
+          });
+        }
+        res.json({ success: true, message: 'Payment recorded successfully' });
+      });
     });
   });
 });
@@ -3612,13 +3687,20 @@ app.get('/api/notifications/:userId', (req, res) => {
         return res.status(500).json({ success: false, message: 'Database error' });
       }
 
-      const unreadCount = results.filter(n => !n.is_read).length;
+      const formattedResults = results.map(n => ({
+        ...n,
+        // Append Z to correctly parse as UTC since dateStrings: true returns raw timestamp string
+        created_at: typeof n.created_at === 'string' && !n.created_at.includes('Z') ? 
+          n.created_at.replace(' ', 'T') + 'Z' : n.created_at
+      }));
+
+      const unreadCount = formattedResults.filter(n => !n.is_read).length;
       const total = countResults[0]?.total || 0;
       const hasMore = offset + results.length < total;
 
       res.json({
         success: true,
-        notifications: results,
+        notifications: formattedResults,
         unreadCount,
         pagination: {
           page: pageNum,
@@ -4029,21 +4111,23 @@ app.get('/api/admin/analytics', (req, res) => {
     WHERE is_deleted = 0
   `;
 
-  // 2. Revenue (Estimated based on completed appointments * artist hourly rate)
+  // 2. Revenue (Total Paid = Payments + Manual Paid Amount)
   const revenueQuery = `
-    SELECT SUM(ar.hourly_rate) as total
+    SELECT 
+      SUM(((SELECT COALESCE(SUM(amount), 0) FROM payments p WHERE p.appointment_id = ap.id AND p.status = 'paid') / 100) + COALESCE(ap.manual_paid_amount, 0)) as total
     FROM appointments ap
-    JOIN artists ar ON ap.artist_id = ar.user_id
-    WHERE ap.status = 'completed' AND ap.is_deleted = 0
+    WHERE ap.status != 'cancelled' AND ap.is_deleted = 0
   `;
 
   // 3. Artist Productivity
   const artistQuery = `
-    SELECT u.name, COUNT(ap.id) as appointments, SUM(ar.hourly_rate) as revenue
+    SELECT 
+      u.name, 
+      COUNT(ap.id) as appointments, 
+      SUM(((SELECT COALESCE(SUM(amount), 0) FROM payments p WHERE p.appointment_id = ap.id AND p.status = 'paid') / 100) + COALESCE(ap.manual_paid_amount, 0)) as revenue
     FROM appointments ap
     JOIN users u ON ap.artist_id = u.id
-    JOIN artists ar ON u.id = ar.user_id
-    WHERE ap.status = 'completed' AND ap.is_deleted = 0
+    WHERE ap.status != 'cancelled' AND ap.is_deleted = 0
     GROUP BY u.id, u.name
     ORDER BY revenue DESC
     LIMIT 5
@@ -4108,7 +4192,7 @@ app.get('/api/admin/analytics', (req, res) => {
 
             db.query(trendQuery, (err, trendRes) => {
               if (err) return res.status(500).json({ success: false, message: err.message });
-              // Mock value for chart based on count * avg price (150)
+              // Calculate chart value properly
               response.revenue.chart = trendRes.map(t => ({ month: t.month, appointments: t.count, value: t.count * 150 }));
 
               res.json({ success: true, data: response });
@@ -4695,6 +4779,115 @@ app.use((err, req, res, next) => {
     success: false,
     message: 'Internal server error',
     error: err.message
+  });
+});
+
+// ========== REVIEWS ENDPOINTS ==========
+
+// GET public artist profile
+app.get('/api/artists/:id/public', (req, res) => {
+  const { id } = req.params;
+  const q = `
+    SELECT u.name, u.email, u.phone, 
+           a.studio_name, a.experience_years, a.specialization, a.hourly_rate, a.rating, a.total_reviews 
+    FROM users u 
+    JOIN artists a ON u.id = a.user_id 
+    WHERE u.id = ? AND u.user_type = 'artist' AND u.is_deleted = 0
+  `;
+  db.query(q, [id], (err, results) => {
+    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+    if (results.length === 0) return res.status(404).json({ success: false, message: 'Artist not found' });
+    res.json({ success: true, artist: results[0] });
+  });
+});
+
+// GET artist's approved reviews
+app.get('/api/artists/:id/reviews', (req, res) => {
+  const { id } = req.params;
+  const q = `
+    SELECT r.*, u.name as customer_name 
+    FROM reviews r 
+    JOIN users u ON r.customer_id = u.id 
+    WHERE r.artist_id = ? AND r.status = 'approved'
+    ORDER BY r.created_at DESC
+  `;
+  db.query(q, [id], (err, results) => {
+    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+    res.json({ success: true, reviews: results });
+  });
+});
+
+// POST submit a review
+app.post('/api/reviews', (req, res) => {
+  const { customer_id, artist_id, appointment_id, rating, comment } = req.body;
+  if (!customer_id || !artist_id || !appointment_id || !rating) {
+    return res.status(400).json({ success: false, message: 'Missing fields' });
+  }
+  
+  // Verify appointment belongs to customer and is completed
+  db.query('SELECT status FROM appointments WHERE id = ? AND customer_id = ?', [appointment_id, customer_id], (err, results) => {
+    if (err || results.length === 0 || results[0].status !== 'completed') {
+      return res.status(400).json({ success: false, message: 'Invalid appointment for review' });
+    }
+    
+    // Check if review already exists
+    db.query('SELECT id FROM reviews WHERE appointment_id = ?', [appointment_id], (err2, res2) => {
+      if (!err2 && res2.length > 0) {
+        return res.status(400).json({ success: false, message: 'You have already reviewed this session.' });
+      }
+
+      const q = 'INSERT INTO reviews (customer_id, artist_id, appointment_id, rating, comment, status) VALUES (?, ?, ?, ?, ?, "pending")';
+      db.query(q, [customer_id, artist_id, appointment_id, rating, comment], (err3, result) => {
+        if (err3) return res.status(500).json({ success: false, message: 'Database error' });
+        
+        // Notify Admin of new review
+        createNotification(1, 'New Review Submitted', `A client submitted a new review for appointment #${appointment_id}. Needs approval.`, 'system', result.insertId);
+        
+        res.json({ success: true, message: 'Review submitted and is pending admin approval.' });
+      });
+    });
+  });
+});
+
+// GET all reviews for Admin Moderation
+app.get('/api/admin/reviews', (req, res) => {
+  const q = `
+    SELECT r.*, c.name as customer_name, a.name as artist_name 
+    FROM reviews r 
+    JOIN users c ON r.customer_id = c.id 
+    JOIN users a ON r.artist_id = a.id
+    ORDER BY r.created_at DESC
+  `;
+  db.query(q, (err, results) => {
+    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+    res.json({ success: true, reviews: results });
+  });
+});
+
+// PUT review status (Admin)
+app.put('/api/admin/reviews/:id', (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body; // 'approved' or 'rejected'
+  db.query('UPDATE reviews SET status = ? WHERE id = ?', [status, id], (err, result) => {
+    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+    
+    // If approved, recalculate artist average rating
+    if (status === 'approved') {
+      db.query('SELECT artist_id FROM reviews WHERE id = ?', [id], (e, r) => {
+        if (!e && r.length) {
+          const artistId = r[0].artist_id;
+          db.query('SELECT AVG(rating) as avg_rating, COUNT(id) as total FROM reviews WHERE artist_id = ? AND status = "approved"', [artistId], (ee, rr) => {
+            if (!ee && rr.length) {
+              const newRating = rr[0].avg_rating || 5;
+              const total = rr[0].total || 0;
+              db.query('UPDATE artists SET rating = ?, total_reviews = ? WHERE user_id = ?', [newRating, total, artistId]);
+            }
+          });
+        }
+      });
+    }
+    
+    res.json({ success: true, message: 'Review status updated' });
   });
 });
 

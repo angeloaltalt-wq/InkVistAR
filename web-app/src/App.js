@@ -4,6 +4,7 @@ import './styles/premium-transitions.css';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Artists from './pages/Artists';
+import PublicArtistProfile from './pages/PublicArtistProfile';
 import Register from './pages/Register';
 import Gallery from './pages/Gallery';
 import Contact from './pages/Contact';
@@ -22,6 +23,7 @@ import AdminClients from './pages/AdminClients';
 import AdminBilling from './pages/AdminBilling';
 import AdminChat from './pages/AdminChat';
 import AdminNotifications from './pages/AdminNotifications';
+import AdminReviews from './pages/AdminReviews';
 import CustomerNotifications from './pages/CustomerNotifications';
 
 import ArtistPortal from './pages/ArtistPortal';
@@ -41,6 +43,7 @@ import CustomerBookings from './pages/CustomerBookings';
 import CustomerGallery from './pages/CustomerGallery';
 import CustomerProfile from './pages/CustomerProfile';
 import CustomerBookingCreate from './pages/CustomerBookingCreate';
+import CustomerReview from './pages/CustomerReview';
 import PaymentSimulation from './pages/PaymentSimulation';
 import BookingConfirmation from './pages/BookingConfirmation';
 import PayMongoPayment from './pages/PayMongoPayment';
@@ -85,6 +88,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/artists" element={<Artists />} />
+          <Route path="/artist/:id" element={<PublicArtistProfile />} />
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/book" element={<PublicBooking />} />
@@ -119,6 +123,7 @@ function App() {
           {/* <Route path="/customer/book" element={<ProtectedRoute allowedRoles={['customer']}><CustomerBookingCreate /></ProtectedRoute>} /> */}
           <Route path="/customer/profile" element={<ProtectedRoute allowedRoles={['customer']}><CustomerProfile /></ProtectedRoute>} />
           <Route path="/customer/notifications" element={<ProtectedRoute allowedRoles={['customer']}><CustomerNotifications /></ProtectedRoute>} />
+          <Route path="/customer/reviews/new" element={<ProtectedRoute allowedRoles={['customer']}><CustomerReview /></ProtectedRoute>} />
           <Route path="/payment" element={<ProtectedRoute allowedRoles={['customer']}><PaymentSimulation /></ProtectedRoute>} />
           <Route path="/pay-mongo" element={<PayMongoPayment />} />
           <Route path="/booking-confirmation" element={<ProtectedRoute allowedRoles={['customer']}><BookingConfirmation /></ProtectedRoute>} />
@@ -127,6 +132,7 @@ function App() {
           <Route path="/admin/analytics" element={<ProtectedRoute allowedRoles={['admin']}><AdminAnalytics /></ProtectedRoute>} />
           <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['admin']}><AdminSettings /></ProtectedRoute>} />
           <Route path="/admin/completed-sessions" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><AdminCompletedSessions /></ProtectedRoute>} />
+          <Route path="/admin/reviews" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><AdminReviews /></ProtectedRoute>} />
         </Routes>
       </Router>
     </div>

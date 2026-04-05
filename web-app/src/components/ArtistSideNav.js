@@ -11,7 +11,8 @@ import {
     Bell,
     ChevronLeft,
     ChevronRight,
-    Building2
+    Building2,
+    Home
 } from 'lucide-react';
 import ConfirmModal from './ConfirmModal';
 import '../styles/ArtistSideNav.css';
@@ -41,6 +42,7 @@ function ArtistSideNav() {
     };
 
     const menuItems = [
+        { label: 'Landing Page', icon: Home, path: '/' },
         { label: 'Dashboard', icon: LayoutDashboard, path: '/artist' },
         { label: 'Schedule', icon: Calendar, path: '/artist/appointments' },
         { label: 'Tattoo Session', icon: PenTool, path: '/artist/sessions' },

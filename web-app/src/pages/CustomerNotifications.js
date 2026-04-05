@@ -186,9 +186,9 @@ function CustomerNotifications() {
                             <p>Fetching your updates...</p>
                         </div>
                     ) : (
-                        <div className="full-width" style={{ padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '500px' }}>
+                        <div className="notifications-wrapper" style={{ padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '500px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
                             {currentItems.length > 0 ? (
-                                <div className="notifications-stream" style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                                <div className="notifications-stream" style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, maxWidth: '100%' }}>
                                     {currentItems.map(n => {
                                         const style = getNotificationStyle(n.type);
                                         const Icon = style.icon;
@@ -227,9 +227,27 @@ function CustomerNotifications() {
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
                                                                     className="notif-btn primary"
-                                                                    style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+                                                                    style={{ padding: '4px 10px', fontSize: '0.75rem', textDecoration: 'none' }}
                                                                 >
                                                                     Invoice
+                                                                </a>
+                                                            )}
+                                                            {n.type === 'aftercare_reminder' && (
+                                                                <a
+                                                                    href="/customer/aftercare"
+                                                                    className="notif-btn primary"
+                                                                    style={{ padding: '4px 10px', fontSize: '0.75rem', backgroundColor: '#06b6d4', textDecoration: 'none' }}
+                                                                >
+                                                                    View Guide
+                                                                </a>
+                                                            )}
+                                                            {n.type === 'review_prompt' && (
+                                                                <a
+                                                                    href={`/customer/reviews/new?appointment=${n.related_id}`}
+                                                                    className="notif-btn primary"
+                                                                    style={{ padding: '4px 10px', fontSize: '0.75rem', backgroundColor: '#f59e0b', textDecoration: 'none' }}
+                                                                >
+                                                                    Leave Review
                                                                 </a>
                                                             )}
                                                         </div>

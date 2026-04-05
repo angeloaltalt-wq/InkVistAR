@@ -18,6 +18,7 @@ function CustomerProfile() {
         profile_image: user.profile_image || ''
     });
     const [isEditing, setIsEditing] = useState(false);
+    const [originalProfile, setOriginalProfile] = useState(null);
     const [passwords, setPasswords] = useState({
         currentPassword: '',
         newPassword: '',
@@ -174,7 +175,7 @@ function CustomerProfile() {
                                                 </p>
                                             </div>
                                         </div>
-                                        <button className="btn btn-secondary" onClick={() => setIsEditing(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <button className="btn btn-secondary" onClick={() => { setOriginalProfile({...profile}); setIsEditing(true); }} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <Edit2 size={16} /> Edit Profile
                                         </button>
                                     </div>
@@ -227,7 +228,7 @@ function CustomerProfile() {
 
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                                         <h2 style={{ margin: 0 }}>Edit Profile</h2>
-                                        <button type="button" className="close-btn" onClick={() => setIsEditing(false)}><X size={24} /></button>
+                                        <button type="button" className="close-btn" onClick={() => { if(originalProfile) setProfile(originalProfile); setIsEditing(false); }}><X size={24} /></button>
                                     </div>
 
                                     {/* Section 1: Personal Information */}
@@ -282,9 +283,14 @@ function CustomerProfile() {
                                                             setProfile({ ...profile, phone: code + currentNo });
                                                         }}
                                                     >
-                                                        <option value="+63">+63</option>
-                                                        <option value="+1">+1</option>
-                                                        <option value="+65">+65</option>
+                                                        <option value="+63">PH (+63)</option>
+                                                        <option value="+1">US/CA (+1)</option>
+                                                        <option value="+44">UK (+44)</option>
+                                                        <option value="+61">AU (+61)</option>
+                                                        <option value="+81">JP (+81)</option>
+                                                        <option value="+82">KR (+82)</option>
+                                                        <option value="+65">SG (+65)</option>
+                                                        <option value="+64">NZ (+64)</option>
                                                     </select>
                                                     <input
                                                         type="tel" className="form-input" style={{ flex: 1 }}
@@ -406,7 +412,7 @@ function CustomerProfile() {
                                     </div>
 
                                     <div style={{ display: 'flex', gap: '10px', marginTop: '32px' }}>
-                                        <button type="button" className="btn btn-secondary" onClick={() => setIsEditing(false)} style={{ flex: 1 }}>
+                                        <button type="button" className="btn btn-secondary" onClick={() => { if(originalProfile) setProfile(originalProfile); setIsEditing(false); }} style={{ flex: 1 }}>
                                             Cancel
                                         </button>
                                         <button type="submit" className="btn btn-primary" disabled={saving} style={{ flex: 1, backgroundColor: '#daa520', color: 'white', border: 'none' }}>

@@ -10,7 +10,8 @@ import {
     LogOut,
     Sparkles,
     Bell,
-    Building2
+    Building2,
+    Home
 } from 'lucide-react';
 import ConfirmModal from './ConfirmModal';
 import '../styles/CustomerSideNav.css';
@@ -40,6 +41,7 @@ function CustomerSideNav() {
     };
 
     const menuItems = [
+        { label: 'Landing Page', icon: Home, path: '/' },
         { label: 'Dashboard', icon: LayoutDashboard, path: '/customer' },
         { label: 'My Bookings', icon: Calendar, path: '/customer/bookings' },
         { label: 'Gallery', icon: Image, path: '/customer/gallery' },

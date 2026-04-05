@@ -71,6 +71,26 @@ function ArtistAppointments(){
         window.print();
     };
 
+    const handleAccept = async (id) => {
+        try {
+            const res = await Axios.put(`${API_URL}/api/artist/appointments/${id}/accept`);
+            if (res.data.success) {
+                fetch();
+                alert('Appointment accepted successfully!');
+            }
+        } catch (e) { console.error(e); }
+    };
+
+    const handleReject = async (id) => {
+        try {
+            const res = await Axios.put(`${API_URL}/api/artist/appointments/${id}/reject`);
+            if (res.data.success) {
+                fetch();
+                alert('Appointment rejected. It has been reverted back to the Admin.');
+            }
+        } catch (e) { console.error(e); }
+    };
+
     const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
     const currentItems = filteredAppointments.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
@@ -192,7 +212,7 @@ function ArtistAppointments(){
                                             <>
                                                 <div className="table-responsive">
                                                     <table className="portal-table">
-                                                        <thead><tr><th>Client</th><th>Service</th><th>Date</th><th>Time</th><th>Price</th><th>Status</th><th>Payment</th></tr></thead>
+                                                        <thead><tr><th>Client</th><th>Service</th><th>Date</th><th>Time</th><th>Price</th><th>Status</th><th>Payment</th>{activeTab === 'pending' && <th>Actions</th>}</tr></thead>
                                                         <tbody>{currentItems.map(a => (
                                                             <tr key={a.id}>
                                                                 <td style={{ fontWeight: '600' }}>{a.client_name}</td>
@@ -206,6 +226,14 @@ function ArtistAppointments(){
                                                                         {a.payment_status ? a.payment_status.charAt(0).toUpperCase() + a.payment_status.slice(1) : 'Unpaid'}
                                                                     </span>
                                                                 </td>
+                                                                {activeTab === 'pending' && (
+                                                                    <td>
+                                                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                                                            <button onClick={() => setConfirmModal({ visible: true, title: 'Accept Assignment', message: 'Do you want to accept this appointment?', onConfirm: () => handleAccept(a.id) })} className="action-btn" style={{ background: '#10b981', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem' }}>Accept</button>
+                                                                            <button onClick={() => setConfirmModal({ visible: true, title: 'Decline Assignment', message: 'Are you sure you want to decline this assignment? It will be reverted back to the Admin.', onConfirm: () => handleReject(a.id) })} className="action-btn" style={{ background: '#ef4444', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem' }}>Decline</button>
+                                                                        </div>
+                                                                    </td>
+                                                                )}
                                                             </tr>
                                                         ))}</tbody>
                                                     </table>

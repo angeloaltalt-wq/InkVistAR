@@ -693,7 +693,7 @@ function AdminAppointments() {
                                                     <td>#{appointment.id}</td>
                                                     <td>{appointment.clientName}</td>
                                                     <td>{appointment.artistName}</td>
-                                                    <td>{appointment.serviceType}</td>
+                                                    <td style={{ maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={appointment.serviceType}>{appointment.serviceType}</td>
                                                     <td>{appointment.date}</td>
                                                     <td>{appointment.time}</td>
                                                     <td>
@@ -1015,7 +1015,13 @@ function AdminAppointments() {
                                         type="number"
                                         className="form-input"
                                         value={manualPaymentModal.amount}
-                                        onChange={e => setManualPaymentModal({ ...manualPaymentModal, amount: e.target.value })}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            if (val === '') setManualPaymentModal({ ...manualPaymentModal, amount: '' });
+                                            else setManualPaymentModal({ ...manualPaymentModal, amount: Math.max(0, parseFloat(val) || 0) });
+                                        }}
+                                        min="0"
+                                        step="0.01"
                                         placeholder="Enter amount paid in studio"
                                     />
                                 </div>
@@ -1077,13 +1083,13 @@ function AdminAppointments() {
                                                     handleEdit(apt);
                                                 }}
                                             >
-                                                <div style={{ flex: 1 }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                                        <Clock size={14} style={{ color: '#64748b' }} />
-                                                        <span style={{ fontWeight: '700', color: '#1e293b' }}>{apt.time.slice(0, 5)}</span>
-                                                        <span style={{ color: '#64748b', fontSize: '0.9rem' }}>• {apt.clientName}</span>
+                                                <div style={{ flex: 1, minWidth: 0, paddingRight: '10px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', overflow: 'hidden' }}>
+                                                        <Clock size={14} style={{ color: '#64748b', flexShrink: 0 }} />
+                                                        <span style={{ fontWeight: '700', color: '#1e293b', flexShrink: 0 }}>{apt.time.slice(0, 5)}</span>
+                                                        <span style={{ color: '#64748b', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>• {apt.clientName}</span>
                                                     </div>
-                                                    <div style={{ fontSize: '0.85rem', color: '#475569', marginLeft: '22px' }}>
+                                                    <div style={{ fontSize: '0.85rem', color: '#475569', marginLeft: '22px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                         {apt.serviceType} with {apt.artistName}
                                                     </div>
                                                 </div>

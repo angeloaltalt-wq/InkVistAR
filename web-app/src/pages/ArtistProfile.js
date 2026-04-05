@@ -339,7 +339,7 @@ function ArtistProfile() {
                                                 type="tel"
                                                 className="form-input"
                                                 value={profile.phone || ''}
-                                                onChange={e => setProfile({ ...profile, phone: e.target.value })}
+                                                onChange={e => setProfile({ ...profile, phone: e.target.value.replace(/[^0-9+\s()-]/g, '') })}
                                                 placeholder="+1 (555) 123-4567"
                                                 style={inputStyle}
                                             />
@@ -352,7 +352,8 @@ function ArtistProfile() {
                                                 value={profile.studio_name || ''}
                                                 onChange={e => setProfile({ ...profile, studio_name: e.target.value })}
                                                 placeholder="Your studio or shop name"
-                                                style={inputStyle}
+                                                style={{...inputStyle, backgroundColor: '#f1f5f9', color: '#64748b'}}
+                                                disabled
                                             />
                                         </div>
                                     </div>
@@ -395,7 +396,7 @@ function ArtistProfile() {
                                                 type="number"
                                                 className="form-input"
                                                 value={profile.experience_years}
-                                                onChange={e => setProfile({ ...profile, experience_years: parseInt(e.target.value) || 0 })}
+                                                onChange={e => setProfile({ ...profile, experience_years: Math.max(0, parseInt(e.target.value) || 0) })}
                                                 min="0"
                                                 max="50"
                                                 style={inputStyle}
@@ -407,7 +408,7 @@ function ArtistProfile() {
                                                 type="number"
                                                 className="form-input"
                                                 value={profile.hourly_rate}
-                                                onChange={e => setProfile({ ...profile, hourly_rate: parseFloat(e.target.value) || 0 })}
+                                                onChange={e => setProfile({ ...profile, hourly_rate: Math.max(0, parseFloat(e.target.value) || 0) })}
                                                 min="0"
                                                 step="0.01"
                                                 placeholder="0.00"
@@ -420,7 +421,7 @@ function ArtistProfile() {
                                                 type="number"
                                                 className="form-input"
                                                 value={profile.commission_rate}
-                                                onChange={e => setProfile({ ...profile, commission_rate: parseFloat(e.target.value) || 0 })}
+                                                onChange={e => setProfile({ ...profile, commission_rate: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)) })}
                                                 min="0"
                                                 max="100"
                                                 step="1"

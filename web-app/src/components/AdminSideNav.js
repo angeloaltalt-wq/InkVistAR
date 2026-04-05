@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
+    Star,
     LayoutDashboard,
     LogOut,
     Users,
@@ -193,6 +194,12 @@ function AdminSideNav() {
             icon: Receipt,
             path: '/admin/billing',
             description: 'Payments & Invoices'
+        },
+        {
+            label: 'Reviews',
+            icon: Star,
+            path: '/admin/reviews',
+            description: 'Moderate customer reviews'
         },
 
         {

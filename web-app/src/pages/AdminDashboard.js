@@ -111,13 +111,13 @@ function AdminDashboard() {
                     }
 
                     // Revenue Calculation
-                    if (apt.status === 'completed') {
-                        const price = Number(apt.hourly_rate) || 150; // Fallback price
-                        totalRev += price;
-                        if (aptDateStr === todayStr) dailyRev += price;
+                    if (apt.status !== 'cancelled') {
+                        const paidTotal = Number(apt.total_paid) || 0;
+                        totalRev += paidTotal;
+                        if (aptDateStr === todayStr) dailyRev += paidTotal;
                         const aptDate = new Date(aptDateStr);
                         if (aptDate.getMonth() === currentMonth && aptDate.getFullYear() === currentYear) {
-                            monthlyRev += price;
+                            monthlyRev += paidTotal;
                         }
                     }
                 });
@@ -423,6 +423,7 @@ function AdminDashboard() {
                                             <Clock size={20} />
                                             <h2>Today's Schedule</h2>
                                         </div>
+                                        <button className="view-all-btn" onClick={() => navigate('/admin/appointments')} style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500' }}>View All</button>
                                     </div>
                                     <div className="modern-table-wrapper">
                                         {todaysAppointments.length > 0 ? (
@@ -601,6 +602,7 @@ function AdminDashboard() {
                                             <Bell size={20} />
                                             <h2>System Alerts</h2>
                                         </div>
+                                        <button className="view-all-btn" onClick={() => navigate('/admin/notifications')} style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500' }}>View All</button>
                                     </div>
                                     <div className="alerts-stack">
                                         {alerts.length > 0 ? alerts.map(alert => (

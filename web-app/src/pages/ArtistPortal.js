@@ -168,9 +168,11 @@ function ArtistPortal() {
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
-                                {/* Today's Schedule */}
                                 <div className="data-card">
-                                    <h2>Today's Schedule</h2>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                        <h2 style={{ margin: 0 }}>Today's Schedule</h2>
+                                        <button className="action-btn" onClick={() => navigate('/artist/sessions')} style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', borderRadius: '8px' }}>Launch Session View</button>
+                                    </div>
                                     {todaysAppointments.length > 0 ? (
                                         <div className="table-responsive">
                                             <table className="portal-table">
@@ -224,7 +226,10 @@ function ArtistPortal() {
 
                             {/* Upcoming Appointments */}
                             <div className="data-card">
-                                <h2>Upcoming Sessions</h2>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                    <h2 style={{ margin: 0 }}>Upcoming Sessions</h2>
+                                    <button className="action-btn" onClick={() => navigate('/artist/appointments')} style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', borderRadius: '8px' }}>View Full Schedule</button>
+                                </div>
                                 <div className="table-responsive">
                                     {appointments.filter(apt => {
                                         const aptDate = apt.appointment_date || apt.date || '';

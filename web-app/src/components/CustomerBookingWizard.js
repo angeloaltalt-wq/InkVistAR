@@ -97,8 +97,9 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                     const dateStr = typeof b.appointment_date === 'string' 
                         ? b.appointment_date.substring(0, 10) 
                         : new Date(b.appointment_date).toISOString().split('T')[0];
-                    if (!bookings[dateStr]) bookings[dateStr] = { count: 0 };
+                    if (!bookings[dateStr]) bookings[dateStr] = { count: 0, times: [] };
                     bookings[dateStr].count += 1;
+                    if (b.start_time) bookings[dateStr].times.push(b.start_time.substring(0, 5));
                 });
                 setBookedDates(bookings);
             }
@@ -200,7 +201,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
         today.setHours(0, 0, 0, 0);
         
         const maxDate = new Date();
-        maxDate.setMonth(today.getMonth() + 3);
+        maxDate.setMonth(today.getMonth() + 4); // Max 4 months in advance
         maxDate.setHours(23, 59, 59, 999);
 
         for (let i = 0; i < firstDay; i++) {
@@ -214,9 +215,9 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
             const isPast = checkDate <= today;
             const isTooFar = checkDate > maxDate;
             
-            const dateData = bookedDates[dateStr] || { count: 0 };
-            const isFull = dateData.count >= 5; // Studios have more capacity than individual artists
-            const isBusy = dateData.count > 2;
+            const dateData = bookedDates[dateStr] || { count: 0, times: [] };
+            const isFull = dateData.count >= 7; // Up to 7 time blocks maximum
+            const isBusy = dateData.count >= 4;
 
             let statusColor = '#10b981'; 
             if (isFull) statusColor = '#ef4444';
@@ -294,8 +295,15 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                     placeholder="e.g. Fine-line Floral, Traditional Blackwork, Realistic Portrait"
                     value={formData.designTitle}
                     onChange={(e) => handleInputChange('designTitle', e.target.value)}
+                    minLength={5}
+                    maxLength={150}
                 />
-                {errors.designTitle && <small style={{color: '#ef4444', display: 'block', marginTop: '4px', fontSize: '0.8rem'}}>{errors.designTitle}</small>}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                    {errors.designTitle ? (
+                        <small style={{color: '#ef4444', fontSize: '0.8rem'}}>{errors.designTitle}</small>
+                    ) : <span />}
+                    <small style={{color: '#94a3b8', fontSize: '0.8rem'}}>{formData.designTitle.length}/150</small>
+                </div>
             </div>
             
             <div className="form-group" style={{marginBottom: '24px'}}>
@@ -328,7 +336,11 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                     placeholder="Where on your body? How large? Any specific details or meaning?"
                     value={formData.notes}
                     onChange={(e) => handleInputChange('notes', e.target.value)}
+                    maxLength={500}
                 />
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+                    <small style={{color: '#94a3b8', fontSize: '0.8rem'}}>{formData.notes.length}/500</small>
+                </div>
             </div>
         </div>
     );
@@ -375,28 +387,42 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                 <div>
                      <label style={{fontWeight: '600', color: '#1e293b', marginBottom: '12px', display: 'block'}}>Preferred Time</label>
                      <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px'}}>
-                        {['13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'].map(t => (
+                        {['13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'].map(t => {
+                            let isDisabled = false;
+                            if (formData.date) {
+                                const checkDate = new Date(`${formData.date}T${t}:00`);
+                                if (checkDate <= new Date()) isDisabled = true;
+                                if (bookedDates[formData.date] && bookedDates[formData.date].times.includes(t)) isDisabled = true;
+                            } else {
+                                isDisabled = true; // Wait for date selection
+                            }
+
+                            return (
                             <button
                                 key={t}
                                 onClick={() => {
+                                    if (isDisabled) return;
                                     setFormData({...formData, time: t});
                                     if (errors.date) setErrors(prev => ({...prev, date: ''}));
                                 }}
+                                disabled={isDisabled}
                                 style={{
                                     padding: '12px',
                                     borderRadius: '8px',
                                     border: formData.time === t ? '2px solid #C19A6B' : '1px solid #e2e8f0',
-                                    backgroundColor: formData.time === t ? '#fffcf0' : 'white',
+                                    backgroundColor: formData.time === t ? '#fffcf0' : (isDisabled ? '#f8fafc' : 'white'),
                                     fontWeight: formData.time === t ? '700' : '500',
-                                    color: formData.time === t ? '#1e293b' : '#64748b',
-                                    cursor: 'pointer',
+                                    color: formData.time === t ? '#1e293b' : (isDisabled ? '#cbd5e1' : '#64748b'),
+                                    cursor: isDisabled ? 'not-allowed' : 'pointer',
+                                    opacity: isDisabled ? 0.6 : 1,
                                     transition: 'all 0.2s'
                                 }}
                             >
                                 {t === '12:00' ? '12:00 PM' : 
                                  parseInt(t) > 12 ? `${parseInt(t) - 12}:00 PM` : `${t} PM`}
                             </button>
-                        ))}
+                            );
+                        })}
                      </div>
                 </div>
             </div>
@@ -421,6 +447,8 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                         value={formData.name}
                         onChange={(e) => handleInputChange('name', e.target.value)}
                         disabled={!!user}
+                        minLength={2}
+                        maxLength={100}
                     />
                     {errors.name && <small style={{color: '#ef4444', display: 'block', marginTop: '4px', fontSize: '0.8rem'}}>{errors.name}</small>}
                 </div>
@@ -445,13 +473,14 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                             value={formData.phoneCode || '+63'} 
                             onChange={(e) => handleInputChange('phoneCode', e.target.value)}
                         >
-                            <option value="+63">+63 (PH)</option>
-                            <option value="+1">+1 (US)</option>
-                            <option value="+44">+44 (UK)</option>
-                            <option value="+61">+61 (AU)</option>
-                            <option value="+81">+81 (JP)</option>
-                            <option value="+82">+82 (KR)</option>
-                            <option value="+65">+65 (SG)</option>
+                            <option value="+63">PH (+63)</option>
+                            <option value="+1">US/CA (+1)</option>
+                            <option value="+44">UK (+44)</option>
+                            <option value="+61">AU (+61)</option>
+                            <option value="+81">JP (+81)</option>
+                            <option value="+82">KR (+82)</option>
+                            <option value="+65">SG (+65)</option>
+                            <option value="+64">NZ (+64)</option>
                         </select>
                         <input 
                             type="tel" 

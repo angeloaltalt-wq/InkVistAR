@@ -30,7 +30,7 @@ function AdminNotifications() {
     const [notifications, setNotifications] = useState([]);
     const [systemAlerts, setSystemAlerts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [unreadCount, setUnreadCount] = useState(0);
+    const unreadCount = notifications.filter(n => !n.is_read).length;
     const [searchTerm, setSearchTerm] = useState('');
     const [activeFilter, setActiveFilter] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
@@ -104,13 +104,11 @@ function AdminNotifications() {
             ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
             setNotifications(combined);
-            setUnreadCount(combined.filter(n => !n.is_read).length);
             setLoading(false);
         } catch (error) {
             console.error("Error fetching notifications:", error);
             setLoading(false);
             setNotifications([]);
-            setUnreadCount(0);
         }
     };
 
@@ -197,7 +195,6 @@ function AdminNotifications() {
             if (unreadIds.length > 0) {
                 await Promise.all(unreadIds.map(id => Axios.put(`${API_URL}/api/notifications/${id}/read`)));
                 setNotifications(notifications.map(n => ({ ...n, is_read: 1 })));
-                setUnreadCount(0);
             }
         } catch (e) {
             console.error(e);
@@ -263,7 +260,6 @@ function AdminNotifications() {
                             onClick={async () => {
                                 // Clear computed alerts (Inventory/Bookings)
                                 setNotifications(notifications.filter(n => !n.id.toString().startsWith('inv-') && n.id !== 'apt-pending'));
-                                setUnreadCount(notifications.filter(n => !n.is_read && !n.id.toString().startsWith('inv-') && n.id !== 'apt-pending').length);
                             }}
                             title="Clear system alerts"
                         >
@@ -323,17 +319,13 @@ function AdminNotifications() {
                                 <select
                                     value={activeFilter}
                                     onChange={(e) => setActiveFilter(e.target.value)}
-                                    className="premium-select-v2" // Keep this class for existing styling
-                                    // Override some styles to match filterButtonStyle
-                                    // This is a temporary fix, ideally these styles should be in CSS
-                                    // and the select should be a custom component or styled consistently.
-                                    // For now, it's a quick way to make it look similar to the buttons.
+                                    className="premium-select-v2"
                                     style={{ background: 'rgba(255,255,255,0.1)', color: 'white', borderColor: 'rgba(255,255,255,0.2)' }}
                                 >
-                                    <option value="all">All Notifications</option>
-                                    <option value="inventory">Inventory Alerts</option>
-                                    <option value="appointment">Booking Requests</option>
-                                    <option value="system">System Updates</option>
+                                    <option value="all" style={{ color: '#1e293b' }}>All Notifications</option>
+                                    <option value="inventory" style={{ color: '#1e293b' }}>Inventory Alerts</option>
+                                    <option value="appointment" style={{ color: '#1e293b' }}>Booking Requests</option>
+                                    <option value="system" style={{ color: '#1e293b' }}>System Updates</option>
                                 </select>
                             </div>
                         </div>
