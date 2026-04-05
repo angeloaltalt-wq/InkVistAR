@@ -199,8 +199,29 @@ function AdminNotifications() {
             console.error(e);
         }
     };
-    const filterButtonStyle = (isActive) => {
-        return { background: isActive ? '#daa520' : 'rgba(255,255,255,0.05)', color: isActive ? 'white' : 'rgba(255,255,255,0.6)' };
+
+    const formatNotificationTime = (dateString) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffInDays = (now - date) / (1000 * 60 * 60 * 24);
+
+        if (diffInDays < 7) {
+            const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            if (date.toDateString() === now.toDateString()) {
+                return time;
+            }
+            const day = date.toLocaleDateString([], { weekday: 'short' });
+            return `${day} ${time}`;
+        }
+        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    };
+
+    const filterButtonStyle = (isActive, type = 'default') => {
+        if (!isActive) return { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)' };
+        
+        // Distinguish Unread with a more urgent amber color
+        const activeBg = type === 'unread' ? '#f59e0b' : '#daa520';
+        return { background: activeBg, color: 'white', fontWeight: '600', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' };
     };
 
 
@@ -270,7 +291,7 @@ function AdminNotifications() {
                     <button
                         className={`filter-btn ${activeFilter === 'unread' ? 'active' : ''}`}
                         onClick={() => setActiveFilter('unread')}
-                        style={filterButtonStyle(activeFilter === 'unread')}
+                        style={filterButtonStyle(activeFilter === 'unread', 'unread')}
                     >
                         Unread
                     </button>
@@ -339,8 +360,8 @@ function AdminNotifications() {
                                                         </div>
 
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexShrink: 0 }}>
-                                                            <span className="notif-time" style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '80px', textAlign: 'right' }}>
-                                                                {new Date(n.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                                            <span className="notif-time" style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '100px', textAlign: 'right' }}>
+                                                                {formatNotificationTime(n.created_at)}
                                                             </span>
 
                                                             <div className="notif-actions" style={{ display: 'flex', gap: '8px' }}>
@@ -348,9 +369,20 @@ function AdminNotifications() {
                                                                     <button
                                                                         className="notif-btn primary"
                                                                         onClick={() => navigate(n.path)}
-                                                                        style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+                                                                        style={{ 
+                                                                            padding: '6px 14px', 
+                                                                            fontSize: '0.8rem', 
+                                                                            fontWeight: '700',
+                                                                            borderRadius: '8px',
+                                                                            background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+                                                                            color: '#fff',
+                                                                            border: '1px solid rgba(255,255,255,0.1)',
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            gap: '6px'
+                                                                        }}
                                                                     >
-                                                                        Take Action <ArrowRight size={14} />
+                                                                        Take Action <ArrowRight size={16} />
                                                                     </button>
                                                                 )}
                                                                 {!n.is_read ? (

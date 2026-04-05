@@ -78,6 +78,22 @@ function ArtistNotifications() {
         }
     };
 
+    const formatNotificationTime = (dateString) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffInDays = (now - date) / (1000 * 60 * 60 * 24);
+
+        if (diffInDays < 7) {
+            const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            if (date.toDateString() === now.toDateString()) {
+                return time;
+            }
+            const day = date.toLocaleDateString([], { weekday: 'short' });
+            return `${day} ${time}`;
+        }
+        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    };
+
     const getNotificationStyle = (type) => {
         switch (type) {
             case 'appointment_request': 
@@ -179,8 +195,8 @@ function ArtistNotifications() {
                                                     </div>
 
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexShrink: 0 }}>
-                                                        <span className="notif-time" style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '80px', textAlign: 'right' }}>
-                                                            {new Date(n.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                                        <span className="notif-time" style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '100px', textAlign: 'right' }}>
+                                                            {formatNotificationTime(n.created_at)}
                                                         </span>
                                                         
                                                         <div className="notif-actions" style={{ display: 'flex', gap: '8px' }}>

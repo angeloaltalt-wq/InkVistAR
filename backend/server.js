@@ -2446,7 +2446,7 @@ app.put('/api/admin/appointments/:id', (req, res) => {
     // Notify users of the update
     db.query('SELECT customer_id, artist_id FROM appointments WHERE id = ?', [id], (e, r) => {
       if (!e && r.length) {
-        createNotification(r[0].customer_id, 'Appointment Update', `An administrator has updated your appointment details.`, 'system', id);
+        createNotification(r[0].customer_id, 'Appointment Update', `An administrator has reviewed your request and has updated your appointment details to ${status}.`, 'system', id);
         createNotification(r[0].artist_id, 'Appointment Update', `An administrator has updated appointment details for your session.`, 'system', id);
       }
     });
@@ -2645,14 +2645,17 @@ app.put('/api/appointments/:id/status', (req, res) => {
       if (updateErr) return res.status(500).json({ success: false, message: 'Database error' });
 
       // Send Notifications
+      const dateStr = appointment.appointment_date ? new Date(appointment.appointment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'your scheduled date';
+      const designTitle = appointment.design_title || 'your tattoo session';
+
       if (status === 'confirmed') {
-        createNotification(appointment.customer_id, 'Appointment Confirmed', 'Your appointment has been confirmed!', 'appointment_confirmed', id);
-        createNotification(appointment.artist_id, 'Appointment Confirmed', 'You have confirmed the appointment.', 'appointment_confirmed', id);
+        createNotification(appointment.customer_id, 'Session Confirmed! ✅', `Great news! Your appointment on ${dateStr} for "${designTitle}" is now officially confirmed. We look forward to seeing you!`, 'appointment_confirmed', id);
+        createNotification(appointment.artist_id, 'Appointment Confirmed', `Appointment #${id} for ${designTitle} is now confirmed.`, 'appointment_confirmed', id);
       } else if (status === 'cancelled') {
-        createNotification(appointment.customer_id, 'Appointment Cancelled', 'Your appointment has been cancelled.', 'appointment_cancelled', id);
-        createNotification(appointment.artist_id, 'Appointment Cancelled', 'An appointment has been cancelled.', 'appointment_cancelled', id);
+        createNotification(appointment.customer_id, 'Appointment Cancelled ❌', `Notice: Your appointment scheduled for ${dateStr} has been cancelled. Please contact the studio if you have any questions.`, 'appointment_cancelled', id);
+        createNotification(appointment.artist_id, 'Appointment Cancelled', `Appointment #${id} has been cancelled.`, 'appointment_cancelled', id);
       } else if (status === 'completed') {
-        createNotification(appointment.customer_id, 'Appointment Completed', 'Thanks for visiting! Please leave a review.', 'appointment_completed', id);
+        createNotification(appointment.customer_id, 'Tattoo Journey Complete! ✨', `Your session for "${designTitle}" is finished! We hope you love your new ink. Don't forget to follow your aftercare instructions!`, 'appointment_completed', id);
 
         // 🚀 SYNC: Automatically create a manual invoice for Admin Billing
         db.query('SELECT name FROM users WHERE id = ?', [appointment.customer_id], (uErr, uRes) => {
@@ -3171,7 +3174,12 @@ app.post('/api/payments/webhook', (req, res) => {
     const newPaymentStatus = (paymentType === 'deposit' || paymentType === 'custom') ? 'downpayment_paid' : 'paid';
 
     // Get current status first to determine new status
-    db.query('SELECT status, customer_id, artist_id FROM appointments WHERE id = ?', [appointmentId], (fetchErr, rows) => {
+    db.query(`
+      SELECT ap.status, ap.customer_id, ap.artist_id, u.name as customer_name 
+      FROM appointments ap 
+      JOIN users u ON ap.customer_id = u.id 
+      WHERE ap.id = ?
+    `, [appointmentId], (fetchErr, rows) => {
       if (!fetchErr && rows.length) {
         const appt = rows[0];
         const newAptStatus = (appt.status?.toLowerCase() === 'pending') ? 'confirmed' : appt.status;
@@ -3184,6 +3192,16 @@ app.post('/api/payments/webhook', (req, res) => {
 
             createNotification(appt.customer_id, 'Payment Received', `Your ${paymentType === 'deposit' ? 'deposit' : 'payment'} for appointment #${appointmentId} is confirmed.`, 'payment_success', appointmentId);
             createNotification(appt.artist_id, 'Payment Received', `Payment for appointment #${appointmentId} is confirmed.`, 'payment_success', appointmentId);
+
+            // Notify Admins and Managers
+            db.query('SELECT id FROM users WHERE user_type IN ("admin", "manager")', (adminErr, admins) => {
+              if (!adminErr && admins.length > 0) {
+                const adminMsg = `Payment of ₱${(amount / 100).toLocaleString()} received from ${appt.customer_name} for appointment #${appointmentId} (${paymentType === 'deposit' ? 'Downpayment' : 'Full Payment'}).`;
+                admins.forEach(admin => {
+                  createNotification(admin.id, 'Payment Received', adminMsg, 'payment_success', appointmentId);
+                });
+              }
+            });
           }
         });
       }

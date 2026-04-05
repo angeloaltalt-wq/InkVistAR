@@ -80,14 +80,30 @@ function CustomerNotifications() {
         }
     };
 
+    const formatNotificationTime = (dateString) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffInDays = (now - date) / (1000 * 60 * 60 * 24);
+
+        if (diffInDays < 7) {
+            const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            if (date.toDateString() === now.toDateString()) {
+                return time;
+            }
+            const day = date.toLocaleDateString([], { weekday: 'short' });
+            return `${day} ${time}`;
+        }
+        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    };
+
     const getNotificationStyle = (type) => {
         switch (type) {
             case 'appointment_confirmed': 
-                return { icon: CalendarCheck, color: 'black', bg: 'rgba(16, 185, 129, 0.1)', label: 'Confirmed' };
+                return { icon: CalendarCheck, color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)', label: 'Confirmed' };
             case 'appointment_cancelled': 
-                return { icon: XCircle, color: 'black', bg: 'rgba(239, 68, 68, 0.1)', label: 'Cancelled' };
+                return { icon: XCircle, color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)', label: 'Cancelled' };
             case 'appointment_completed':
-                return { icon: CheckCircle, color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)', label: 'Completed' };
+                return { icon: CheckCircle, color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)', label: 'Completed' };
             case 'payment_received':
                 return { icon: Check, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)', label: 'Payment' };
             case 'system':
@@ -187,8 +203,8 @@ function CustomerNotifications() {
                                                     </div>
 
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexShrink: 0 }}>
-                                                        <span className="notif-time" style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '80px', textAlign: 'right' }}>
-                                                            {new Date(n.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                                        <span className="notif-time" style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '100px', textAlign: 'right' }}>
+                                                            {formatNotificationTime(n.created_at)}
                                                         </span>
                                                         
                                                         <div className="notif-actions" style={{ display: 'flex', gap: '8px' }}>
