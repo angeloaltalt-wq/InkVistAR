@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
 import { useParams, Link } from 'react-router-dom';
 import { Star, ArrowLeft, ArrowRight, CheckCircle, Image as ImageIcon } from 'lucide-react';
-import PublicNavbar from '../components/PublicNavbar';
-import PublicFooter from '../components/PublicFooter';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 import './PublicStyles.css'; // Assuming this exists or using inline styles
 import { API_URL } from '../config';
 
@@ -41,11 +41,11 @@ const PublicArtistProfile = () => {
     if (loading) {
         return (
             <div className="public-layout">
-                <PublicNavbar />
+                <Navbar />
                 <div style={{ minHeight: '60vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                     <div className="premium-loader"></div>
                 </div>
-                <PublicFooter />
+                <Footer />
             </div>
         );
     }
@@ -53,20 +53,20 @@ const PublicArtistProfile = () => {
     if (!artist) {
         return (
             <div className="public-layout">
-                <PublicNavbar />
+                <Navbar />
                 <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '50px' }}>
                     <h2>Artist Not Found</h2>
                     <p style={{ color: '#64748b', marginBottom: '20px' }}>The artist profile you're looking for doesn't exist.</p>
                     <Link to="/artists" className="premium-btn primary" style={{ textDecoration: 'none' }}>Back to Artists</Link>
                 </div>
-                <PublicFooter />
+                <Footer />
             </div>
         );
     }
 
     return (
         <div className="public-layout">
-            <PublicNavbar />
+            <Navbar />
             
             <div className="artist-profile-header" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white', padding: '80px 20px 40px', textAlign: 'center' }}>
                 <div className="container" style={{ maxWidth: '1000px', margin: '0 auto' }}>
@@ -164,7 +164,7 @@ const PublicArtistProfile = () => {
                 </div>
             </div>
             
-            <PublicFooter />
+            <Footer />
         </div>
     );
 };
