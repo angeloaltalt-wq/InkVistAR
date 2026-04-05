@@ -65,7 +65,7 @@ function AdminSideNav() {
     // Socket.io for Real-time Chat Notifications
     useEffect(() => {
         const socket = io(API_URL);
-        
+
         socket.on('connect', () => {
             socket.emit('join_admin_tracking');
         });
@@ -80,7 +80,7 @@ function AdminSideNav() {
                 const lastMsg = s.messages[s.messages.length - 1];
                 return lastMsg && !lastMsg.sender.toLowerCase().includes('admin') && !lastMsg.sender.toLowerCase().includes('agent');
             }).length;
-            
+
             setUnreadChatCount(waitingCount);
         });
 

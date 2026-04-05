@@ -191,7 +191,7 @@ function AdminAppointments() {
     };
 
     const showAlert = (title, message, type = 'info') => {
-        setConfirmDialog({ isOpen: true, title, message, type, isAlert: true, onConfirm: () => setConfirmDialog(prev => ({...prev, isOpen: false})) });
+        setConfirmDialog({ isOpen: true, title, message, type, isAlert: true, onConfirm: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })) });
     };
 
     const handleStatusUpdate = async (id, status) => {
@@ -311,7 +311,7 @@ function AdminAppointments() {
             showAlert('Invalid Amount', `Amount exceeds the remaining balance of ₱${remainingBalance.toLocaleString()}`, 'warning');
             return;
         }
-        
+
         try {
             const res = await Axios.post(`${API_URL}/api/admin/appointments/${selectedAppointment.id}/manual-payment`, {
                 amount: manualPaymentModal.amount,
@@ -859,18 +859,18 @@ function AdminAppointments() {
                                             <label>Total Quoted Price (₱)</label>
                                             <input type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} className="premium-input-v2" style={{ width: '100%', backgroundImage: 'none' }} />
                                         </div>
-                                        
+
                                         <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '12px', marginTop: '15px', border: '1px solid #e2e8f0' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                                 <label style={{ margin: 0 }}>Financial Summary</label>
-                                                <button 
-                                                    type="button" 
-                                                    className="btn btn-secondary" 
-                                                    style={{ 
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-secondary"
+                                                    style={{
                                                         padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '5px',
                                                         opacity: (!selectedAppointment || (selectedAppointment.totalPaid >= formData.price)) ? 0.5 : 1,
                                                         cursor: (!selectedAppointment || (selectedAppointment.totalPaid >= formData.price)) ? 'not-allowed' : 'pointer'
-                                                    }} 
+                                                    }}
                                                     onClick={() => selectedAppointment && (selectedAppointment.totalPaid < formData.price) && setManualPaymentModal({ ...manualPaymentModal, isOpen: true, amount: '' })}
                                                     disabled={!selectedAppointment || (selectedAppointment.totalPaid >= formData.price)}
                                                 >
@@ -929,19 +929,19 @@ function AdminAppointments() {
                             <div className="modal-body">
                                 <div className="form-group">
                                     <label>Amount to Add (₱)</label>
-                                    <input 
-                                        type="number" 
-                                        className="form-input" 
-                                        value={manualPaymentModal.amount} 
-                                        onChange={e => setManualPaymentModal({ ...manualPaymentModal, amount: e.target.value })} 
+                                    <input
+                                        type="number"
+                                        className="form-input"
+                                        value={manualPaymentModal.amount}
+                                        onChange={e => setManualPaymentModal({ ...manualPaymentModal, amount: e.target.value })}
                                         placeholder="Enter amount paid in studio"
                                     />
                                 </div>
                                 <div className="form-group" style={{ marginTop: '15px' }}>
                                     <label>Payment Method</label>
-                                    <select 
-                                        className="form-input" 
-                                        value={manualPaymentModal.method} 
+                                    <select
+                                        className="form-input"
+                                        value={manualPaymentModal.method}
                                         onChange={e => setManualPaymentModal({ ...manualPaymentModal, method: e.target.value })}
                                     >
                                         <option value="Cash">Cash</option>
@@ -978,12 +978,12 @@ function AdminAppointments() {
                                 {dayViewModal.appointments.length > 0 ? (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                         {dayViewModal.appointments.map(apt => (
-                                            <div 
-                                                key={apt.id} 
-                                                className="glass-card" 
-                                                style={{ 
-                                                    padding: '16px', 
-                                                    cursor: 'pointer', 
+                                            <div
+                                                key={apt.id}
+                                                className="glass-card"
+                                                style={{
+                                                    padding: '16px',
+                                                    cursor: 'pointer',
                                                     borderLeft: `4px solid ${apt.status === 'confirmed' ? '#10b981' : (apt.status === 'pending' ? '#f59e0b' : '#6366f1')}`,
                                                     background: 'rgba(255,255,255,0.5)',
                                                     display: 'flex',
@@ -1022,8 +1022,8 @@ function AdminAppointments() {
                                 )}
                             </div>
                             <div className="modal-footer" style={{ borderTop: '1px solid #f1f5f9', padding: '20px' }}>
-                                <button 
-                                    className="btn btn-primary" 
+                                <button
+                                    className="btn btn-primary"
                                     style={{ width: '100%', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                                     onClick={() => {
                                         setDayViewModal({ ...dayViewModal, isOpen: false });
@@ -1039,9 +1039,9 @@ function AdminAppointments() {
             </div>
 
             {/* Confirmation Modal */}
-            <ConfirmModal 
-                {...confirmDialog} 
-                onClose={() => setConfirmDialog(prev => ({...prev, isOpen: false}))} 
+            <ConfirmModal
+                {...confirmDialog}
+                onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
             />
         </div>
     );

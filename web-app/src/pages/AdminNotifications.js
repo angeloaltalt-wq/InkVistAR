@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
-import { 
-    Bell, 
-    AlertTriangle, 
-    CheckCircle, 
-    Package, 
+import {
+    Bell,
+    AlertTriangle,
+    CheckCircle,
+    Package,
     CalendarDays,
     CalendarCheck, // Added for appointment_confirmed
     XCircle, // Added for appointment_cancelled
-    Settings, 
-    Clock, 
+    Settings,
+    Clock,
     ArrowRight,
     Search,
     Filter,
@@ -55,7 +55,7 @@ function AdminNotifications() {
 
             // Generate System-wide Alerts (Mirroring Dashboard logic for consistency)
             const alerts = [];
-            
+
             // 1. Inventory Alerts
             if (inventoryResponse.data.success) {
                 const lowStockItems = inventoryResponse.data.data.filter(item => item.current_stock <= item.min_stock);
@@ -98,7 +98,7 @@ function AdminNotifications() {
                     severity: n.type === 'system' ? 'medium' : 'low'
                 }))
             ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            
+
             setNotifications(combined);
             setUnreadCount(combined.filter(n => !n.is_read).length);
             setLoading(false);
@@ -112,15 +112,15 @@ function AdminNotifications() {
 
     const getNotificationStyle = (type) => {
         switch (type) {
-            case 'inventory': 
+            case 'inventory':
                 return { color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)', label: 'Inventory' };
-            case 'appointment': 
+            case 'appointment':
                 return { color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)', label: 'Booking' };
-            case 'system': 
+            case 'system':
                 return { color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)', label: 'System' };
-            case 'appointment_confirmed': 
+            case 'appointment_confirmed':
                 return { color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)', label: 'Confirmed' };
-            case 'appointment_cancelled': 
+            case 'appointment_cancelled':
                 return { color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)', label: 'Cancelled' };
             case 'appointment_completed':
                 return { color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)', label: 'Completed' };
@@ -205,8 +205,8 @@ function AdminNotifications() {
 
 
     const filteredNotifs = notifications.filter(n => {
-        const matchesSearch = n.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                             n.message.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = n.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            n.message.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesFilter = activeFilter === 'all' || n.type === activeFilter;
         return matchesSearch && matchesFilter;
     });
@@ -227,13 +227,13 @@ function AdminNotifications() {
                         <h1>Notification Center</h1>
                     </div>
                     <div className="header-actions">
-                        <button 
+                        <button
                             className="premium-btn primary"
                             onClick={markAllRead}
                         >
                             <CheckCheck size={18} /> Mark All Read
                         </button>
-                        <button 
+                        <button
                             className="premium-btn secondary"
                             onClick={async () => {
                                 // Clear computed alerts (Inventory/Bookings)
@@ -260,14 +260,14 @@ function AdminNotifications() {
                 </div>
 
                 <div className="filter-bar" style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
-                    <button 
+                    <button
                         className={`filter-btn ${activeFilter === 'all' ? 'active' : ''}`}
                         onClick={() => setActiveFilter('all')}
                         style={filterButtonStyle(activeFilter === 'all')}
                     >
                         All
                     </button>
-                    <button 
+                    <button
                         className={`filter-btn ${activeFilter === 'unread' ? 'active' : ''}`}
                         onClick={() => setActiveFilter('unread')}
                         style={filterButtonStyle(activeFilter === 'unread')}
@@ -295,8 +295,8 @@ function AdminNotifications() {
                                     <Filter size={16} />
                                     <span>Type:</span>
                                 </div>
-                                <select 
-                                    value={activeFilter} 
+                                <select
+                                    value={activeFilter}
                                     onChange={(e) => setActiveFilter(e.target.value)}
                                     className="premium-select-v2" // Keep this class for existing styling
                                     // Override some styles to match filterButtonStyle
@@ -332,7 +332,7 @@ function AdminNotifications() {
                                                         <div className="icon-badge" style={{ background: style.bg, padding: '6px', borderRadius: '6px', flexShrink: 0 }}>
                                                             {Icon}
                                                         </div>
-                                                        
+
                                                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '20px', overflow: 'hidden' }}>
                                                             <span className="subject-text" style={{ fontSize: '0.95rem', minWidth: '150px', color: n.is_read ? '#64748b' : '#1e293b' }}>{n.title}</span>
                                                             <p className="notif-body" style={{ margin: 0, fontSize: '0.9rem', color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.message}</p>
@@ -342,11 +342,11 @@ function AdminNotifications() {
                                                             <span className="notif-time" style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '80px', textAlign: 'right' }}>
                                                                 {new Date(n.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                                                             </span>
-                                                            
+
                                                             <div className="notif-actions" style={{ display: 'flex', gap: '8px' }}>
                                                                 {n.path && (
-                                                                    <button 
-                                                                        className="notif-btn primary" 
+                                                                    <button
+                                                                        className="notif-btn primary"
                                                                         onClick={() => navigate(n.path)}
                                                                         style={{ padding: '4px 10px', fontSize: '0.75rem' }}
                                                                     >
@@ -355,11 +355,11 @@ function AdminNotifications() {
                                                                 )}
                                                                 {!n.is_read ? (
                                                                     <button className="notif-btn ghost" onClick={() => markAsRead(n.id)} style={{ padding: '4px' }} title="Mark as Read">
-                                                                        <Check size={14}/>
+                                                                        <Check size={14} />
                                                                     </button>
                                                                 ) : (
                                                                     <button className="notif-btn ghost" onClick={() => markAsUnread(n.id)} style={{ padding: '4px' }} title="Mark as Unread">
-                                                                        <RotateCcw size={14}/>
+                                                                        <RotateCcw size={14} />
                                                                     </button>
                                                                 )}
                                                             </div>
@@ -380,7 +380,7 @@ function AdminNotifications() {
                         )}
 
                         {!loading && filteredNotifs.length > 0 && (
-                            <Pagination 
+                            <Pagination
                                 currentPage={currentPage}
                                 totalPages={totalPages}
                                 onPageChange={setCurrentPage}
