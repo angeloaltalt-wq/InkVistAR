@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
 import { Star, CheckCircle, XCircle } from 'lucide-react';
 import AdminSideNav from '../components/AdminSideNav';
-import './AdminStyles.css';
+import './PortalStyles.css';
 import { API_URL } from '../config';
 
 function AdminReviews() {
