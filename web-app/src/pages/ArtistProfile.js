@@ -103,17 +103,7 @@ function ArtistProfile() {
             return;
         }
 
-        if (profile.hourly_rate < 0) {
-            setMessage({ type: 'error', text: 'Hourly rate cannot be negative' });
-            setSaving(false);
-            return;
-        }
 
-        if (profile.commission_rate < 0 || profile.commission_rate > 100) {
-            setMessage({ type: 'error', text: 'Commission rate must be between 0% and 100%' });
-            setSaving(false);
-            return;
-        }
 
         // Password validation
         if (showChangePassword) {
@@ -138,9 +128,8 @@ function ArtistProfile() {
                 phone: profile.phone,
                 studio_name: profile.studio_name,
                 specialization: profile.specialization,
-                hourly_rate: profile.hourly_rate,
                 experience_years: profile.experience_years,
-                commission_rate: profile.commission_rate / 100,
+                commission_rate: 0.30,
                 profileImage: profile.profile_image
             });
 
@@ -402,34 +391,17 @@ function ArtistProfile() {
                                                 style={inputStyle}
                                             />
                                         </div>
-                                        <div className="form-group">
-                                            <label style={formLabel}><DollarSign size={16} /> Hourly Rate ($)</label>
-                                            <input
-                                                type="number"
-                                                className="form-input"
-                                                value={profile.hourly_rate}
-                                                onChange={e => setProfile({ ...profile, hourly_rate: Math.max(0, parseFloat(e.target.value) || 0) })}
-                                                min="0"
-                                                step="0.01"
-                                                placeholder="0.00"
-                                                style={inputStyle}
-                                            />
-                                        </div>
                                         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                                            <label style={formLabel}><Percent size={16} /> Commission Rate (%)</label>
+                                            <label style={formLabel}><Percent size={16} /> Platform Commission Rate</label>
                                             <input
-                                                type="number"
+                                                type="text"
                                                 className="form-input"
-                                                value={profile.commission_rate}
-                                                onChange={e => setProfile({ ...profile, commission_rate: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)) })}
-                                                min="0"
-                                                max="100"
-                                                step="1"
-                                                placeholder="60"
-                                                style={inputStyle}
+                                                value="30%"
+                                                disabled
+                                                style={{ ...inputStyle, backgroundColor: '#f1f5f9', color: '#64748b' }}
                                             />
                                             <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                                                Platform takes {100 - (profile.commission_rate || 0)}% commission. You keep {profile.commission_rate || 0}%.
+                                                Platform takes a fixed 30% commission. You keep 70%.
                                             </span>
                                         </div>
                                     </div>

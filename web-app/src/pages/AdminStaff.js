@@ -307,10 +307,11 @@ function AdminStaff() {
                 <div className="form-group">
                     <label>Commission Rate (%)</label>
                     <input
-                        type="number"
+                        type="text"
                         className="form-input"
-                        value={(formData.commission_rate || 0) * 100}
-                        onChange={e => setFormData({ ...formData, commission_rate: parseFloat(e.target.value) / 100 })}
+                        value="30"
+                        disabled
+                        style={{ backgroundColor: '#f1f5f9', color: '#64748b' }}
                     />
                 </div>
             </div>

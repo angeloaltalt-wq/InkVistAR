@@ -1791,18 +1791,15 @@ app.put('/api/artist/profile/:id', (req, res) => {
     let artistQuery = 'UPDATE artists SET specialization = ?';
     const params = [specialization];
 
-    if (hourly_rate !== undefined) {
-      artistQuery += ', hourly_rate = ?';
-      params.push(hourly_rate);
-    }
     if (experience_years !== undefined) {
       artistQuery += ', experience_years = ?';
       params.push(experience_years);
     }
-    if (commission_rate !== undefined) {
-      artistQuery += ', commission_rate = ?';
-      params.push(commission_rate);
-    }
+    
+    // Lock commission rate to 30%
+    artistQuery += ', commission_rate = ?';
+    params.push(0.30);
+
     if (studio_name !== undefined) {
       artistQuery += ', studio_name = ?';
       params.push(studio_name);
