@@ -12,6 +12,11 @@ export const AdminChat = ({ navigation }) => {
   
   const socketRef = useRef(null);
   const flatListRef = useRef(null);
+  const selectedRef = useRef(null);
+
+  useEffect(() => {
+    selectedRef.current = selectedSession;
+  }, [selectedSession]);
 
   useEffect(() => {
     // Connect to tracking socket to get sessions
@@ -23,6 +28,11 @@ export const AdminChat = ({ navigation }) => {
     socket.on('support_sessions_update', (sessions) => {
       const sorted = [...sessions].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       setLiveSessions(sorted);
+
+      const sel = selectedRef.current;
+      if (sel && !sessions.find(s => s.id === sel.id)) {
+          setSelectedSession(null);
+      }
     });
 
     return () => {
@@ -61,6 +71,13 @@ export const AdminChat = ({ navigation }) => {
     setInputValue('');
   };
 
+  const handleCloseSession = () => {
+    if (!selectedSession || !socketRef.current) return;
+    socketRef.current.emit('close_session', { room: selectedSession.id });
+    setLiveSessions(prev => prev.filter(s => s.id !== selectedSession.id));
+    setSelectedSession(null);
+  };
+
   const renderSessionItem = ({ item }) => (
     <TouchableOpacity 
       style={[styles.sessionCard, selectedSession?.id === item.id && styles.sessionCardActive]}
@@ -89,13 +106,23 @@ export const AdminChat = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => {
-            if (selectedSession) setSelectedSession(null);
-            else navigation.goBack();
-          }} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{selectedSession ? selectedSession.name : 'Support Chat'}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity onPress={() => {
+              if (selectedSession) setSelectedSession(null);
+              else navigation.goBack();
+            }} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{selectedSession ? selectedSession.name : 'Support Chat'}</Text>
+        </View>
+        {selectedSession && (
+          <TouchableOpacity 
+            style={{backgroundColor: '#ef4444', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6}}
+            onPress={handleCloseSession}
+          >
+            <Text style={{color: 'white', fontWeight: 'bold', fontSize: 12}}>Close Session</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {!selectedSession ? (
@@ -146,7 +173,7 @@ export const AdminChat = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#111827' },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 20, paddingTop: 50, backgroundColor: '#1f2937', borderBottomWidth: 1, borderBottomColor: '#374151' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 50, backgroundColor: '#1f2937', borderBottomWidth: 1, borderBottomColor: '#374151' },
   backButton: { marginRight: 15, padding: 5 },
   headerTitle: { fontSize: 20, fontWeight: 'bold', color: 'white' },
   

@@ -38,7 +38,7 @@ import { CustomerNotifications } from './screens/CustomerNotifications.jsx';
 import { AdminDashboard } from './screens/AdminDashboard.jsx';
 import { AdminUserManagement } from './screens/AdminUserManagement.jsx';
 import { AdminAppointmentManagement } from './screens/AdminAppointmentManagement.jsx';
-import { AdminSystemHealth } from './screens/AdminSystemHealth.jsx';
+import { AdminStudio } from './screens/AdminStudio.jsx';
 
 // Import New Admin Features
 import { AdminServices } from './screens/AdminServices.jsx';
@@ -481,7 +481,7 @@ export default function App() {
           if (route.name === 'Dashboard') iconName = focused ? 'shield' : 'shield-outline';
           else if (route.name === 'Users') iconName = focused ? 'people' : 'people-outline';
           else if (route.name === 'Bookings') iconName = focused ? 'calendar' : 'calendar-outline';
-          else if (route.name === 'System') iconName = focused ? 'server' : 'server-outline';
+          else if (route.name === 'Studio') iconName = focused ? 'grid' : 'grid-outline';
           return <Ionicons name={iconName} size={24} color={color} />;
         },
       })}
@@ -491,7 +491,7 @@ export default function App() {
       </Tab.Screen>
       <Tab.Screen name="Users" component={AdminUserManagement} />
       <Tab.Screen name="Bookings" component={AdminAppointmentManagement} />
-      <Tab.Screen name="System" component={AdminSystemHealth} />
+      <Tab.Screen name="Studio" component={AdminStudio} />
     </Tab.Navigator>
   );
 

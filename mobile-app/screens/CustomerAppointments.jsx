@@ -4,6 +4,7 @@ import {
   SafeAreaView, ActivityIndicator, Modal, Platform, Alert, FlatList, RefreshControl, Linking
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { WebView } from 'react-native-webview';
 import { getCustomerAppointments, updateAppointmentStatus, createCheckoutSession, getPaymentStatus } from '../src/utils/api';
 
 const ITEMS_PER_PAGE = 5;
@@ -20,6 +21,8 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentUrl, setPaymentUrl] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   useEffect(() => {
     if (customerId) fetchAppointments();
@@ -68,8 +71,8 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
       setPaymentLoading(true);
       const res = await createCheckoutSession(selectedAppointment.id, selectedAppointment.price);
       if (res.success && res.checkoutUrl) {
-        await Linking.openURL(res.checkoutUrl);
-        setSelectedAppointment(null);
+        setPaymentUrl(res.checkoutUrl);
+        setShowPaymentModal(true);
       } else {
         Alert.alert('Payment Error', res.message || 'Could not initiate payment.');
       }
@@ -78,6 +81,13 @@ export function CustomerAppointments({ customerId, onBack, onBookNew }) {
     } finally {
       setPaymentLoading(false);
     }
+  };
+
+  const handlePaymentClose = () => {
+    setShowPaymentModal(false);
+    setPaymentUrl(null);
+    setSelectedAppointment(null);
+    fetchAppointments(); // Refresh the list to catch any state update!
   };
 
   const onRefresh = () => {
@@ -442,6 +452,29 @@ const renderAppointmentItem = ({ item, index }) => (
             </TouchableOpacity>
           </View>
         </View>
+      </Modal>
+
+      {/* Payment WebView Modal */}
+      <Modal
+        visible={showPaymentModal}
+        animationType="slide"
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#f9fafb' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#e5e7eb' }}>
+            <TouchableOpacity onPress={handlePaymentClose} style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="close" size={24} color="#333" />
+              <Text style={{ marginLeft: 8, fontSize: 16, fontWeight: 'bold' }}>Close Checkout</Text>
+            </TouchableOpacity>
+          </View>
+          {paymentUrl && (
+            <WebView 
+              source={{ uri: paymentUrl }} 
+              style={{ flex: 1 }} 
+              startInLoadingState={true}
+              renderLoading={() => <ActivityIndicator style={{ position: 'absolute', top: '50%', left: '50%', transform: [{translateX: -10}, {translateY: -10}] }} size="large" color="#daa520" />}
+            />
+          )}
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
