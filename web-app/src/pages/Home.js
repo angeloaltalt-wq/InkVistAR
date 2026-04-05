@@ -253,7 +253,6 @@ function Home() {
                                             </div>
                                         )}
 
-                                        <h3 className="testimonial-quote">"An Experience Worth Attending"</h3>
                                         <div className="testimonial-stars">
                                             {'★'.repeat(testimony.rating || 5)}{'☆'.repeat(5 - (testimony.rating || 5))}
                                         </div>

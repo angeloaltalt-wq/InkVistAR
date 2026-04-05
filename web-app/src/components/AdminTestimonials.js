@@ -276,7 +276,7 @@ function AdminTestimonials() {
                 </div>
             )}
 
-            <ConfirmModal {...confirmDialog} onCancel={() => setConfirmDialog({ isOpen: false })} />
+            <ConfirmModal {...confirmDialog} onClose={() => setConfirmDialog({ isOpen: false })} />
         </div>
     );
 }
