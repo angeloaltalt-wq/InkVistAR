@@ -4339,24 +4339,7 @@ app.post('/api/emergency-login', (req, res) => {
   });
 });
 
-// ========== 404 HANDLER ==========
-app.use((req, res) => {
-  console.log(`❌ 404: ${req.method} ${req.url} not found`);
-  res.status(404).json({
-    success: false,
-    message: 'Endpoint not found'
-  });
-});
 
-// ========== ERROR HANDLER ==========
-app.use((err, req, res, next) => {
-  console.error('🔥 Unhandled error:', err);
-  res.status(500).json({
-    success: false,
-    message: 'Internal server error',
-    error: err.message
-  });
-});
 
 // ========== SOCKET.IO REAL-TIME CHAT ==========
 const activeSupportSessions = {};
@@ -4573,6 +4556,25 @@ function startAppointmentReminders() {
     }
   }, 1000 * 60);
 }
+
+// ========== 404 HANDLER ==========
+app.use((req, res) => {
+  console.log(`❌ 404: ${req.method} ${req.url} not found`);
+  res.status(404).json({
+    success: false,
+    message: 'Endpoint not found'
+  });
+});
+
+// ========== ERROR HANDLER ==========
+app.use((err, req, res, next) => {
+  console.error('🔥 Unhandled error:', err);
+  res.status(500).json({
+    success: false,
+    message: 'Internal server error',
+    error: err.message
+  });
+});
 
 // ========== START SERVER ==========
 const PORT = process.env.PORT || 3001;
