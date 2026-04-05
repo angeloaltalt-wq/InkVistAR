@@ -463,26 +463,34 @@ function AdminAppointments() {
                                             <span>{day}</span>
                                             <Plus size={12} style={{ opacity: 0.5 }} />
                                         </div>
-                                        {dayAppts.map(apt => (
-                                            <div key={apt.id} style={{
-                                                fontSize: '0.75rem',
-                                                padding: '4px',
-                                                marginBottom: '4px',
-                                                borderRadius: '4px',
-                                                backgroundColor: apt.status === 'confirmed' ? '#d1fae5' : (apt.status === 'pending' ? '#fef3c7' : '#e0e7ff'),
-                                                color: apt.status === 'confirmed' ? '#065f46' : (apt.status === 'pending' ? '#92400e' : '#3730a3'),
-                                                whiteSpace: 'nowrap',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                cursor: 'pointer'
-                                            }} title={`${apt.time || 'N/A'} - ${apt.clientName} (${apt.artistName})`}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleEdit(apt);
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: 'auto' }}>
+                                            {dayAppts.length > 0 && (
+                                                <div style={{
+                                                    fontSize: '0.75rem',
+                                                    padding: '4px',
+                                                    borderRadius: '4px',
+                                                    backgroundColor: '#e0e7ff',
+                                                    color: '#3730a3',
+                                                    textAlign: 'center',
+                                                    fontWeight: '600'
                                                 }}>
-                                                {(apt.time || '').slice(0, 5)} {apt.clientName}
-                                            </div>
-                                        ))}
+                                                    {dayAppts.length} {dayAppts.length === 1 ? 'Booking' : 'Bookings'}
+                                                </div>
+                                            )}
+                                            {dayAppts.length > 0 && (
+                                                <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                                    {dayAppts.slice(0, 5).map(apt => (
+                                                        <div key={apt.id} style={{
+                                                            width: '8px', 
+                                                            height: '8px', 
+                                                            borderRadius: '50%',
+                                                            backgroundColor: apt.status === 'confirmed' ? '#10b981' : (apt.status === 'pending' ? '#f59e0b' : '#6366f1')
+                                                        }} title={apt.status} />
+                                                    ))}
+                                                    {dayAppts.length > 5 && <span style={{ fontSize: '10px', color: '#94a3b8', lineHeight: '8px' }}>+</span>}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 );
                             })}
