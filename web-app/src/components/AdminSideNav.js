@@ -194,12 +194,7 @@ function AdminSideNav() {
             path: '/admin/billing',
             description: 'Payments & Invoices'
         },
-        {
-            label: 'Settings',
-            icon: Settings,
-            path: '/admin/settings',
-            description: 'System settings'
-        },
+
         {
             label: 'Notifications',
             icon: Bell,
