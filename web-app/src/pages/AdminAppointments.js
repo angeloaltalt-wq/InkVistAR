@@ -533,7 +533,10 @@ function AdminAppointments() {
                 showConfirm(
                     'Incomplete Session Details',
                     `This physical session is missing ${hasNoArtist ? 'an Assigned Artist' : ''}${hasNoArtist && hasNoPrice ? ' and ' : ''}${hasNoPrice ? 'a finalized Service Price' : ''}. Would you like to review and supply these parameters for ${clientName}'s session now?`,
-                    () => handleEdit(apt)
+                    () => {
+                        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                        handleEdit(apt);
+                    }
                 );
                 return;
             }
@@ -1584,11 +1587,21 @@ function AdminAppointments() {
                                                     <td data-label="Actions" className="actions-cell">
                                                         {appointment.status === 'pending' && (
                                                             <>
-                                                                <button className="action-btn view-btn admin-st-bb9a2c41" onClick={() => handleStatusUpdate(appointment.id, 'confirmed', appointment.clientName)} title="Approve">
-                                                                    <Check size={14} className="admin-st-da4d9cdd" />
+                                                                <button
+                                                                    className="action-btn admin-st-bb9a2c41"
+                                                                    onClick={() => handleStatusUpdate(appointment.id, 'confirmed', appointment.clientName)}
+                                                                    title="Approve this pending appointment"
+                                                                    style={{ background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1.5px solid rgba(16,185,129,0.35)' }}
+                                                                >
+                                                                    <Check size={14} />
                                                                 </button>
-                                                                <button className="action-btn delete-btn admin-st-02e8d890" onClick={() => handleStatusUpdate(appointment.id, 'cancelled', appointment.clientName)} title="Reject">
-                                                                    <X size={14} className="admin-st-234e64b8" />
+                                                                <button
+                                                                    className="action-btn admin-st-02e8d890"
+                                                                    onClick={() => handleStatusUpdate(appointment.id, 'rejected', appointment.clientName)}
+                                                                    title="Reject this pending appointment"
+                                                                    style={{ background: 'rgba(239,68,68,0.10)', color: '#dc2626', border: '1.5px solid rgba(239,68,68,0.3)' }}
+                                                                >
+                                                                    <X size={14} />
                                                                 </button>
                                                             </>
                                                         )}

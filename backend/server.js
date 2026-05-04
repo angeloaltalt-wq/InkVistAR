@@ -4714,6 +4714,9 @@ app.post('/api/admin/appointments', async (req, res) => {
           conn.commit((commitErr) => {
             conn.release();
             if (commitErr) console.error('[WARN] Commit error:', commitErr);
+            // Broadcast to all connected clients so other booking wizards on the same slot
+            // receive an instant real-time conflict notification without needing to poll
+            io.emit('slot_booked', { date, time: startTime });
             res.json({ success: true, message: 'Appointment created successfully', id: appointmentId, bookingCode });
           });
         };

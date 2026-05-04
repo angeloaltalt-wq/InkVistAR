@@ -56,7 +56,7 @@ function AdminDashboard() {
     const appointmentsPerPage = 10;
     const [selectedAppointment, setSelectedAppointment] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-    const [confirmModal, setConfirmModal] = useState({ open: false, message: '', onConfirm: null });
+    const [confirmModal, setConfirmModal] = useState({ open: false, type: 'approve', title: '', message: '', appointmentRef: '', onConfirm: null });
 
     const navigate = useNavigate();
 
@@ -262,13 +262,20 @@ function AdminDashboard() {
         }
     };
 
-    const showConfirm = (message, onConfirm) => {
-        setConfirmModal({ open: true, message, onConfirm });
+    const showConfirm = (type, title, message, appointmentRef, onConfirm) => {
+        setConfirmModal({ open: true, type, title, message, appointmentRef, onConfirm });
     };
 
-    const handleStatusUpdate = async (id, status) => {
+    const handleStatusUpdate = async (id, status, appointment) => {
+        const isApprove = status === 'confirmed';
+        const ref = `${appointment.client_name || 'Client'} — ${getDisplayCode(appointment)}`;
         showConfirm(
-            `Are you sure you want to mark this appointment as "${status}"?`,
+            isApprove ? 'approve' : 'reject',
+            isApprove ? 'Approve Consultation' : 'Reject Consultation',
+            isApprove
+                ? 'Confirming this request will notify the client that their consultation has been approved and schedule it in the system.'
+                : 'Rejecting this request will mark it as declined and notify the client that their consultation was not approved.',
+            ref,
             async () => {
                 try {
                     await Axios.put(`${API_URL}/api/appointments/${id}/status`, { status });
@@ -741,10 +748,10 @@ function AdminDashboard() {
                                                             <div className="table-actions-v2">
                                                                 {appointment.status === 'pending' && appointment.service_type?.toLowerCase() === 'consultation' && (
                                                                     <>
-                                                                        <button className="icon-btn-v2 check" title="Approve" onClick={() => handleStatusUpdate(appointment.id, 'confirmed')}>
+                                                                        <button className="icon-btn-v2 check" title="Approve consultation" onClick={() => handleStatusUpdate(appointment.id, 'confirmed', appointment)}>
                                                                             <CheckCircle size={16} />
                                                                         </button>
-                                                                        <button className="icon-btn-v2 cross" title="Reject" onClick={() => handleStatusUpdate(appointment.id, 'cancelled')}>
+                                                                        <button className="icon-btn-v2 cross" title="Reject consultation" onClick={() => handleStatusUpdate(appointment.id, 'rejected', appointment)}>
                                                                             <AlertTriangle size={16} />
                                                                         </button>
                                                                     </>
@@ -1043,41 +1050,81 @@ function AdminDashboard() {
             )}
 
             {/* Confirmation Modal */}
-            {confirmModal.open && (
-                <div className="modal-overlay open" onClick={() => setConfirmModal({ open: false, message: '', onConfirm: null })}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h2 className="admin-st-14fa8787">System Confirmation</h2>
-                            <button className="close-btn" onClick={() => setConfirmModal({ open: false, message: '', onConfirm: null })}>
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <div className="modal-body admin-st-06ff1ea3">
-                            <div className="admin-st-969fbc7a">
-                                <SlidersHorizontal size={24} className="admin-st-606a2b73" />
+            {confirmModal.open && (() => {
+                const isApprove = confirmModal.type === 'approve';
+                const closeModal = () => setConfirmModal({ open: false, type: 'approve', title: '', message: '', appointmentRef: '', onConfirm: null });
+                return (
+                    <div className="modal-overlay open" onClick={closeModal}>
+                        <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '460px' }}>
+                            <div className="modal-header" style={{ borderBottom: `2px solid ${isApprove ? '#10b981' : '#ef4444'}` }}>
+                                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    {isApprove
+                                        ? <CheckCircle size={20} color="#10b981" />
+                                        : <AlertTriangle size={20} color="#ef4444" />}
+                                    {confirmModal.title}
+                                </h2>
+                                <button className="close-btn" onClick={closeModal} aria-label="Close modal" title="Close">
+                                    <X size={20} />
+                                </button>
                             </div>
-                            <p className="admin-st-9e8bc04b">{confirmModal.message}</p>
-                        </div>
-                        <div className="modal-footer admin-st-651c59bd">
-                            <button
-                                className="btn btn-secondary admin-st-49cdf874"
-                                onClick={() => setConfirmModal({ open: false, message: '', onConfirm: null })}
-                            >
-                                Revert
-                            </button>
-                            <button
-                                className="btn btn-primary admin-st-49cdf874"
-                                onClick={() => {
-                                    confirmModal.onConfirm?.();
-                                    setConfirmModal({ open: false, message: '', onConfirm: null });
-                                }}
-                            >
-                                Authorize
-                            </button>
+                            <div className="modal-body" style={{ padding: '28px 28px 16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                {/* Icon badge */}
+                                <div style={{
+                                    width: '64px', height: '64px', borderRadius: '50%', margin: '0 auto',
+                                    background: isApprove ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+                                    border: `2px solid ${isApprove ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }}>
+                                    {isApprove
+                                        ? <CheckCircle size={30} color="#10b981" />
+                                        : <AlertTriangle size={30} color="#ef4444" />}
+                                </div>
+                                {/* Description */}
+                                <p style={{ margin: 0, textAlign: 'center', color: '#475569', fontSize: '0.95rem', lineHeight: '1.6' }}>
+                                    {confirmModal.message}
+                                </p>
+                                {/* Appointment reference chip */}
+                                {confirmModal.appointmentRef && (
+                                    <div style={{
+                                        padding: '10px 16px', borderRadius: '10px', textAlign: 'center',
+                                        background: isApprove ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)',
+                                        border: `1px solid ${isApprove ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`,
+                                        fontSize: '0.85rem', fontWeight: 600,
+                                        color: isApprove ? '#065f46' : '#991b1b'
+                                    }}>
+                                        {confirmModal.appointmentRef}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="modal-footer" style={{ padding: '16px 28px 24px', display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={closeModal}
+                                    title="Cancel and go back"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className="btn"
+                                    style={{
+                                        background: isApprove ? '#10b981' : '#ef4444',
+                                        color: '#fff',
+                                        border: 'none',
+                                        fontWeight: 700
+                                    }}
+                                    onClick={() => {
+                                        confirmModal.onConfirm?.();
+                                        closeModal();
+                                    }}
+                                    title={isApprove ? 'Confirm approval' : 'Confirm rejection'}
+                                >
+                                    {isApprove ? 'Yes, Approve' : 'Yes, Reject'}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
         </div>
     );
 }

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 
 import Axios from 'axios';
 import { CheckCircle, ChevronLeft, ChevronRight, Calendar, User, MessageSquare, Info, Image as ImageIcon, Upload, MapPin, UserPlus, Clock, CalendarCheck, UserCog, Gift, Check, Paintbrush, Gem, Star, CreditCard, Eye, Shield, Bell, Sparkles, Award, Video, Users, FileWarning } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { API_URL } from '../config';
+import { API_URL, SOCKET_URL } from '../config';
+import io from 'socket.io-client';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import WaiverFormModal from './WaiverFormModal';
 const BodyModelViewer = lazy(() => import('./BodyModelViewer'));
@@ -146,6 +147,33 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
             }));
         }
     }, [location.state]);
+
+    // ═══ Real-time slot conflict detection via Socket.IO ═══
+    // Listens for slot_booked broadcasts from the backend so that Laptop 2
+    // instantly knows when Laptop 1 just claimed the same date+time slot.
+    useEffect(() => {
+        const socket = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
+
+        socket.on('slot_booked', ({ date: bookedDate, time: bookedTime }) => {
+            setFormData(prev => {
+                // Only trigger if the user currently has this exact slot selected
+                // and hasn't already submitted (step < 5)
+                if (prev.date === bookedDate && prev.time === bookedTime) {
+                    // Refresh the calendar so the newly blocked slot is reflected visually
+                    fetchAvailability();
+                    setConflictModal({
+                        show: true,
+                        title: 'Slot Just Taken',
+                        message: 'Someone else just requested this time slot a moment before you. The calendar has been refreshed — please select a different date or time to continue.',
+                        returnToStep: 3
+                    });
+                }
+                return prev; // no state change — side effects only
+            });
+        });
+
+        return () => socket.disconnect();
+    }, []);
 
     const fetchJewelryItems = async () => {
         try {
