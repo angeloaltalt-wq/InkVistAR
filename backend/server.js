@@ -3609,7 +3609,7 @@ app.get('/api/artist/:artistId/availability', (req, res) => {
     SELECT appointment_date, start_time, status, service_type
     FROM appointments
     WHERE artist_id = ? 
-    AND status != 'cancelled' 
+    AND status NOT IN ('cancelled', 'rejected') 
     AND is_deleted = 0
     AND appointment_date >= CURDATE()
   `;
@@ -4632,7 +4632,10 @@ app.post('/api/admin/appointments', async (req, res) => {
         if (isFromWizard) {
           // Studio-wide capacity check: count ALL bookings at this date+time
           checkQuery = `
-            SELECT COUNT(*) as slot_count FROM appointments
+            SELECT 
+              COUNT(*) as slot_count,
+              (SELECT COUNT(id) FROM users WHERE user_type = 'artist' AND is_deleted = 0) as artist_count
+            FROM appointments
             WHERE appointment_date = ? AND start_time = ? AND status NOT IN ('cancelled', 'rejected') AND is_deleted = 0
             FOR UPDATE
           `;
@@ -4641,7 +4644,7 @@ app.post('/api/admin/appointments', async (req, res) => {
           // Admin booking: check specific artist or customer collision
           checkQuery = `
             SELECT id FROM appointments 
-            WHERE appointment_date = ? AND start_time = ? AND status != 'cancelled' AND is_deleted = 0
+            WHERE appointment_date = ? AND start_time = ? AND status NOT IN ('cancelled', 'rejected') AND is_deleted = 0
             AND (artist_id = ? OR customer_id = ?)
             FOR UPDATE
           `;
@@ -4662,9 +4665,9 @@ app.post('/api/admin/appointments', async (req, res) => {
           let conflictMessage = '';
 
           if (isFromWizard) {
-            // For consultations: 7 slots per day (13:00-19:00), checked against total artists
             const slotCount = checkResults[0]?.slot_count || 0;
-            if (slotCount >= 7) {
+            const artistCount = Math.max(1, checkResults[0]?.artist_count || 1);
+            if (slotCount >= artistCount) {
               hasConflict = true;
               conflictMessage = 'SLOT_TAKEN: This time slot was just booked by another client. Please select a different time.';
             }
