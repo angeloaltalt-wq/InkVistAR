@@ -8,7 +8,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 import {
   ArrowLeft, Calendar, CheckCircle2, ArrowUpDown, ChevronLeft, ChevronRight,
-  Clock, User, X, Ban, Download, Printer, Lock, Unlock,
+  Clock, User, X, Ban, Download, Printer, Lock, Unlock, PenTool,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import * as FileSystem from 'expo-file-system';
@@ -401,6 +401,7 @@ export function ArtistSchedule({ onBack, artistId, navigation, route }) {
                 {(apt.status === 'confirmed' || apt.status === 'in_progress') && (
                   <View style={styles.aptActions}>
                     <AnimatedTouchable style={styles.manageBtn} onPress={() => navigation.navigate('artist-active-session', { appointment: apt })}>
+                      <PenTool size={14} color={colors.backgroundDeep} />
                       <Text style={styles.manageBtnText}>Manage Session</Text>
                     </AnimatedTouchable>
                   </View>

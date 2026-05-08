@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
-import { Calendar, Clock, Zap, ChevronRight, User } from 'lucide-react-native';
+import { Calendar, Clock, PenTool, ChevronRight, User } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { typography, shadows } from '../src/theme';
 import { useTheme } from '../src/context/ThemeContext';
@@ -103,7 +103,7 @@ export const ArtistSessions = ({ artistId, onBack, navigation, route }) => {
                 navigation.navigate('artist-active-session', { appointment: item });
               }}
             >
-              <Zap size={16} color={colors.backgroundDeep} />
+              <PenTool size={16} color={colors.backgroundDeep} />
               <Text style={styles.manageBtnText}>Manage Session</Text>
             </AnimatedTouchable>
           )}

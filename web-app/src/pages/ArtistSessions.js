@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Axios from 'axios';
-import { Play, Pause, CheckCircle, Upload, Save, X, Package, FileText, Image as ImageIcon, Clock, Search, Calendar, Plus, Archive, AlertTriangle, List } from 'lucide-react';
+import { PenTool, Play, Pause, CheckCircle, Upload, Save, X, Package, FileText, Image as ImageIcon, Clock, Search, Calendar, Plus, Archive, AlertTriangle, List } from 'lucide-react';
 import ArtistSideNav from '../components/ArtistSideNav';
 import ConfirmModal from '../components/ConfirmModal';
 import Pagination from '../components/Pagination';
@@ -647,7 +647,7 @@ function ArtistSessions() {
                                                     <td data-label="Status"><span className={`badge status-${getStatusColor(session.status)}`}>{formatStatus(session.status)}</span></td>
                                                     <td data-label="Action">
                                                         <button className="btn btn-primary" onClick={(e) => { e.stopPropagation(); handleManageSession(session); }} style={{ padding: '6px 14px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                            <Play size={14} /> Manage Session
+                                                            <PenTool size={14} /> Manage Session
                                                         </button>
                                                     </td>
                                                 </tr>

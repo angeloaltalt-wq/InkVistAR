@@ -127,7 +127,6 @@ export const ArtistProfile = ({ userId, userName, userEmail, onLogout }) => {
   const details = [
     { Icon: Briefcase, label: 'Specialization', value: profile.specialization },
     { Icon: Clock, label: 'Experience', value: `${profile.experience_years} Years` },
-    { Icon: Percent, label: 'Commission', value: `${((profile.commission_rate || 0) * 100).toFixed(0)}%` },
     { Icon: Phone, label: 'Phone', value: profile.phone || 'Not set' },
   ];
 

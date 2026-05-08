@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Axios from 'axios';
-import { Check, X, Calendar, List, ChevronLeft, ChevronRight, Inbox, Play, Plus, User, Download, Printer, Search, Filter } from 'lucide-react';
+import { Check, X, Calendar, List, ChevronLeft, ChevronRight, Inbox, PenTool, Plus, User, Download, Printer, Search, Filter } from 'lucide-react';
 import ArtistSideNav from '../components/ArtistSideNav';
 import ConfirmModal from '../components/ConfirmModal';
 import Pagination from '../components/Pagination';
@@ -880,7 +880,7 @@ function ArtistAppointments() {
                                                             className="btn btn-primary"
                                                             style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '500', color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}
                                                         >
-                                                            <Play size={14} /> Manage Session
+                                                            <PenTool size={14} /> Manage Session
                                                         </button>
                                                     )}
                                                     <button onClick={() => setSelectedAppointment(null)} className="btn btn-secondary" style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontWeight: '500', color: '#334155' }}>Close</button>

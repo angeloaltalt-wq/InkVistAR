@@ -258,7 +258,7 @@ const getStyles = (theme) => StyleSheet.create({
   quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   quickChip: { paddingHorizontal: 14, paddingVertical: 8, backgroundColor: theme.surface, borderRadius: borderRadius.round, borderWidth: 1, borderColor: theme.border },
   quickChipText: { ...typography.bodySmall, color: theme.textPrimary },
-  inputBar: { flexDirection: 'row', padding: 12, backgroundColor: theme.surface, borderTopWidth: 1, borderTopColor: theme.border, gap: 10, alignItems: 'flex-end' },
+  inputBar: { flexDirection: 'row', padding: 12, paddingBottom: Platform.OS === 'ios' ? 95 : 72, backgroundColor: theme.surface, borderTopWidth: 1, borderTopColor: theme.border, gap: 10, alignItems: 'flex-end' },
   input: { flex: 1, minHeight: 42, maxHeight: 100, borderWidth: 1, borderColor: theme.border, borderRadius: 21, paddingHorizontal: 16, paddingVertical: 10, ...typography.body, color: theme.textPrimary, backgroundColor: theme.surfaceLight },
   sendBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: theme.gold, justifyContent: 'center', alignItems: 'center', ...shadows.subtle },
 });

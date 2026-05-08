@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, SafeAreaView, RefreshControl, Animated, Platform
 } from 'react-native';
-import { Calendar, Clock, Zap, ChevronRight, User } from 'lucide-react-native';
+import { Calendar, Clock, PenTool, ChevronRight, User } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { typography } from '../src/theme';
 import { useTheme } from '../src/context/ThemeContext';
@@ -103,7 +103,7 @@ export const ArtistClients = ({ artistId, onBack, navigation }) => {
                 navigation.navigate('artist-active-session', { appointment: item });
               }}
             >
-              <Zap size={14} color={colors.backgroundDeep} />
+              <PenTool size={14} color={colors.backgroundDeep} />
               <Text style={styles.manageBtnText}>Manage Session</Text>
             </AnimatedTouchable>
           )}

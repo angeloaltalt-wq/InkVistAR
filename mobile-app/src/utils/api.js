@@ -250,6 +250,11 @@ export const getArtistAppointments = async (artistId, status = '', date = '') =>
   return fetchAPI(endpoint);
 };
 
+// Artist: Get Earnings Ledger
+export const getArtistEarningsLedger = async (artistId) => {
+  return fetchAPI(`/artist/${artistId}/earnings-ledger`);
+};
+
 // Artist: Update Appointment Status
 export const updateAppointmentStatus = async (appointmentId, status) => {
   return fetchAPI(`/appointments/${appointmentId}/status`, {

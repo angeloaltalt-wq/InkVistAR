@@ -328,7 +328,7 @@ export function CustomerAppointments({ customerId, onBack, onBookNew, navigation
         ))}
       </View>
 
-      <ScrollView style={{ flex: 1, paddingHorizontal: 16 }} contentContainerStyle={{ paddingBottom: 20, paddingTop: 14 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.gold} />}>
+      <ScrollView style={{ flex: 1, paddingHorizontal: 16 }} contentContainerStyle={{ paddingBottom: 90, paddingTop: 14 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.gold} />}>
         {/* Calendar View */}
         {viewMode === 'calendar' && (
           <View style={styles.calCard}>
@@ -578,7 +578,7 @@ const getStyles = (theme) => StyleSheet.create({
   pagination: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderTopWidth: 1, borderTopColor: theme.border },
   pageBtn: { padding: 8, borderRadius: borderRadius.md, backgroundColor: theme.surfaceLight },
   pageInfo: { ...typography.bodySmall, color: theme.textTertiary },
-  dockedBar: { padding: 16, paddingBottom: Platform.OS === 'ios' ? 32 : 16, backgroundColor: theme.surface, borderTopWidth: 1, borderTopColor: theme.border },
+  dockedBar: { padding: 16, paddingBottom: Platform.OS === 'ios' ? 100 : 80, backgroundColor: theme.surface, borderTopWidth: 1, borderTopColor: theme.border },
   dockedBtn: { backgroundColor: theme.gold, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, borderRadius: borderRadius.xl, gap: 8 },
   dockedBtnText: { ...typography.button, color: theme.backgroundDeep, fontSize: 16 },
 });

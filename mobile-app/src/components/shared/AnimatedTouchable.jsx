@@ -3,6 +3,8 @@ import { Animated, TouchableOpacity } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
 
+const AnimatedTouch = Animated.createAnimatedComponent(TouchableOpacity);
+
 export const AnimatedTouchable = ({ children, onPress, style, innerStyle, activeOpacity = 0.9, disabled }) => {
   const { hapticsEnabled } = useTheme();
   const scale = useRef(new Animated.Value(1)).current;
@@ -19,17 +21,15 @@ export const AnimatedTouchable = ({ children, onPress, style, innerStyle, active
   };
 
   return (
-    <Animated.View style={[{ transform: [{ scale }] }, style]}>
-      <TouchableOpacity
-        disabled={disabled}
-        onPress={onPress}
-        onPressIn={pressIn}
-        onPressOut={pressOut}
-        activeOpacity={activeOpacity}
-        style={innerStyle}
-      >
-        {children}
-      </TouchableOpacity>
-    </Animated.View>
+    <AnimatedTouch
+      disabled={disabled}
+      onPress={onPress}
+      onPressIn={pressIn}
+      onPressOut={pressOut}
+      activeOpacity={activeOpacity}
+      style={[style, innerStyle, { transform: [{ scale }] }]}
+    >
+      {children}
+    </AnimatedTouch>
   );
 };

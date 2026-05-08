@@ -621,7 +621,7 @@ export function CustomerProfilePage({ userId, userName, userEmail, onLogout }) {
 
 const getStyles = (theme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.background },
-  scrollContent: { paddingBottom: 40, paddingHorizontal: 16 },
+  scrollContent: { paddingBottom: 100, paddingHorizontal: 16 },
   header: {
     paddingVertical: 16, paddingTop: Platform.OS === 'ios' ? 16 : 52, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },

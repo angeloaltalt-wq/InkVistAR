@@ -220,34 +220,31 @@ export function CustomerPaymentAlertOverlay({ customerId, onPayOnline }) {
         </View>
       </Modal>
 
-      {/* PERSISTENT TOAST */}
+      {/* COMPACT FLOATING PILL (bottom-right, above tab bar) */}
       {!showPopup && popupDismissed && alerts.length > 0 && (
         <Animated.View style={[
-          styles.toastContainer,
+          styles.floatingPill,
           {
             transform: [{
               translateY: slideAnim.interpolate({
                 inputRange: [0, 1],
-                outputRange: [-100, 0] // Slide down from top
+                outputRange: [80, 0]
               })
             }]
           }
         ]}>
           <TouchableOpacity 
-            style={styles.toastBtn} 
+            style={styles.pillBtn} 
             activeOpacity={0.8}
             onPress={() => setShowPopup(true)}
           >
-            <View style={styles.toastIconWrap}>
-              <AlertTriangle size={20} color="#fff" />
-            </View>
-            <View style={styles.toastContent}>
-              <Text style={styles.toastTitle}>
-                {alerts.length} session{alerts.length > 1 ? 's' : ''} pending payment
-              </Text>
-              <Text style={styles.toastSubtitle}>Tap to review and pay online</Text>
-            </View>
-            <ChevronRight size={20} color="rgba(255,255,255,0.8)" />
+            <AlertTriangle size={16} color="#fff" />
+            <Text style={styles.pillText}>
+              {alerts.length} unpaid
+            </Text>
+            <View style={styles.pillDivider} />
+            <Text style={styles.pillAction}>Pay</Text>
+            <ChevronRight size={14} color="rgba(255,255,255,0.8)" />
           </TouchableOpacity>
         </Animated.View>
       )}
@@ -426,38 +423,38 @@ const getStyles = (colors) => StyleSheet.create({
     ...typography.button,
     color: '#fff',
   },
-  toastContainer: {
+  // Compact floating pill (bottom-right, above tab bar)
+  floatingPill: {
     position: 'absolute',
-    top: 60,
-    left: 20,
-    right: 20,
+    bottom: 80,
+    right: 16,
     zIndex: 100,
-    backgroundColor: '#f59e0b',
-    borderRadius: 16,
-    ...shadows.large,
+    backgroundColor: '#d97706',
+    borderRadius: 24,
+    ...shadows.medium,
+    elevation: 6,
   },
-  toastBtn: {
+  pillBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    gap: 6,
   },
-  toastIconWrap: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    padding: 10,
-    borderRadius: 12,
-    marginRight: 12,
-  },
-  toastContent: {
-    flex: 1,
-  },
-  toastTitle: {
-    ...typography.body,
+  pillText: {
+    ...typography.bodySmall,
     fontWeight: '700',
     color: '#fff',
   },
-  toastSubtitle: {
-    ...typography.bodyXSmall,
-    color: 'rgba(255,255,255,0.9)',
-    marginTop: 2,
+  pillDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    marginHorizontal: 2,
+  },
+  pillAction: {
+    ...typography.bodySmall,
+    fontWeight: '800',
+    color: '#fff',
   },
 });

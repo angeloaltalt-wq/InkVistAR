@@ -357,7 +357,7 @@ const getStyles = (colors) => StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, paddingTop: Platform.OS === 'ios' ? 16 : 52, backgroundColor: colors.backgroundDeep, borderBottomWidth: 1, borderBottomColor: colors.border },
   headerTitle: { ...typography.h2, color: colors.textPrimary },
   headerBack: { ...typography.body, color: colors.goldMuted },
-  content: { padding: 16 },
+  content: { padding: 16, paddingBottom: 90 },
   searchWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.darkBgSecondary, borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.lg, paddingHorizontal: 14, marginBottom: 14, height: 48 },
   searchInput: { flex: 1, height: 46, marginLeft: 10, ...typography.body, color: colors.textPrimary },
   sortRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 12 },

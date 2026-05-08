@@ -134,7 +134,7 @@ export function CustomerDashboard({ userName, userId, onNavigate, onLogout }) {
       <ScrollView 
         showsVerticalScrollIndicator={false} 
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
       >
         
         {/* Header Bar */}

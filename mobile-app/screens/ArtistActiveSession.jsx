@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import {
   ArrowLeft, Play, CheckCircle2, Camera, Package, Palette,
-  XCircle, Briefcase, Zap, Plus, Save, Clock, ChevronUp, ShieldAlert
+  XCircle, Briefcase, Zap, Plus, Save, Clock, ChevronUp, ShieldAlert, X
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
@@ -37,9 +37,10 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
   const [medicalNotes, setMedicalNotes] = useState(null);
   const [draftImage, setDraftImage] = useState(null);
   const [refImage, setRefImage] = useState(null);
-  const [keyboardPadding, setKeyboardPadding] = useState(0);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const scrollViewRef = useRef(null);
-  const notesRef = useRef(null);
+  const notesYRef = useRef(0);
+  const [fullscreenImage, setFullscreenImage] = useState(null);
 
   useEffect(() => { 
     fetchInventory(); 
@@ -49,36 +50,61 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
     if (status === 'in_progress') fetchSessionMaterials(); 
   }, [appointment?.id, status]);
 
-  // Keyboard handling for notes field
+  // Keyboard visibility tracking (for extra bottom padding)
   useEffect(() => {
     const showSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e) => {
-        setKeyboardPadding(e.endCoordinates.height);
-        setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 150);
-      }
+      (e) => setKeyboardVisible(true)
     );
     const hideSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setKeyboardPadding(0)
+      () => setKeyboardVisible(false)
     );
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
 
+  const scrollToNotes = () => {
+    // When user focuses on notes, wait for keyboard to appear then scroll the view up
+    setTimeout(() => {
+      if (notesYRef.current && notesYRef.current.measureInWindow) {
+        notesYRef.current.measureInWindow((x, y) => {
+          // If the notes section is in the bottom half of the screen (behind keyboard),
+          // scroll the ScrollView up by that amount
+          const screenH = Dimensions.get('window').height;
+          const visibleH = screenH * 0.45; // area above the keyboard
+          if (y > visibleH) {
+            const currentOffset = y - visibleH + 60;
+            scrollViewRef.current?.scrollTo({ y: currentOffset, animated: true });
+          }
+        });
+      } else {
+        // Fallback: just scroll to end
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }
+    }, 400);
+  };
+
   const fetchCustomerHealth = async () => {
     if (!appointment?.customer_id) return;
     try {
+      // Primary: fetch profile which has the 'notes' column
       const r = await (await fetch(`${API_URL}/customer/profile/${appointment.customer_id}`)).json();
       if (r.success && r.profile?.notes) {
         try {
           const parsed = JSON.parse(r.profile.notes);
-          // Check if it has medical sub-object OR top-level medical fields
           if (parsed.medicalNotes) {
             setMedicalNotes(parsed.medicalNotes);
+            return;
           } else if (parsed.allergies || parsed.skinConditions) {
             setMedicalNotes(parsed);
+            return;
           }
         } catch (e) { /* notes is plain text, not medical JSON */ }
+      }
+      // Fallback: try the dashboard endpoint which may also return medicalNotes
+      const d = await (await fetch(`${API_URL}/customer/${appointment.customer_id}/dashboard`)).json();
+      if (d.success && d.customer?.medicalNotes) {
+        setMedicalNotes(d.customer.medicalNotes);
       }
     } catch (e) { console.error('Error fetching customer health:', e); }
   };
@@ -86,16 +112,33 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
   const fetchSessionImages = async () => {
     if (!appointment?.id) return;
     try {
+      // Primary: dedicated details endpoint (may not be deployed yet)
       const r = await (await fetch(`${API_URL}/appointments/${appointment.id}/details`)).json();
       if (r.success && r.appointment) {
         if (r.appointment.draft_image) setDraftImage(r.appointment.draft_image);
         if (r.appointment.reference_image) setRefImage(r.appointment.reference_image);
+        return;
       }
-    } catch (e) {
-      // Fallback: try from the passed prop (may work for small images)
-      if (appointment?.draft_image) setDraftImage(appointment.draft_image);
-      if (appointment?.reference_image) setRefImage(appointment.reference_image);
-    }
+    } catch (e) { /* endpoint may not exist yet on production */ }
+
+    // Fallback 1: Re-fetch from artist appointments list (includes ap.*)
+    try {
+      if (appointment?.artist_id) {
+        const r2 = await (await fetch(`${API_URL}/artist/${appointment.artist_id}/appointments`)).json();
+        if (r2.success && r2.appointments) {
+          const match = r2.appointments.find(a => a.id === appointment.id);
+          if (match) {
+            if (match.draft_image) setDraftImage(match.draft_image);
+            if (match.reference_image) setRefImage(match.reference_image);
+            return;
+          }
+        }
+      }
+    } catch (e) { /* fallback failed too */ }
+
+    // Fallback 2: from passed props (usually truncated but worth trying)
+    if (appointment?.draft_image) setDraftImage(appointment.draft_image);
+    if (appointment?.reference_image) setRefImage(appointment.reference_image);
   };
 
   // Timer logic
@@ -234,7 +277,7 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: keyboardPadding > 0 ? keyboardPadding + 40 : 0 }}>
+      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: keyboardVisible ? 340 : 0 }}>
         {/* Header */}
         <View style={styles.header}>
           <AnimatedTouchable onPress={onBack} style={styles.backBtn}><ArrowLeft size={20} color={colors.textPrimary} /></AnimatedTouchable>
@@ -313,16 +356,16 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
               <Text style={styles.sectionTitle}>Reference Artwork</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
                 {draftImage && (
-                  <View style={styles.artworkBox}>
+                  <TouchableOpacity style={styles.artworkBox} onPress={() => setFullscreenImage({ uri: draftImage, label: 'Approved Draft' })} activeOpacity={0.85}>
                     <Image source={{ uri: draftImage }} style={styles.artworkImage} />
                     <Text style={styles.artworkLabel}>Approved Draft</Text>
-                  </View>
+                  </TouchableOpacity>
                 )}
                 {refImage && (
-                  <View style={styles.artworkBox}>
+                  <TouchableOpacity style={styles.artworkBox} onPress={() => setFullscreenImage({ uri: refImage, label: 'Reference Image' })} activeOpacity={0.85}>
                     <Image source={{ uri: refImage }} style={styles.artworkImage} />
                     <Text style={styles.artworkLabel}>Reference Image</Text>
-                  </View>
+                  </TouchableOpacity>
                 )}
               </ScrollView>
             </View>
@@ -354,13 +397,15 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
           </AnimatedTouchable>
 
           {/* Notes */}
-          <Text style={styles.sectionTitle}>Session Notes</Text>
-          <View style={styles.notesCard}>
-            <TextInput style={styles.notesInput} placeholder="Record session details, skin reaction, etc..." placeholderTextColor={colors.textTertiary} value={sessionData.notes} onChangeText={t => setSessionData(p => ({ ...p, notes: t }))} multiline numberOfLines={4} />
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSaveDetails} disabled={loading} activeOpacity={0.8}>
-              <View style={{ marginRight: 10 }}><Save size={18} color={colors.backgroundDeep} /></View>
-              <Text style={styles.saveBtnText}>Save Details</Text>
-            </TouchableOpacity>
+          <View ref={r => { notesYRef.current = r; }}>
+            <Text style={styles.sectionTitle}>Session Notes</Text>
+            <View style={styles.notesCard}>
+              <TextInput style={styles.notesInput} placeholder="Record session details, skin reaction, etc..." placeholderTextColor={colors.textTertiary} value={sessionData.notes} onChangeText={t => setSessionData(p => ({ ...p, notes: t }))} multiline numberOfLines={4} onFocus={scrollToNotes} />
+              <TouchableOpacity style={styles.saveBtn} onPress={handleSaveDetails} disabled={loading} activeOpacity={0.8}>
+                <View style={{ marginRight: 10 }}><Save size={18} color={colors.backgroundDeep} /></View>
+                <Text style={styles.saveBtnText}>Save Details</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -457,6 +502,21 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
           </View>
         </View>
       </Modal>
+
+      {/* Fullscreen Image Viewer */}
+      <Modal visible={!!fullscreenImage} animationType="fade" transparent statusBarTranslucent>
+        <View style={styles.fullscreenOverlay}>
+          <View style={styles.fullscreenHeader}>
+            <Text style={styles.fullscreenLabel}>{fullscreenImage?.label}</Text>
+            <TouchableOpacity onPress={() => setFullscreenImage(null)} style={styles.fullscreenCloseBtn} title="Close" aria-label="Close fullscreen image">
+              <X size={24} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
+          {fullscreenImage && (
+            <Image source={{ uri: fullscreenImage.uri }} style={styles.fullscreenImg} resizeMode="contain" />
+          )}
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -548,4 +608,18 @@ const getStyles = (colors) => StyleSheet.create({
   artworkBox: { width: 160, height: 200, backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   artworkImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   artworkLabel: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.6)', paddingVertical: 6, textAlign: 'center', ...typography.bodyXSmall, color: '#ffffff', fontWeight: '700' },
+
+  // Fullscreen Image Viewer
+  fullscreenOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' },
+  fullscreenHeader: {
+    position: 'absolute', top: Platform.OS === 'ios' ? 60 : 40, left: 0, right: 0,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 20, zIndex: 10,
+  },
+  fullscreenLabel: { ...typography.body, fontWeight: '700', color: '#ffffff', letterSpacing: 0.3 },
+  fullscreenCloseBtn: {
+    width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  fullscreenImg: { width: '100%', height: '80%' },
 });
