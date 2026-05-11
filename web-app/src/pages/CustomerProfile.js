@@ -351,9 +351,9 @@ function CustomerProfile() {
                                                         const { code, currentNo } = getPhoneParts(profile.phone);
                                                         return (
                                                             <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                                                                <CountryCodeSelect value={code} onChange={newCode => { const { currentNo: num } = getPhoneParts(profile.phone); setProfile({ ...profile, phone: newCode + num }); }} />
+                                                                <CountryCodeSelect value={code} onChange={newCode => { const { currentNo: num } = getPhoneParts(profile.phone); setProfile({ ...profile, phone: newCode + num.replace(/^0+/, '') }); }} />
                                                                 <input type="tel" className="form-input artist-profile-input" style={{ flex: 1 }} value={currentNo}
-                                                                    onChange={e => { const digits = e.target.value.replace(/[^\d]/g, '').slice(0, 11); const { code: currentCode } = getPhoneParts(profile.phone); setProfile({ ...profile, phone: currentCode + digits }); }}
+                                                                    onChange={e => { const digits = e.target.value.replace(/[^\d]/g, '').slice(0, 11); const { code: currentCode } = getPhoneParts(profile.phone); setProfile({ ...profile, phone: currentCode + digits.replace(/^0+/, '') }); }}
                                                                     placeholder="9123456789" maxLength={11} />
                                                             </div>
                                                         );

@@ -885,7 +885,7 @@ function AdminUsers() {
             ? `${createFormData.firstName.trim()} ${createFormData.lastName.trim()} ${suffixPart}`
             : `${createFormData.firstName.trim()} ${createFormData.lastName.trim()}`;
 
-        const fullPhone = createFormData.countryCode + createFormData.phone.trim();
+        const fullPhone = createFormData.countryCode + createFormData.phone.trim().replace(/^0+/, '');
 
         try {
             await Axios.post(`${API_URL}/api/admin/users`, {

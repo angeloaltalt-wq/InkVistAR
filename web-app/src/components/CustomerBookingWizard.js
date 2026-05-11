@@ -289,7 +289,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                 endTime: formData.time || '13:00',
                 serviceType: 'Consultation',
                 designTitle: formData.designTitle,
-                notes: `DESIGN DETAILS\nIdea: ${formData.designTitle}\nConsultation for: ${consultTypeStr}\nConsultation method: ${consultMethodStr}\nPlacement: ${placementStr}${formData.placementNotes ? `\nSpecific notes: ${formData.placementNotes}` : ''}\nNotes: ${formData.notes || 'No additional notes'}\n\nCLIENT CONTEXT\nName: ${currentUser?.name || generatedName}\nEmail: ${currentUser?.email || formData.email}\nPhone: ${formData.phoneCode || '+63'}${formData.phone}`,
+                notes: `DESIGN DETAILS\nIdea: ${formData.designTitle}\nConsultation for: ${consultTypeStr}\nConsultation method: ${consultMethodStr}\nPlacement: ${placementStr}${formData.placementNotes ? `\nSpecific notes: ${formData.placementNotes}` : ''}\nNotes: ${formData.notes || 'No additional notes'}\n\nCLIENT CONTEXT\nName: ${currentUser?.name || generatedName}\nEmail: ${currentUser?.email || formData.email}\nPhone: ${formData.phoneCode || '+63'}${formData.phone.replace(/^0+/, '')}`,
                 referenceImage: formData.referenceImage,
                 status: 'pending',
                 price: 0,
@@ -299,7 +299,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                 deviceId: deviceId,
                 consultationMethod: consultMethodStr,
                 guestEmail: !currentUser ? formData.email : null,
-                guestPhone: !currentUser ? `${formData.phoneCode || '+63'}${formData.phone}` : null,
+                guestPhone: !currentUser ? `${formData.phoneCode || '+63'}${formData.phone.replace(/^0+/, '')}` : null,
                 waiverAcceptedAt: waiverAcceptedAt || new Date().toISOString(),
                 photoMarketingConsent: photoMarketingConsent,
                 piercingJewelry: (formData.piercingJewelry && formData.piercingJewelry.length > 0) ? formData.piercingJewelry : undefined
@@ -1553,7 +1553,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                             else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Please enter a valid email format';
                             
                             if (!formData.phone) newErrors.phone = 'Phone Number is required';
-                            else if (!/^\+?\d{10,15}$/.test((formData.phoneCode || '+63') + formData.phone)) newErrors.phone = 'Please enter a valid phone number';
+                            else if (!/^\+?\d{10,15}$/.test((formData.phoneCode || '+63') + formData.phone.replace(/^0+/, ''))) newErrors.phone = 'Please enter a valid phone number';
                             
                             if (!waiverAccepted) newErrors.waiver = 'You must accept the Service Waiver to proceed';
                             

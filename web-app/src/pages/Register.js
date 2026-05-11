@@ -203,8 +203,7 @@ function Register() {
       }
       
       const orphanAppointmentId = sessionStorage.getItem('orphanAppointmentId');
-      let rawPhone = formData.phone.trim();
-      if (rawPhone.length === 10 && !rawPhone.startsWith('0')) rawPhone = '0' + rawPhone;
+      let rawPhone = formData.phone.trim().replace(/^0+/, '');
       const response = await Axios.post(`${API_URL}/api/register`, {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),

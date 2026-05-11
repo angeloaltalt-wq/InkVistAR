@@ -91,7 +91,7 @@ const Contact = () => {
       const payload = {
         name: formData.name.trim(),
         email: formData.email.trim(),
-        phone: formData.phone ? `${formData.countryCode} ${formData.phone}` : '',
+        phone: formData.phone ? `${formData.countryCode}${formData.phone.replace(/^0+/, '')}` : '',
         subject: formData.subject || '',
         message: formData.message.trim(),
         captchaToken: token
