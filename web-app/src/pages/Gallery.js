@@ -12,7 +12,8 @@ const Gallery = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [activeCategory, setActiveCategory] = useState('All');
-  const [selectedArtist, setSelectedArtist] = useState(null);
+  const [activeArtistId, setActiveArtistId] = useState('All');
+  const [artistsList, setArtistsList] = useState([]);
   const [categories, setCategories] = useState(['All', ...TATTOO_STYLES]);
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,12 +28,11 @@ const Gallery = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const artistId = params.get('artistId');
-    const artistName = params.get('artistName');
     
     if (artistId) {
-      setSelectedArtist({ id: artistId, name: artistName || 'Artist' });
+      setActiveArtistId(artistId);
     } else {
-      setSelectedArtist(null);
+      setActiveArtistId('All');
     }
   }, [location.search]);
 
@@ -41,6 +41,20 @@ const Gallery = () => {
   const itemsPerPage = 12;
 
 
+
+  
+  // Fetch artists
+  useEffect(() => {
+    fetch(`${API_URL}/api/customer/artists`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.artists) {
+          const activeArtists = data.artists.filter(a => a.portfolio_count > 0);
+          setArtistsList(activeArtists);
+        }
+      })
+      .catch(err => console.error('Error fetching artists:', err));
+  }, []);
 
   // Fetch categories from backend
   useEffect(() => {
@@ -75,13 +89,7 @@ const Gallery = () => {
 
   // Fetch works from backend (re-fetch when category or artist changes)
   useEffect(() => {
-    // If we have an artistId in the URL but selectedArtist state hasn't updated yet, 
-    // skip this fetch to avoid "flash" of all works
-    const params = new URLSearchParams(location.search);
-    const artistIdInUrl = params.get('artistId');
-    if (artistIdInUrl && (!selectedArtist || selectedArtist.id !== artistIdInUrl)) {
-      return;
-    }
+
 
     setLoading(true);
     let url = `${API_URL}/api/gallery/works?`;
@@ -90,8 +98,8 @@ const Gallery = () => {
     if (activeCategory && activeCategory !== 'All') {
       queryParams.append('category', activeCategory);
     }
-    if (selectedArtist) {
-      queryParams.append('artistId', selectedArtist.id);
+    if (activeArtistId && activeArtistId !== 'All') {
+      queryParams.append('artistId', activeArtistId);
     }
     queryParams.append('minPrice', debouncedPriceRange.min);
     queryParams.append('maxPrice', debouncedPriceRange.max);
@@ -111,12 +119,12 @@ const Gallery = () => {
         console.error('Error fetching works:', err);
         setLoading(false);
       });
-  }, [activeCategory, selectedArtist, location.search, debouncedPriceRange]);
+  }, [activeCategory, activeArtistId, location.search, debouncedPriceRange]);
 
   // Reset page when category or artist changes
   useEffect(() => {
      setCurrentPage(1);
-  }, [activeCategory, selectedArtist, debouncedPriceRange]);
+  }, [activeCategory, activeArtistId, debouncedPriceRange]);
 
   // Pagination logic
   const totalPages = Math.ceil(works.length / itemsPerPage);
@@ -129,43 +137,7 @@ const Gallery = () => {
       <div className="gallery-page page-transition-wrapper">
       {/* Header Section */}
       <header className="gallery-header">
-        <h1>{selectedArtist ? `PORTFOLIO: ${selectedArtist.name.toUpperCase()}` : 'OUR ARTWORK SPEAKS VOLUMES'}</h1>
-        
-        {selectedArtist && (
-          <div className="artist-filter-badge" style={{ 
-            margin: '10px 0 20px', 
-            background: 'rgba(193, 154, 107, 0.1)', 
-            border: '1px solid #be9055',
-            padding: '8px 20px',
-            borderRadius: '50px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '12px',
-            color: '#be9055',
-            fontWeight: '600'
-          }}>
-            <span>Showing works by {selectedArtist.name}</span>
-            <button 
-              onClick={() => navigate('/gallery')}
-              style={{ 
-                background: '#be9055', 
-                border: 'none', 
-                color: 'black', 
-                borderRadius: '50%', 
-                width: '20px', 
-                height: '20px', 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '12px',
-                fontWeight: 'bold'
-              }}
-            >
-              &times;
-            </button>
-          </div>
-        )}
+        <h1>OUR ARTWORK SPEAKS VOLUMES</h1>
 
         <div className="filter-nav-container">
           <span className="filter-label">STYLE FILTER:</span>
@@ -195,6 +167,35 @@ const Gallery = () => {
             >
               {categories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+            <select
+              value={activeArtistId}
+              onChange={(e) => setActiveArtistId(e.target.value)}
+              style={{
+                padding: '8px 20px',
+                paddingRight: '40px',
+                borderRadius: '50px',
+                border: '1px solid #be9055',
+                background: '#1a1a1a',
+                color: '#be9055',
+                fontSize: '0.85rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                outline: 'none',
+                transition: 'all 0.3s ease',
+                minWidth: '150px',
+                appearance: 'none',
+                WebkitAppearance: 'none',
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23C19A6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 16px center',
+                marginLeft: '10px'
+              }}
+            >
+              <option value="All">All Artists</option>
+              {artistsList.map(a => (
+                <option key={a.id} value={a.id}>{a.name}</option>
               ))}
             </select>
             <button

@@ -533,7 +533,7 @@ function AdminStudio() {
                                     <div className="admin-st-c200c71d">
                                         <div className="form-group">
                                             <label className="premium-label">Contact Hotlink (Phone)</label>
-                                            <input type="text" name="phone" className={`form-input ${errors.phone ? 'error' : ''}`} value={formData.phone} onChange={e => { const val = filterDigits(e.target.value).replace(/^0+/, '').slice(0, 15); setFormData({...formData, phone: val}); validateField('phone', val); }} />
+                                            <input type="text" name="phone" className={`form-input ${errors.phone ? 'error' : ''}`} value={formData.phone} onChange={e => { const val = e.target.value.replace(/\\D/g, '').replace(/^0+/, '').slice(0, 15); setFormData({...formData, phone: val}); validateField('phone', val); }} />
                                             {errors.phone && <small style={{ color: '#ef4444', display: 'block', marginTop: '4px', fontSize: '0.8rem' }}>{errors.phone}</small>}
                                         </div>
                                         <div className="form-group">
