@@ -11614,6 +11614,137 @@ function startPendingPaymentsCleanup() {
   }, 1000 * 60 * 30);
 }
 
+// ========== FEATURE B: TATTOO PROJECT TIMELINE API ==========
+
+// POST /api/projects — Create a new tattoo project and link a seed appointment to it
+app.post('/api/projects', (req, res) => {
+  const { customer_id, artist_id, design_title, total_sessions_planned, notes, seed_appointment_id } = req.body;
+  if (!customer_id || !artist_id || !total_sessions_planned) {
+    return res.status(400).json({ success: false, message: 'customer_id, artist_id, and total_sessions_planned are required.' });
+  }
+  const sessionsPlanned = parseInt(total_sessions_planned, 10);
+  if (isNaN(sessionsPlanned) || sessionsPlanned < 1) {
+    return res.status(400).json({ success: false, message: 'total_sessions_planned must be a positive integer.' });
+  }
+
+  db.query(
+    'INSERT INTO tattoo_projects (customer_id, artist_id, design_title, total_sessions_planned, notes) VALUES (?, ?, ?, ?, ?)',
+    [customer_id, artist_id, design_title || null, sessionsPlanned, notes || null],
+    (err, result) => {
+      if (err) {
+        console.error('[ERROR] Create project:', err.message);
+        return res.status(500).json({ success: false, message: 'Failed to create project.' });
+      }
+      const projectId = result.insertId;
+      // Link seed appointment if provided
+      if (seed_appointment_id) {
+        db.query(
+          'UPDATE appointments SET project_id = ?, session_number = 1, total_sessions = ? WHERE id = ?',
+          [projectId, sessionsPlanned, seed_appointment_id],
+          (linkErr) => {
+            if (linkErr) console.error('[WARN] Could not link seed appointment to project:', linkErr.message);
+          }
+        );
+      }
+      res.json({ success: true, project_id: projectId, message: 'Tattoo project created.' });
+    }
+  );
+});
+
+// GET /api/projects/:id — Fetch a project with its full ordered session timeline
+app.get('/api/projects/:id', (req, res) => {
+  const projectId = parseInt(req.params.id, 10);
+  if (isNaN(projectId)) return res.status(400).json({ success: false, message: 'Invalid project ID.' });
+
+  db.query('SELECT * FROM tattoo_projects WHERE id = ?', [projectId], (err, projects) => {
+    if (err) return res.status(500).json({ success: false, message: 'DB error.' });
+    if (!projects.length) return res.status(404).json({ success: false, message: 'Project not found.' });
+
+    const project = projects[0];
+    db.query(
+      `SELECT a.id, a.booking_code, a.appointment_date, a.start_time, a.end_time,
+              a.session_number, a.total_sessions, a.status, a.payment_status,
+              a.design_title, a.notes, a.after_photo, a.before_photo, a.session_duration,
+              u.name AS artist_name
+       FROM appointments a
+       LEFT JOIN users u ON u.id = a.artist_id
+       WHERE a.project_id = ? AND (a.is_deleted = 0 OR a.is_deleted IS NULL)
+       ORDER BY COALESCE(a.session_number, 9999) ASC, a.appointment_date ASC`,
+      [projectId],
+      (sessErr, sessions) => {
+        if (sessErr) return res.status(500).json({ success: false, message: 'DB error fetching sessions.' });
+        res.json({ success: true, project: { ...project, sessions: sessions || [] } });
+      }
+    );
+  });
+});
+
+// GET /api/projects?customer_id=X&artist_id=Y — List projects for a customer or artist
+app.get('/api/projects', (req, res) => {
+  const { customer_id, artist_id } = req.query;
+  if (!customer_id && !artist_id) {
+    return res.status(400).json({ success: false, message: 'Provide customer_id or artist_id.' });
+  }
+  let sql = 'SELECT tp.*, u.name AS customer_name, ua.name AS artist_name FROM tattoo_projects tp LEFT JOIN users u ON u.id = tp.customer_id LEFT JOIN users ua ON ua.id = tp.artist_id WHERE 1=1';
+  const params = [];
+  if (customer_id) { sql += ' AND tp.customer_id = ?'; params.push(customer_id); }
+  if (artist_id)   { sql += ' AND tp.artist_id = ?';   params.push(artist_id); }
+  sql += ' ORDER BY tp.created_at DESC';
+
+  db.query(sql, params, (err, rows) => {
+    if (err) return res.status(500).json({ success: false, message: 'DB error.' });
+    res.json({ success: true, projects: rows });
+  });
+});
+
+// PUT /api/projects/:id/complete — Mark a project as completed or completed_early
+app.put('/api/projects/:id/complete', (req, res) => {
+  const projectId = parseInt(req.params.id, 10);
+  if (isNaN(projectId)) return res.status(400).json({ success: false, message: 'Invalid project ID.' });
+
+  const { early, actual_sessions } = req.body;
+  const newStatus = early ? 'completed_early' : 'completed';
+  const actualSessions = actual_sessions ? parseInt(actual_sessions, 10) : null;
+
+  db.query(
+    'UPDATE tattoo_projects SET status = ?, total_sessions_actual = ? WHERE id = ?',
+    [newStatus, actualSessions, projectId],
+    (err, result) => {
+      if (err) {
+        console.error('[ERROR] Complete project:', err.message);
+        return res.status(500).json({ success: false, message: 'Failed to update project.' });
+      }
+      if (result.affectedRows === 0) return res.status(404).json({ success: false, message: 'Project not found.' });
+      res.json({ success: true, message: `Project marked as ${newStatus}.` });
+    }
+  );
+});
+
+// PUT /api/projects/:id/link-session — Link an existing appointment to a project
+app.put('/api/projects/:id/link-session', (req, res) => {
+  const projectId = parseInt(req.params.id, 10);
+  const { appointment_id, session_number } = req.body;
+  if (isNaN(projectId) || !appointment_id) {
+    return res.status(400).json({ success: false, message: 'project_id and appointment_id are required.' });
+  }
+
+  // Fetch the project's total_sessions_planned to sync on the appointment row
+  db.query('SELECT total_sessions_planned FROM tattoo_projects WHERE id = ?', [projectId], (err, rows) => {
+    if (err || !rows.length) return res.status(404).json({ success: false, message: 'Project not found.' });
+
+    const totalPlanned = rows[0].total_sessions_planned;
+    db.query(
+      'UPDATE appointments SET project_id = ?, session_number = ?, total_sessions = ? WHERE id = ?',
+      [projectId, session_number || null, totalPlanned, appointment_id],
+      (linkErr, linkResult) => {
+        if (linkErr) return res.status(500).json({ success: false, message: 'Failed to link session.' });
+        if (linkResult.affectedRows === 0) return res.status(404).json({ success: false, message: 'Appointment not found.' });
+        res.json({ success: true, message: 'Session linked to project.' });
+      }
+    );
+  });
+});
+
 // ========== START SERVER ==========
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, '0.0.0.0', () => {

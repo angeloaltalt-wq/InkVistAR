@@ -11,7 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Calendar, List, ChevronLeft, ChevronRight, ChevronRight as ChevronR,
-  X, Plus, CreditCard, ShieldAlert, Info
+  X, Plus, CreditCard, ShieldAlert, Info, Layers, CheckCircle, Circle
 } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
 import * as Haptics from 'expo-haptics';
@@ -19,7 +19,7 @@ import { useTheme } from '../src/context/ThemeContext';
 import { colors, typography, borderRadius, shadows } from '../src/theme';
 import { PremiumLoader } from '../src/components/shared/PremiumLoader';
 import { EmptyState } from '../src/components/shared/EmptyState';
-import { getCustomerAppointments, updateAppointmentStatus, createCheckoutSession, getPaymentStatus, getCustomerTransactions } from '../src/utils/api';
+import { getCustomerAppointments, updateAppointmentStatus, createCheckoutSession, getPaymentStatus, getCustomerTransactions, API_URL } from '../src/utils/api';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -73,6 +73,9 @@ export function CustomerAppointments({ customerId, onBack, onBookNew, navigation
   const [modalTab, setModalTab] = useState('details');
   const [apptTransactions, setApptTransactions] = useState([]);
   const fabPulse = useRef(new Animated.Value(1)).current;
+  // B-M2: project timeline for selected appointment
+  const [projectTimeline, setProjectTimeline] = useState(null);
+  const [projectTimelineLoading, setProjectTimelineLoading] = useState(false);
 
   useEffect(() => {
     Animated.loop(
@@ -86,7 +89,16 @@ export function CustomerAppointments({ customerId, onBack, onBookNew, navigation
   const handleSelectAppointment = async (appt) => {
     setSelectedAppointment(appt);
     setModalTab('details');
+    // B-M2: reset and fetch project timeline
+    setProjectTimeline(null);
     if (!appt) return;
+    if (appt.project_id) {
+      setProjectTimelineLoading(true);
+      try {
+        const r = await (await fetch(`${API_URL}/projects/${appt.project_id}`)).json();
+        if (r.success && r.project) setProjectTimeline(r.project);
+      } catch (e) { /* silent */ } finally { setProjectTimelineLoading(false); }
+    }
     try {
       const res = await getCustomerTransactions(customerId);
       if (res.success && res.transactions) {
@@ -393,6 +405,72 @@ export function CustomerAppointments({ customerId, onBack, onBookNew, navigation
 
             {modalTab === 'details' && selectedAppointment && (
               <ScrollView showsVerticalScrollIndicator={false}>
+                {/* B-M2: Project Timeline (read-only) */}
+                {(projectTimeline || projectTimelineLoading) && (() => {
+                  if (projectTimelineLoading) return (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16, padding: 12, backgroundColor: theme.surfaceLight, borderRadius: 10, borderWidth: 1, borderColor: theme.border }}>
+                      <Layers size={12} color={theme.gold} />
+                      <ActivityIndicator size="small" color={theme.gold} />
+                      <Text style={{ ...typography.bodyXSmall, color: theme.textSecondary }}>Loading project timeline...</Text>
+                    </View>
+                  );
+                  if (!projectTimeline) return null;
+                  const sessions = projectTimeline.sessions || [];
+                  const planned = Math.max(projectTimeline.total_sessions_planned || 1, sessions.reduce((m, s) => Math.max(m, s.session_number || 0), 0));
+                  const nodes = Array.from({ length: planned }, (_, i) => ({
+                    num: i + 1,
+                    session: sessions.find(s => (s.session_number || 0) === i + 1)
+                  }));
+                  const completedCount = sessions.filter(s => s.status === 'completed').length;
+                  return (
+                    <View style={{ marginBottom: 18, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(190,144,85,0.2)', backgroundColor: theme.surfaceLight }}>
+                      {/* Timeline header */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, padding: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(190,144,85,0.15)' }}>
+                        <Layers size={12} color={theme.gold} />
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: theme.gold, textTransform: 'uppercase', letterSpacing: 0.4 }}>Project Timeline</Text>
+                        {projectTimeline.design_title ? <Text style={{ fontSize: 10, color: theme.textTertiary, fontStyle: 'italic' }}>{projectTimeline.design_title}</Text> : null}
+                        <View style={{ marginLeft: 'auto', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, backgroundColor: projectTimeline.status === 'active' ? `${theme.gold}18` : `${theme.success}20` }}>
+                          <Text style={{ fontSize: 9, fontWeight: '700', color: projectTimeline.status === 'active' ? theme.gold : theme.success }}>
+                            {projectTimeline.status === 'completed_early' ? 'Done Early' : projectTimeline.status === 'completed' ? 'Completed' : 'Active'}
+                          </Text>
+                        </View>
+                      </View>
+                      {/* Nodes rail */}
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ padding: 12, alignItems: 'center' }}>
+                        {nodes.map((node, idx) => {
+                          const isCompleted = node.session?.status === 'completed';
+                          const isCurrent = node.session?.id === selectedAppointment?.id;
+                          const isLast = idx === nodes.length - 1;
+                          const dotBg = isCompleted ? `${theme.gold}20` : isCurrent ? 'rgba(251,191,36,0.18)' : theme.surfaceLight;
+                          const dotBorder = isCompleted ? theme.gold : isCurrent ? '#f59e0b' : theme.border;
+                          const labelColor = isCompleted ? theme.gold : isCurrent ? '#f59e0b' : theme.textTertiary;
+                          return (
+                            <View key={node.num} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                              {idx > 0 && <View style={{ width: 20, height: 2, borderRadius: 1, backgroundColor: isCompleted ? theme.gold : theme.border }} />}
+                              <View style={{ alignItems: 'center' }}>
+                                <View style={{
+                                  width: 28, height: 28, borderRadius: 14,
+                                  backgroundColor: dotBg, borderWidth: isCurrent ? 2.5 : 1.5, borderColor: dotBorder,
+                                  justifyContent: 'center', alignItems: 'center',
+                                }}>
+                                  {isCompleted ? <CheckCircle size={12} color={theme.gold} /> : !node.session ? <Circle size={9} color={theme.textTertiary} /> : <Text style={{ fontSize: 10, fontWeight: '700', color: '#f8fafc' }}>{node.num}</Text>}
+                                </View>
+                                <Text style={{ fontSize: 9, fontWeight: '700', color: labelColor, marginTop: 4 }}>S{node.num}</Text>
+                                {node.session?.appointment_date ? <Text style={{ fontSize: 8, color: theme.textTertiary }}>{new Date(node.session.appointment_date + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}</Text> : null}
+                              </View>
+                              {!isLast && <View style={{ width: 20, height: 2, borderRadius: 1, backgroundColor: nodes[idx+1]?.session ? theme.gold : theme.border }} />}
+                            </View>
+                          );
+                        })}
+                      </ScrollView>
+                      {/* Summary strip */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingBottom: 10 }}>
+                        <Text style={{ fontSize: 10, color: theme.textTertiary }}>{completedCount} of {planned} sessions completed</Text>
+                      </View>
+                    </View>
+                  );
+                })()}
+
                 {[
                   ['Status', () => <View style={[modalS.badge, { backgroundColor: getStatusColor(selectedAppointment.status) + '20' }]}><Text style={[modalS.badgeText, { color: getStatusColor(selectedAppointment.status) }]}>{selectedAppointment.status?.toUpperCase()}</Text></View>],
                   ['Payment Status', () => <View style={[modalS.badge, { backgroundColor: selectedAppointment.payment_status === 'paid' ? `${theme.success}20` : `${theme.warning}20` }]}><Text style={[modalS.badgeText, { color: selectedAppointment.payment_status === 'paid' ? theme.success : theme.warning }]}>{(selectedAppointment.payment_status || 'unpaid').toUpperCase()}</Text></View>],

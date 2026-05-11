@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import {
   ArrowLeft, Play, CheckCircle2, Camera, Package, Palette,
-  XCircle, Briefcase, Zap, Plus, Save, Clock, ChevronUp, ShieldAlert, X
+  XCircle, Briefcase, Zap, Plus, Save, Clock, ChevronUp, ShieldAlert, X, Layers, CheckCircle, Circle
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
@@ -44,13 +44,19 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
   const scrollViewRef = useRef(null);
   const notesYRef = useRef(0);
   const [fullscreenImage, setFullscreenImage] = useState(null);
+  // B-M1: project timeline
+  const [projectTimeline, setProjectTimeline] = useState(null);
+  const [projectTimelineLoading, setProjectTimelineLoading] = useState(false);
+  const [timelineCollapsed, setTimelineCollapsed] = useState(false);
 
   useEffect(() => { 
     fetchInventory(); 
     fetchServiceKits(); 
     fetchCustomerHealth();
     fetchSessionImages();
-    if (status === 'in_progress') fetchSessionMaterials(); 
+    if (status === 'in_progress') fetchSessionMaterials();
+    // B-M1: load project timeline
+    if (appointment?.project_id) fetchProjectTimeline(appointment.project_id);
   }, [appointment?.id, status]);
 
   // Keyboard visibility tracking (for extra bottom padding)
@@ -111,6 +117,17 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
         }
       }
     } catch (e) { console.error('Error fetching customer health:', e); }
+  };
+
+  // B-M1: fetch project timeline
+  const fetchProjectTimeline = async (projectId) => {
+    if (!projectId) return;
+    setProjectTimelineLoading(true);
+    try {
+      const r = await (await fetch(`${API_URL}/projects/${projectId}`)).json();
+      if (r.success && r.project) setProjectTimeline(r.project);
+    } catch (e) { console.error('fetchProjectTimeline error:', e); }
+    finally { setProjectTimelineLoading(false); }
   };
 
   const fetchSessionImages = async () => {
@@ -389,6 +406,110 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
                       </View>
                     </>
                   )}
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* B-M1: Project Timeline */}
+          {(projectTimeline || projectTimelineLoading) && (
+            <View style={{ marginBottom: 24 }}>
+              {/* Header toggle */}
+              <TouchableOpacity
+                onPress={() => setTimelineCollapsed(c => !c)}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                  paddingVertical: 10, paddingHorizontal: 14,
+                  backgroundColor: 'rgba(15,23,42,0.7)',
+                  borderWidth: 1, borderColor: 'rgba(190,144,85,0.25)',
+                  borderRadius: timelineCollapsed ? 12 : 0,
+                  borderTopLeftRadius: 12, borderTopRightRadius: 12,
+                }}
+                activeOpacity={0.85}
+                accessibilityLabel={timelineCollapsed ? 'Expand project timeline' : 'Collapse project timeline'}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Layers size={13} color="#be9055" />
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#be9055', letterSpacing: 0.5, textTransform: 'uppercase' }}>Project Timeline</Text>
+                  {projectTimeline?.design_title ? (
+                    <Text style={{ fontSize: 11, color: '#64748b', fontStyle: 'italic' }}>{projectTimeline.design_title}</Text>
+                  ) : null}
+                  <View style={{
+                    paddingHorizontal: 7, paddingVertical: 2, borderRadius: 20,
+                    backgroundColor: projectTimeline?.status === 'active' ? 'rgba(190,144,85,0.15)' : 'rgba(20,83,45,0.4)'
+                  }}>
+                    <Text style={{ fontSize: 9, fontWeight: '700', color: projectTimeline?.status === 'active' ? '#be9055' : '#86efac' }}>
+                      {projectTimeline?.status === 'completed_early' ? 'Done Early' : projectTimeline?.status === 'completed' ? 'Completed' : 'Active'}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={{ color: '#be9055', fontSize: 16 }}>{timelineCollapsed ? '+' : '−'}</Text>
+              </TouchableOpacity>
+
+              {!timelineCollapsed && (
+                <View style={{
+                  backgroundColor: 'rgba(15,23,42,0.6)',
+                  borderWidth: 1, borderTopWidth: 0, borderColor: 'rgba(190,144,85,0.2)',
+                  borderBottomLeftRadius: 12, borderBottomRightRadius: 12,
+                  padding: 14,
+                }}>
+                  {projectTimelineLoading ? (
+                    <ActivityIndicator size="small" color="#be9055" />
+                  ) : (() => {
+                    if (!projectTimeline) return null;
+                    const sessions = projectTimeline.sessions || [];
+                    const planned = Math.max(projectTimeline.total_sessions_planned || 1, sessions.reduce((m, s) => Math.max(m, s.session_number || 0), 0));
+                    const nodes = Array.from({ length: planned }, (_, i) => ({
+                      num: i + 1,
+                      session: sessions.find(s => (s.session_number || 0) === i + 1)
+                    }));
+                    const completedCount = sessions.filter(s => s.status === 'completed').length;
+                    return (
+                      <>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center', paddingBottom: 4 }}>
+                          {nodes.map((node, idx) => {
+                            const isCompleted = node.session?.status === 'completed';
+                            const isCurrent = node.session?.id === appointment?.id;
+                            const isPlanned = !node.session;
+                            const isLast = idx === nodes.length - 1;
+                            const dotBg = isCompleted ? 'rgba(190,144,85,0.18)' : isCurrent ? 'rgba(251,191,36,0.22)' : 'rgba(51,65,85,0.55)';
+                            const dotBorder = isCompleted ? '#be9055' : isCurrent ? '#f59e0b' : '#334155';
+                            const labelColor = isCompleted ? '#be9055' : isCurrent ? '#fbbf24' : '#475569';
+                            return (
+                              <View key={node.num} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                {idx > 0 && (
+                                  <View style={{ width: 24, height: 2, borderRadius: 2, backgroundColor: isCompleted ? '#be9055' : '#334155' }} />
+                                )}
+                                <View style={{ alignItems: 'center' }}>
+                                  <View style={[{
+                                    width: 30, height: 30, borderRadius: 15,
+                                    justifyContent: 'center', alignItems: 'center',
+                                    borderWidth: isCompleted ? 2 : isCurrent ? 2.5 : 1.5,
+                                    backgroundColor: dotBg, borderColor: dotBorder,
+                                  }, isCurrent && { shadowColor: '#f59e0b', shadowOpacity: 0.35, shadowRadius: 6, elevation: 4 }]}>
+                                    {isCompleted ? <CheckCircle size={13} color="#be9055" /> : isPlanned ? <Circle size={10} color="#475569" /> : <Text style={{ fontSize: 11, fontWeight: '700', color: '#f8fafc' }}>{node.num}</Text>}
+                                  </View>
+                                  <Text style={{ fontSize: 10, fontWeight: '700', color: labelColor, marginTop: 5 }}>S{node.num}</Text>
+                                  {node.session?.appointment_date ? (
+                                    <Text style={{ fontSize: 9, color: '#475569', marginTop: 1 }}>
+                                      {new Date(node.session.appointment_date + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
+                                    </Text>
+                                  ) : null}
+                                </View>
+                                {!isLast && (
+                                  <View style={{ width: 24, height: 2, borderRadius: 2, backgroundColor: nodes[idx+1]?.session ? '#be9055' : '#334155' }} />
+                                )}
+                              </View>
+                            );
+                          })}
+                        </ScrollView>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(51,65,85,0.4)' }}>
+                          <Clock size={10} color="#475569" />
+                          <Text style={{ fontSize: 10, color: '#64748b' }}>{completedCount} of {planned} sessions completed</Text>
+                        </View>
+                      </>
+                    );
+                  })()}
                 </View>
               )}
             </View>

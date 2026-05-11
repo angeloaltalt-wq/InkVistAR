@@ -16,6 +16,7 @@ import { getDisplayCode, formatTime12Hour, formatStatus } from '../utils/formatt
 import { filterName, filterDigits, clampNumber } from '../utils/validation';
 import CustomSelect from '../components/CustomSelect';
 import { generateReportHeader, downloadCsv, escapeCsv } from '../utils/csvExport';
+import SessionTimeline from '../components/SessionTimeline';
 
 const formatDuration = (totalSeconds) => {
     if (!totalSeconds || totalSeconds <= 0) return 'N/A';
@@ -99,6 +100,10 @@ function AdminAppointments() {
     const [archiveMode, setArchiveMode] = useState(false);
     const [archiveMaterials, setArchiveMaterials] = useState({ materials: [], totalCost: 0 });
 
+    // Feature B: Project Timeline state
+    const [projectTimeline, setProjectTimeline] = useState(null); // { project, sessions[] } or null
+    const [projectTimelineLoading, setProjectTimelineLoading] = useState(false);
+
     // Health data for the selected client (fetched on-demand in create mode)
     const [clientHealthData, setClientHealthData] = useState({ conditions: [], allergens: [], loaded: false, loading: false });
 
@@ -119,6 +124,23 @@ function AdminAppointments() {
             setPendingRescheduleRequest(null);
         }
     };
+
+    // Feature B: Fetch project timeline when opening a project-linked appointment
+    const fetchProjectTimeline = async (projectId) => {
+        if (!projectId) { setProjectTimeline(null); return; }
+        setProjectTimelineLoading(true);
+        try {
+            const res = await Axios.get(`${API_URL}/api/projects/${projectId}`);
+            if (res.data.success) setProjectTimeline(res.data.project);
+            else setProjectTimeline(null);
+        } catch (e) {
+            console.error('Failed to load project timeline:', e);
+            setProjectTimeline(null);
+        } finally {
+            setProjectTimelineLoading(false);
+        }
+    };
+
 
     const handleRescheduleRequestDecision = async (decision) => {
         if (!pendingRescheduleRequest) return;
@@ -693,6 +715,9 @@ function AdminAppointments() {
         setPendingRescheduleRequest(null);
         setRescheduleRequestNotes('');
         fetchRescheduleRequest(appointment.id);
+        // Feature B: Load project timeline if this appointment belongs to a project
+        setProjectTimeline(null);
+        if (appointment.project_id) fetchProjectTimeline(appointment.project_id);
     };
 
     // handleDelete deprecated — replaced by Reschedule flow
@@ -744,6 +769,7 @@ function AdminAppointments() {
     };
 
     const handleRebookNextSession = (appointment) => {
+        const nextSessionNumber = (appointment.sessionNumber || appointment.session_number || 1) + 1;
         setSelectedAppointment(null);
         setModalTab('details');
         setFormData({
@@ -766,9 +792,14 @@ function AdminAppointments() {
             manualPaidAmount: 0,
             manualPaymentMethod: 'Cash',
             rejectionReason: '',
-            rescheduleReason: ''
+            rescheduleReason: '',
+            // Feature B: carry project linkage forward
+            projectId: appointment.project_id || null,
+            sessionNumber: nextSessionNumber,
+            totalSessions: appointment.totalSessions || appointment.total_sessions || ''
         });
         setClientSearch(appointment.clientName);
+        setProjectTimeline(null);
 
         showConfirm(`Are you sure you want to Rebook a next session for this project?`, () => {
             openModal();
@@ -888,6 +919,8 @@ function AdminAppointments() {
                     piercingPrice: isDualService ? (Number(formData.piercingPrice) || 0) : null,
                     sessionNumber: formData.totalSessions ? (parseInt(formData.sessionNumber) || 1) : null,
                     totalSessions: formData.totalSessions ? (parseInt(formData.totalSessions) || null) : null,
+                    // Feature B: carry project_id on rebooks
+                    projectId: formData.projectId || null,
                     discountAmount: parseFloat(formData.discountAmount) || 0,
                     discountType: parseFloat(formData.discountAmount) > 0 ? (formData.discountType || 'flat') : null
                 };
@@ -905,7 +938,36 @@ function AdminAppointments() {
                 if (selectedAppointment) {
                     await Axios.put(`${API_URL}/api/admin/appointments/${selectedAppointment.id}`, payload);
                 } else {
-                    await Axios.post(`${API_URL}/api/admin/appointments`, payload);
+                    // Feature B: Auto-create a tattoo_project when totalSessions > 1 and no project yet
+                    const totalSessNum = parseInt(formData.totalSessions) || 0;
+                    const hasExistingProject = !!formData.projectId;
+                    let resolvedProjectId = formData.projectId || null;
+
+                    if (totalSessNum > 1 && !hasExistingProject) {
+                        try {
+                            const projRes = await Axios.post(`${API_URL}/api/projects`, {
+                                customer_id: formData.clientId,
+                                artist_id: formData.artistId,
+                                design_title: formData.designTitle || 'Multi-Session Project',
+                                total_sessions_planned: totalSessNum,
+                                notes: formData.notes || null
+                            });
+                            if (projRes.data.success) resolvedProjectId = projRes.data.project_id;
+                        } catch (projErr) {
+                            console.error('[B-2] Failed to auto-create project:', projErr.message);
+                        }
+                    }
+
+                    payload.projectId = resolvedProjectId;
+                    const aptRes = await Axios.post(`${API_URL}/api/admin/appointments`, payload);
+
+                    // Link the seed appointment to the project (session 1)
+                    if (resolvedProjectId && aptRes.data?.id) {
+                        Axios.put(`${API_URL}/api/projects/${resolvedProjectId}/link-session`, {
+                            appointment_id: aptRes.data.id,
+                            session_number: parseInt(formData.sessionNumber) || 1
+                        }).catch(e => console.warn('[B-2] Could not link session to project:', e.message));
+                    }
                 }
                 closeModal(true);
                 fetchAppointments();
@@ -2038,6 +2100,20 @@ function AdminAppointments() {
                                 )}
 
                                 {modalTab === 'details' && (
+                                    <>
+                                    {/* B-4: Project Timeline — shown when the open appointment is part of a project */}
+                                    {selectedAppointment?.project_id && (
+                                        <SessionTimeline
+                                            project={projectTimeline}
+                                            currentSessionId={selectedAppointment?.id}
+                                            isAdmin={true}
+                                            loading={projectTimelineLoading}
+                                            onProjectUpdated={() => {
+                                                fetchProjectTimeline(selectedAppointment.project_id);
+                                                fetchAppointments();
+                                            }}
+                                        />
+                                    )}
                                     <div className="grid-3col" style={{ gap: '24px', alignItems: 'stretch' }}>
                                         {/* Left Column: People & Service */}
                                         <div className="admin-st-d295c8d6" style={{ justifyContent: 'flex-start' }}>
@@ -2502,7 +2578,10 @@ function AdminAppointments() {
                                             );
                                         })()}
                                     </div>
+                                    </>
                                 )}
+
+
 
                                 {modalTab === 'pricing' && (
                                     /* Pricing Tab View */

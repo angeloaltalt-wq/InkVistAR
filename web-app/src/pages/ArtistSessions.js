@@ -5,6 +5,7 @@ import ArtistSideNav from '../components/ArtistSideNav';
 import ConfirmModal from '../components/ConfirmModal';
 import Pagination from '../components/Pagination';
 import ImageLightbox from '../components/ImageLightbox';
+import SessionTimeline from '../components/SessionTimeline';
 import './PortalStyles.css';
 import './ArtistStyles.css';
 import { API_URL } from '../config';
@@ -51,6 +52,9 @@ function ArtistSessions() {
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [showHealthAlert, setShowHealthAlert] = useState(false);
+    // Feature B: Project timeline for the active session (read-only for artist)
+    const [projectTimeline, setProjectTimeline] = useState(null);
+    const [projectTimelineLoading, setProjectTimelineLoading] = useState(false);
     const [lightboxSrc, setLightboxSrc] = useState(null);
     const [confirmModal, setConfirmModal] = useState({
         isOpen: false,
@@ -70,6 +74,21 @@ function ArtistSessions() {
             isAlert: true,
             onConfirm: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
         });
+    };
+
+    // Feature B: fetch project timeline for the active session
+    const fetchProjectTimeline = async (projectId) => {
+        if (!projectId) { setProjectTimeline(null); return; }
+        setProjectTimelineLoading(true);
+        try {
+            const res = await Axios.get(`${API_URL}/api/projects/${projectId}`);
+            if (res.data.success) setProjectTimeline(res.data.project);
+            else setProjectTimeline(null);
+        } catch (e) {
+            setProjectTimeline(null);
+        } finally {
+            setProjectTimelineLoading(false);
+        }
     };
 
     const [user] = useState(() => {
@@ -348,6 +367,9 @@ function ArtistSessions() {
         setSessionTab('overview');
         setPaymentInfo(null);
         setShowHealthAlert(false); // Always start collapsed
+        // Feature B: load project timeline for this session if it belongs to a project
+        setProjectTimeline(null);
+        if (session.project_id) fetchProjectTimeline(session.project_id);
         openSessionModal();
     };
 
@@ -929,6 +951,16 @@ function ArtistSessions() {
                                     </div>
                                 );
                             })()}
+
+                            {/* B-5: Project Timeline — read-only for artists */}
+                            {activeSession?.project_id && (
+                                <SessionTimeline
+                                    project={projectTimeline}
+                                    currentSessionId={activeSession?.id}
+                                    isAdmin={false}
+                                    loading={projectTimelineLoading}
+                                />
+                            )}
 
                             {/* Session Tabs */}
                             <div style={{ display: 'flex', gap: '4px', padding: '0 0 16px 0', borderBottom: '1px solid #e2e8f0', marginBottom: '20px' }}>
