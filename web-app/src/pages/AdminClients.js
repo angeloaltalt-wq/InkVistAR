@@ -439,7 +439,7 @@ function AdminClients() {
                                                     </div>
                                                     <div className="form-group">
                                                         <label className="admin-st-19644797">Primary Contact</label>
-                                                        <input type="text" className={`form-input ${errors.phone ? 'error' : ''}`} value={formData.phone || ''} onChange={e => handleInputChange('phone', e.target.value)} />
+                                                        <input type="text" className={`form-input ${errors.phone ? 'error' : ''}`} value={formData.phone || ''} onChange={e => handleInputChange('phone', e.target.value.replace(/[^\d]/g, '').replace(/^0+/, '').slice(0, 15))} />
                                                         {errors.phone && <small style={{ color: '#ef4444', display: 'block', marginTop: '4px', fontSize: '0.8rem' }}>{errors.phone}</small>}
                                                     </div>
                                                 </div>

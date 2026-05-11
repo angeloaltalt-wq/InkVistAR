@@ -1031,7 +1031,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                             className={`form-input ${errors.phone ? 'error' : ''}`} 
                             placeholder="9171234567" 
                             value={formData.phone} 
-                            onChange={(e) => handleInputChange('phone', e.target.value.replace(/[^0-9]/g, '').slice(0, 11))} 
+                            onChange={(e) => handleInputChange('phone', e.target.value.replace(/[^0-9]/g, '').replace(/^0+/, '').slice(0, 11))} 
                             style={{ flex: 1, padding: '10px' }}
                             maxLength={11}
                         />

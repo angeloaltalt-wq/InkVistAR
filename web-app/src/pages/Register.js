@@ -101,7 +101,7 @@ function Register() {
     } else if (name === 'email') {
       sanitizedValue = value.replace(/\s/g, '').slice(0, 254); // No spaces in email
     } else if (name === 'phone') {
-      sanitizedValue = filterDigits(value).slice(0, 11); // Only numbers, max 11
+      sanitizedValue = filterDigits(value).replace(/^0+/, '').slice(0, 11); // Only numbers, no leading 0, max 11
     } else if (name === 'password' || name === 'confirmPassword') {
       sanitizedValue = value.slice(0, 128);
     } else {

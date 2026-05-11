@@ -1142,7 +1142,7 @@ function AdminUsers() {
                                                 value={formData.countryCode || '+63'}
                                                 onChange={(code) => setFormData({ ...formData, countryCode: code })}
                                             />
-                                            <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: filterDigits(e.target.value).slice(0, 11) })} maxLength={11} className="form-input" style={{ flex: 1 }} placeholder="9123456789" />
+                                            <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: filterDigits(e.target.value).replace(/^0+/, '').slice(0, 11) })} maxLength={11} className="form-input" style={{ flex: 1 }} placeholder="9123456789" />
                                         </div>
                                     </div>
                                 </div>
@@ -1245,7 +1245,7 @@ function AdminUsers() {
                                                     </div>
                                                     <div className="form-group">
                                                         <label className="admin-st-19644797">Primary Contact</label>
-                                                        <input type="text" className="form-input" value={clientFormData.phone || ''} onChange={e => setClientFormData({ ...clientFormData, phone: filterDigits(e.target.value).slice(0, 11) })} maxLength={11} />
+                                                        <input type="text" className="form-input" value={clientFormData.phone || ''} onChange={e => setClientFormData({ ...clientFormData, phone: filterDigits(e.target.value).replace(/^0+/, '').slice(0, 11) })} maxLength={11} />
                                                     </div>
                                                 </div>
                                                 <div className="admin-st-ff43421e">

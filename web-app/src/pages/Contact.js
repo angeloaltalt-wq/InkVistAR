@@ -42,7 +42,7 @@ const Contact = () => {
     let sanitized = value;
     if (field === 'name') sanitized = filterName(value).substring(0, 100);
     else if (field === 'email') sanitized = value.substring(0, 254);
-    else if (field === 'phone') sanitized = filterDigits(value).substring(0, 15);
+    else if (field === 'phone') sanitized = filterDigits(value).replace(/^0+/, '').substring(0, 15);
     else if (field === 'subject') sanitized = value.substring(0, 150);
     else if (field === 'message') sanitized = value.substring(0, 2000);
 
