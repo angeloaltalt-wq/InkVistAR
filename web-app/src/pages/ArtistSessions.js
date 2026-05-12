@@ -321,7 +321,38 @@ function ArtistSessions() {
         setTimeout(() => setSessionModal({ mounted: true, visible: true }), 10);
     };
 
+    const hasUnsavedChanges = () => {
+        if (!activeSession) return false;
+        const origNotes = activeSession.notes || '';
+        const origBefore = activeSession.before_photo || null;
+        const origAfter = activeSession.after_photo || null;
+
+        return sessionData.notes !== origNotes || 
+               sessionData.beforePhoto !== origBefore || 
+               sessionData.afterPhoto !== origAfter;
+    };
+
     const closeSessionModal = () => {
+        if (hasUnsavedChanges()) {
+            setConfirmModal({
+                isOpen: true,
+                title: 'Unsaved Changes',
+                message: 'You have unsaved changes in your documentation. Are you sure you want to close? Your changes will be lost.',
+                confirmText: 'Discard Changes',
+                cancelText: 'Cancel',
+                type: 'warning',
+                onConfirm: () => {
+                    forceCloseSessionModal();
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                },
+                onClose: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
+            });
+            return;
+        }
+        forceCloseSessionModal();
+    };
+
+    const forceCloseSessionModal = () => {
         setSessionModal(prev => ({ ...prev, visible: false }));
         setTimeout(() => {
             setSessionModal({ mounted: false, visible: false });
