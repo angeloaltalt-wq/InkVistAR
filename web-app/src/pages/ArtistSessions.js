@@ -1055,7 +1055,8 @@ function ArtistSessions() {
 
                             {/* TAB: Supplies */}
                             {sessionTab === 'supplies' && (
-                                <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                <div style={{ display: 'flex', gap: '16px', alignItems: 'stretch' }}>
+                                <div style={{ flex: 1, background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                     <label style={{ fontWeight: 700, fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <Package size={14}/> Consumption Log
                                     </label>
@@ -1111,6 +1112,69 @@ function ArtistSessions() {
                                             <p style={{ margin: 0, fontSize: '0.85rem' }}>{activeSession.status === 'confirmed' ? 'Start procedure to log supplies.' : 'Supply log archived.'}</p>
                                         </div>
                                     )}
+                                </div>
+                                {inventoryModal.visible && (
+                                    <div style={{ flex: 1, background: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '550px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <label style={{ fontWeight: 700, fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <Search size={14}/> Add Inventory Items
+                                            </label>
+                                            <button onClick={closeInventoryModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={16} /></button>
+                                        </div>
+                                        <div className="premium-search-box">
+                                            <Search size={18} className="text-muted" />
+                                            <input
+                                                type="text"
+                                                placeholder="Search by name or category..."
+                                                value={inventorySearch}
+                                                onChange={(e) => setInventorySearch(e.target.value)}
+                                                autoFocus
+                                                style={{ border: 'none', outline: 'none', background: 'transparent', flex: 1, marginLeft: '8px' }}
+                                            />
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flex: 1 }}>
+                                            {inventoryItems.length === 0 ? (
+                                                <div style={{ textAlign: 'center', padding: '20px 0', color: '#94a3b8' }}>No items in stock.</div>
+                                            ) : (
+                                                (() => {
+                                                    const filtered = inventoryItems.filter(item =>
+                                                        !inventorySearch ||
+                                                        (item.name && item.name.toLowerCase().includes(inventorySearch.toLowerCase())) ||
+                                                        (item.category && item.category.toLowerCase().includes(inventorySearch.toLowerCase()))
+                                                    );
+                                                    return filtered.length > 0 ? filtered.map(item => (
+                                                        <div
+                                                            key={item.id}
+                                                            onClick={async () => {
+                                                                await handleQuickAdd(item.id, 1);
+                                                            }}
+                                                            style={{
+                                                                padding: '10px 14px',
+                                                                background: '#fff',
+                                                                border: '1px solid #e2e8f0',
+                                                                borderRadius: '10px',
+                                                                display: 'flex',
+                                                                justifyContent: 'space-between',
+                                                                alignItems: 'center',
+                                                                cursor: 'pointer',
+                                                                transition: 'all 0.2s',
+                                                                flexShrink: 0
+                                                            }}
+                                                        >
+                                                            <div>
+                                                                <div style={{ fontWeight: 700, fontSize: '0.85rem' }}>{item.name}</div>
+                                                                <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                                                                    {item.category} • {item.current_stock} {item.unit} available
+                                                                </div>
+                                                            </div>
+                                                            <button className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.7rem', color: '#1e293b', background: '#e2e8f0', border: '1px solid #cbd5e1', fontWeight: 600 }}>Add</button>
+                                                        </div>
+                                                    )) : <div style={{ textAlign: 'center', padding: '20px 0', color: '#94a3b8' }}>No matching items found.</div>;
+                                                })()
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                                 </div>
                             )}
                             {/* TAB: Audit Log */}
@@ -1250,90 +1314,7 @@ function ArtistSessions() {
                 </div>
             )}
 
-            {/* Inventory Selection Modal */}
-            {inventoryModal.mounted && (
-                <div 
-                    className={`modal-overlay ${inventoryModal.visible ? 'open' : ''}`} 
-                    onClick={closeInventoryModal}
-                    style={{ backgroundColor: 'rgba(15, 23, 42, 0.1)', justifyContent: 'flex-end', padding: 0 }}
-                >
-                    <div 
-                        className="modal-content" 
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                            margin: 0,
-                            height: '100%',
-                            maxHeight: '100vh',
-                            width: '420px',
-                            maxWidth: '90vw',
-                            borderRadius: '24px 0 0 24px',
-                            transform: inventoryModal.visible ? 'translateX(0)' : 'translateX(100%)',
-                            transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
-                        }}
-                    >
-                        <div className="modal-header">
-                            <div>
-                                <h2 style={{ margin: 0 }}>Add Supplies</h2>
-                                <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>Search and select items to log for this session</p>
-                            </div>
-                            <button className="close-btn" onClick={closeInventoryModal}><X size={24} /></button>
-                        </div>
-                        <div className="modal-body" style={{ padding: '24px' }}>
-                            <div className="premium-search-box" style={{ marginBottom: '20px' }}>
-                                <Search size={18} className="text-muted" />
-                                <input
-                                    type="text"
-                                    placeholder="Search by name or category..."
-                                    value={inventorySearch}
-                                    onChange={(e) => setInventorySearch(e.target.value)}
-                                    autoFocus
-                                />
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                {inventoryItems.length === 0 ? (
-                                    <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8' }}>No items in stock.</div>
-                                ) : (
-                                    (() => {
-                                        const filtered = inventoryItems.filter(item =>
-                                            !inventorySearch ||
-                                            (item.name && item.name.toLowerCase().includes(inventorySearch.toLowerCase())) ||
-                                            (item.category && item.category.toLowerCase().includes(inventorySearch.toLowerCase()))
-                                        );
-                                        return filtered.length > 0 ? filtered.map(item => (
-                                            <div
-                                                key={item.id}
-                                                onClick={async () => {
-                                                    await handleQuickAdd(item.id, 1);
-                                                }}
-                                                style={{
-                                                    padding: '12px 16px',
-                                                    background: '#f8fafc',
-                                                    border: '1px solid #e2e8f0',
-                                                    borderRadius: '12px',
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'center',
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s'
-                                                }}
-                                                className="inventory-item-row"
-                                            >
-                                                <div>
-                                                    <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{item.name}</div>
-                                                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                                                        {item.category} • {item.current_stock} {item.unit} available
-                                                    </div>
-                                                </div>
-                                                <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.75rem', color: '#1e293b', background: '#e2e8f0', border: '1px solid #cbd5e1', fontWeight: 600 }}>Add</button>
-                                            </div>
-                                        )) : <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8' }}>No matching items found.</div>;
-                                    })()
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+
             {/* Abort Session Reason Modal */}
             {showAbortModal && (
                 <div className="modal-overlay open" onClick={() => { if (!isAborting) { setShowAbortModal(false); setAbortReason(''); } }}>
