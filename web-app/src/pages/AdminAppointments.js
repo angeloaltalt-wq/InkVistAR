@@ -829,7 +829,8 @@ function AdminAppointments() {
                 discountAmount: 0,
                 discountType: 'flat',
                 quotedPrice: appointment.quotedPrice || appointment.quoted_price || previousPrice,
-                isReferral: !!(appointment.isReferral || appointment.is_referral)
+                isReferral: !!(appointment.isReferral || appointment.is_referral),
+                originalSessionId: appointment.id
             });
             setClientSearch(appointment.clientName);
             setProjectTimeline(null);
@@ -1002,12 +1003,22 @@ function AdminAppointments() {
                 } else {
                     const aptRes = await Axios.post(`${API_URL}/api/admin/appointments`, payload);
 
-                    // Link the seed appointment to the project (session 1)
                     if (resolvedProjectId && aptRes.data?.id) {
+                        // Link the NEW appointment to the project
                         Axios.put(`${API_URL}/api/projects/${resolvedProjectId}/link-session`, {
                             appointment_id: aptRes.data.id,
                             session_number: parseInt(formData.sessionNumber) || 1
                         }).catch(e => console.warn('[B-2] Could not link session to project:', e.message));
+
+                        // If we just auto-created this project (hasExistingProject is false),
+                        // and we rebooked from an older session (originalSessionId exists),
+                        // we MUST also link that older session as Session 1!
+                        if (!hasExistingProject && formData.originalSessionId) {
+                            Axios.put(`${API_URL}/api/projects/${resolvedProjectId}/link-session`, {
+                                appointment_id: formData.originalSessionId,
+                                session_number: 1
+                            }).catch(e => console.warn('[B-2] Could not link original session to project:', e.message));
+                        }
                     }
                 }
                 closeModal(true);
