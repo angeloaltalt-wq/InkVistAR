@@ -538,8 +538,9 @@ function CustomerBookings(){
             if (bookingData.bookingType === 'followup' && !bookingData.followupAppointmentId) return showAlert("Required Field", "Please select which previous appointment this is a follow-up for.", "warning");
             if (bookingData.selectedServices.length === 0) return showAlert("Required Field", "Please select at least one service type.", "warning");
         }
-        if (bookingStep === 2 && !bookingData.designTitle && derivedType !== 'Consultation') {
-            return showAlert("Required Field", "Please provide a design idea or title.", "warning");
+        if (bookingStep === 2 && !bookingData.designTitle) {
+            setErrors(prev => ({...prev, designTitle: 'Please tell us about your tattoo idea'}));
+            return;
         }
         if (bookingStep === 3 && bookingData.placement.length === 0 && derivedType !== 'Consultation') {
             return showAlert("Required Field", "Please select at least one placement area for your session.", "warning");
@@ -1869,7 +1870,7 @@ function CustomerBookings(){
                                         <div className="grid-2col" style={{ flex: 1, minHeight: 0 }}>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', height: '100%' }}>
                                                 <div className="form-group" style={{ marginBottom: 0 }}>
-                                                    <label className="customer-st-67198c20" >Concept Name <span style={{ color: '#ef4444', fontWeight: '400' }}>*</span></label>
+                                                    <label className="customer-st-67198c20" >Idea Name <span style={{ color: '#ef4444', fontWeight: '400' }}>*</span></label>
                                                     <input 
                                                         type="text" className="form-input" placeholder="e.g. Traditional Dagger with Flowers" 
                                                         name="designTitle" maxLength={150}
@@ -1884,7 +1885,7 @@ function CustomerBookings(){
                                                 <div className="form-group customer-st-5d155c93" style={{ marginBottom: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
                                                     <label className="customer-st-67198c20" >Tell us your story (Optional)</label>
                                                     <textarea 
-                                                        className="form-input" placeholder="Describe the size, color preferences, and any meaningful details..."
+                                                        className="form-input" placeholder="Explain the concept here"
                                                         name="notes" maxLength={500}
                                                         value={bookingData.notes} onChange={handleBookingFormChange}
                                                         style={{ resize: 'none', border: errors.notes ? '1px solid #ef4444' : undefined, flex: 1 }}

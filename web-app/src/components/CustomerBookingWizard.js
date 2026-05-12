@@ -510,7 +510,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                         <textarea
                             rows="5"
                             className="form-input"
-                            placeholder="Where on your body? How large? Any specific details or meaning?"
+                            placeholder="Explain the concept here"
                             value={formData.notes}
                             onChange={(e) => handleInputChange('notes', e.target.value)}
                             maxLength={500}
