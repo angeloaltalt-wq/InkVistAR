@@ -788,39 +788,40 @@ function AdminAppointments() {
     };
 
     const handleRebookNextSession = (appointment) => {
-        const nextSessionNumber = (appointment.sessionNumber || appointment.session_number || 1) + 1;
-        setSelectedAppointment(null);
-        setModalTab('details');
-        setFormData({
-            clientId: appointment.clientId || appointment.customer_id,
-            artistId: appointment.artistId || appointment.artist_id,
-            secondaryArtistId: appointment.secondary_artist_id || '',
-            commissionSplit: appointment.commission_split || 50,
-            serviceType: appointment.serviceType || appointment.service_type,
-            designTitle: appointment.designTitle || appointment.design_title,
-            date: new Date().toISOString().split('T')[0],
-            time: '13:00',
-            status: 'pending',
-            paymentStatus: 'unpaid',
-            notes: `Continuation of project: ${appointment.designTitle || appointment.design_title}`,
-            price: appointment.price || 0,
-            tattooPrice: appointment.tattooPrice || appointment.tattoo_price || 0,
-            piercingPrice: appointment.piercingPrice || appointment.piercing_price || 0,
-            beforePhoto: null,
-            referenceImage: appointment.referenceImage || '',
-            manualPaidAmount: 0,
-            manualPaymentMethod: 'Cash',
-            rejectionReason: '',
-            rescheduleReason: '',
-            // Feature B: carry project linkage forward
-            projectId: appointment.project_id || null,
-            sessionNumber: nextSessionNumber,
-            totalSessions: appointment.totalSessions || appointment.total_sessions || ''
-        });
-        setClientSearch(appointment.clientName);
-        setProjectTimeline(null);
-
         showConfirm(`Are you sure you want to Rebook a next session for this project?`, () => {
+            const nextSessionNumber = (appointment.sessionNumber || appointment.session_number || 1) + 1;
+            setSelectedAppointment(null);
+            setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+            setModalTab('details');
+            setFormData({
+                clientId: appointment.clientId || appointment.customer_id,
+                artistId: appointment.artistId || appointment.artist_id,
+                secondaryArtistId: appointment.secondary_artist_id || '',
+                commissionSplit: appointment.commission_split || 50,
+                serviceType: appointment.serviceType || appointment.service_type,
+                designTitle: appointment.designTitle || appointment.design_title,
+                date: new Date().toISOString().split('T')[0],
+                time: '13:00',
+                status: 'pending',
+                paymentStatus: 'unpaid',
+                notes: `Continuation of project: ${appointment.designTitle || appointment.design_title}`,
+                price: appointment.price || 0,
+                tattooPrice: appointment.tattooPrice || appointment.tattoo_price || 0,
+                piercingPrice: appointment.piercingPrice || appointment.piercing_price || 0,
+                beforePhoto: null,
+                referenceImage: appointment.referenceImage || '',
+                manualPaidAmount: 0,
+                manualPaymentMethod: 'Cash',
+                rejectionReason: '',
+                rescheduleReason: '',
+                projectId: appointment.project_id || appointment.projectId || null,
+                sessionNumber: nextSessionNumber,
+                totalSessions: appointment.totalSessions || appointment.total_sessions || '',
+                discountAmount: 0,
+                discountType: 'flat'
+            });
+            setClientSearch(appointment.clientName);
+            setProjectTimeline(null);
             openModal();
         });
     };

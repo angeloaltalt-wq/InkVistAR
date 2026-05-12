@@ -137,7 +137,7 @@ export default function SessionTimeline({
                                         {idx > 0 && (
                                             <div style={{
                                                 ...styles.connector,
-                                                background: state === 'planned' ? '#334155' : '#be9055'
+                                                background: state === 'planned' ? '#cbd5e1' : '#be9055'
                                             }} />
                                         )}
                                         {/* Node circle */}
@@ -158,14 +158,14 @@ export default function SessionTimeline({
                                         {!isLast && (
                                             <div style={{
                                                 ...styles.connector,
-                                                background: getNodeState(nodes[idx + 1]) === 'planned' ? '#334155' : '#be9055'
+                                                background: getNodeState(nodes[idx + 1]) === 'planned' ? '#cbd5e1' : '#be9055'
                                             }} />
                                         )}
                                         {/* Label below */}
                                         <div style={styles.nodeLabel}>
                                             <span style={{
                                                 ...styles.nodeLabelNum,
-                                                color: state === 'planned' ? '#475569' : state === 'completed' ? '#be9055' : '#f8fafc'
+                                                color: state === 'planned' ? '#64748b' : state === 'completed' ? '#92400e' : '#4338ca'
                                             }}>
                                                 S{node.num}
                                             </span>
@@ -235,60 +235,66 @@ export default function SessionTimeline({
 
 const styles = {
     wrapper: {
-        background: 'rgba(15,23,42,0.6)',
-        border: '1px solid rgba(190,144,85,0.18)',
-        borderRadius: 14,
-        padding: '14px 18px',
-        marginBottom: 20
+        background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)',
+        border: '1px solid #e2e8f0',
+        borderRadius: 16,
+        padding: '18px 24px',
+        marginBottom: 24,
+        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.02)'
     },
     header: {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 14,
+        marginBottom: 20,
         flexWrap: 'wrap',
-        gap: 8
+        gap: 12
     },
     headerLabel: {
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: 700,
         color: '#be9055',
-        letterSpacing: '0.5px',
+        letterSpacing: '0.8px',
         textTransform: 'uppercase'
     },
     designTitle: {
-        fontSize: 12,
-        color: '#94a3b8',
-        fontStyle: 'italic'
+        fontSize: 14,
+        color: '#334155',
+        fontStyle: 'italic',
+        fontWeight: 600
     },
     statusPill: {
-        fontSize: 10,
+        fontSize: 11,
         fontWeight: 700,
-        padding: '2px 8px',
+        padding: '4px 12px',
         borderRadius: 20,
-        letterSpacing: '0.3px'
+        letterSpacing: '0.4px',
+        border: '1px solid transparent'
     },
     muted: {
-        fontSize: 11,
-        color: '#64748b'
+        fontSize: 12,
+        color: '#64748b',
+        fontWeight: 500
     },
     collapseBtn: {
-        background: 'none',
-        border: '1px solid rgba(100,116,139,0.25)',
-        borderRadius: 6,
-        padding: '3px 7px',
-        color: '#64748b',
+        background: '#ffffff',
+        border: '1px solid #e2e8f0',
+        borderRadius: 8,
+        padding: '5px 9px',
+        color: '#475569',
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
-        transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)'
+        transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
     },
     rail: {
         display: 'flex',
         alignItems: 'center',
         overflowX: 'auto',
-        paddingBottom: 8,
-        gap: 0
+        paddingBottom: 12,
+        gap: 0,
+        paddingTop: 8
     },
     nodeWrapper: {
         display: 'flex',
@@ -298,125 +304,132 @@ const styles = {
         flexShrink: 0
     },
     connector: {
-        width: 28,
-        height: 2,
+        width: 36,
+        height: 3,
         borderRadius: 2,
         alignSelf: 'center',
         flexShrink: 0
     },
     nodeCircle: {
-        width: 30,
-        height: 30,
+        width: 34,
+        height: 34,
         borderRadius: '50%',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         flexShrink: 0,
-        transition: 'all 0.25s ease'
+        transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
     },
     nodeCompleted: {
-        background: 'rgba(190,144,85,0.15)',
+        background: '#fffbeb',
         border: '2px solid #be9055'
     },
     nodeCurrent: {
-        background: 'rgba(251,191,36,0.2)',
+        background: '#ffffff',
         border: '2.5px solid #f59e0b',
-        boxShadow: '0 0 0 4px rgba(245,158,11,0.12)'
+        boxShadow: '0 0 0 4px rgba(245,158,11,0.15)'
     },
     nodeActive: {
-        background: 'rgba(99,102,241,0.12)',
+        background: '#e0e7ff',
         border: '2px solid #6366f1'
     },
     nodePlanned: {
-        background: 'rgba(51,65,85,0.5)',
-        border: '1.5px solid #334155'
+        background: '#f8fafc',
+        border: '2px dashed #cbd5e1',
+        boxShadow: 'none'
     },
     nodeNumber: {
-        fontSize: 11,
+        fontSize: 13,
         fontWeight: 700,
-        color: '#f8fafc'
+        color: '#1e293b'
     },
     nodeLabel: {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        marginTop: 6,
-        gap: 1
+        marginTop: 10,
+        gap: 2
     },
     nodeLabelNum: {
-        fontSize: 10,
+        fontSize: 11,
         fontWeight: 700,
-        letterSpacing: '0.3px'
+        letterSpacing: '0.5px'
     },
     nodeLabelDate: {
-        fontSize: 9,
-        color: '#64748b'
+        fontSize: 10,
+        color: '#64748b',
+        fontWeight: 500
     },
     summaryStrip: {
         display: 'flex',
         alignItems: 'center',
-        gap: 6,
-        marginTop: 12,
-        paddingTop: 10,
-        borderTop: '1px solid rgba(51,65,85,0.4)'
+        gap: 8,
+        marginTop: 16,
+        paddingTop: 14,
+        borderTop: '1px solid #e2e8f0'
     },
     completeEarlyBtn: {
         display: 'flex',
         alignItems: 'center',
         gap: 6,
-        marginTop: 10,
-        padding: '6px 14px',
-        background: 'rgba(251,191,36,0.08)',
-        border: '1px solid rgba(251,191,36,0.3)',
-        borderRadius: 8,
-        color: '#fbbf24',
-        fontSize: 12,
+        marginTop: 12,
+        padding: '8px 16px',
+        background: '#fffbeb',
+        border: '1px solid #fcd34d',
+        borderRadius: 10,
+        color: '#b45309',
+        fontSize: 13,
         fontWeight: 600,
         cursor: 'pointer',
-        transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)'
+        transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+        boxShadow: '0 1px 2px rgba(245,158,11,0.05)'
     },
     earlyConfirmBox: {
-        marginTop: 12,
-        padding: '12px 14px',
-        background: 'rgba(251,191,36,0.06)',
-        border: '1px solid rgba(251,191,36,0.25)',
-        borderRadius: 10
+        marginTop: 14,
+        padding: '16px 20px',
+        background: '#fefce8',
+        border: '1px solid #fde047',
+        borderRadius: 12,
+        boxShadow: '0 4px 6px -1px rgba(234,179,8,0.1)'
     },
     earlyConfirmText: {
-        fontSize: 12,
-        color: '#cbd5e1',
-        marginBottom: 10,
+        fontSize: 13,
+        color: '#854d0e',
+        marginBottom: 12,
         lineHeight: 1.6
     },
     earlyConfirmYes: {
-        padding: '6px 14px',
-        background: '#be9055',
+        padding: '8px 18px',
+        background: 'linear-gradient(135deg, #be9055, #a07840)',
         border: 'none',
         borderRadius: 8,
-        color: '#0f172a',
-        fontSize: 12,
+        color: '#ffffff',
+        fontSize: 13,
         fontWeight: 700,
-        cursor: 'pointer'
+        cursor: 'pointer',
+        boxShadow: '0 2px 4px rgba(190,144,85,0.3)'
     },
     earlyConfirmNo: {
-        padding: '6px 14px',
-        background: 'transparent',
-        border: '1px solid #475569',
+        padding: '8px 18px',
+        background: '#ffffff',
+        border: '1px solid #cbd5e1',
         borderRadius: 8,
-        color: '#94a3b8',
-        fontSize: 12,
+        color: '#475569',
+        fontSize: 13,
+        fontWeight: 600,
         cursor: 'pointer'
     },
     skeletonRail: {
         display: 'flex',
-        gap: 12,
-        paddingBottom: 4
+        gap: 16,
+        paddingBottom: 8
     },
     skeletonNode: {
-        width: 30,
-        height: 30,
+        width: 34,
+        height: 34,
         borderRadius: '50%',
-        background: 'rgba(51,65,85,0.4)',
+        background: '#e2e8f0',
         animation: 'pulse 1.5s ease infinite'
     }
 };
