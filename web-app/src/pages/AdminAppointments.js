@@ -1837,6 +1837,12 @@ function AdminAppointments() {
                                         isAdmin={true}
                                         loading={projectTimelineLoading}
                                         onProjectUpdated={() => fetchProjectTimeline(selectedAppointment.project_id)}
+                                        onSessionSelect={(id) => {
+                                            const sessionData = appointments.find(a => a.id === id);
+                                            if (sessionData) {
+                                                setSelectedAppointment(sessionData);
+                                            }
+                                        }}
                                     />
                                 )}
                                 <div className="admin-st-232d6dae">

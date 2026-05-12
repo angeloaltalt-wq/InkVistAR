@@ -12,6 +12,7 @@ import { API_URL } from '../config';
  *   currentSessionId {number} — The appointment id currently open (to highlight the active node)
  *   isAdmin        {boolean} — Show "Mark Complete Early" button when true
  *   onProjectUpdated {fn}    — Callback after a successful complete-early action
+ *   onSessionSelect {fn}     — Callback when a node is clicked
  *   loading        {boolean} — Show skeleton while fetching
  */
 export default function SessionTimeline({
@@ -19,6 +20,7 @@ export default function SessionTimeline({
     currentSessionId,
     isAdmin = false,
     onProjectUpdated,
+    onSessionSelect,
     loading = false
 }) {
     const [completingEarly, setCompletingEarly] = useState(false);
@@ -126,20 +128,35 @@ export default function SessionTimeline({
                     <div style={styles.rail}>
                         {nodes.map((node, idx) => {
                             const state = getNodeState(node);
-                            const isLast = idx === nodes.length - 1;
+                            const isClickable = node.session && node.session.id !== currentSessionId;
                             return (
                                 <React.Fragment key={node.num}>
-                                    <div style={styles.nodeWrapper} title={node.session
-                                        ? `Session ${node.num} — ${node.session.status} — ${node.session.appointment_date || 'TBD'}`
-                                        : `Session ${node.num} — Planned`
-                                    }>
-                                        {/* Connector line (before node, except first) */}
-                                        {idx > 0 && (
-                                            <div style={{
-                                                ...styles.connector,
-                                                background: state === 'planned' ? '#cbd5e1' : '#be9055'
-                                            }} />
-                                        )}
+                                    {/* Connector line (before node, except first) */}
+                                    {idx > 0 && (
+                                        <div style={{
+                                            ...styles.connector,
+                                            background: state === 'planned' ? '#cbd5e1' : '#be9055'
+                                        }} />
+                                    )}
+                                    
+                                    <div 
+                                        style={{
+                                            ...styles.nodeWrapper,
+                                            cursor: isClickable ? 'pointer' : 'default',
+                                            opacity: isClickable ? 0.9 : 1
+                                        }} 
+                                        title={node.session
+                                            ? `Session ${node.num} — ${node.session.status} — ${node.session.appointment_date || 'TBD'}` + (isClickable ? ' (Click to view)' : '')
+                                            : `Session ${node.num} — Planned`
+                                        }
+                                        onClick={() => {
+                                            if (isClickable && onSessionSelect) {
+                                                onSessionSelect(node.session.id);
+                                            } else if (isClickable && window.handleTimelineSessionSelect) {
+                                                window.handleTimelineSessionSelect(node.session.id);
+                                            }
+                                        }}
+                                    >
                                         {/* Node circle */}
                                         <div style={{
                                             ...styles.nodeCircle,
@@ -148,24 +165,18 @@ export default function SessionTimeline({
                                             ...(state === 'active' ? styles.nodeActive : {}),
                                             ...(state === 'planned' ? styles.nodePlanned : {}),
                                         }}>
-                                            {state === 'completed' && <CheckCircle size={13} style={{ color: '#be9055' }} />}
+                                            {state === 'completed' && <CheckCircle size={15} style={{ color: '#be9055' }} />}
                                             {(state === 'current' || state === 'active') && (
                                                 <span style={styles.nodeNumber}>{node.num}</span>
                                             )}
-                                            {state === 'planned' && <Circle size={10} style={{ color: '#475569', strokeWidth: 1.5 }} />}
+                                            {state === 'planned' && <Circle size={12} style={{ color: '#94a3b8', strokeWidth: 2 }} />}
                                         </div>
-                                        {/* Connector after node, except last */}
-                                        {!isLast && (
-                                            <div style={{
-                                                ...styles.connector,
-                                                background: getNodeState(nodes[idx + 1]) === 'planned' ? '#cbd5e1' : '#be9055'
-                                            }} />
-                                        )}
+                                        
                                         {/* Label below */}
                                         <div style={styles.nodeLabel}>
                                             <span style={{
                                                 ...styles.nodeLabelNum,
-                                                color: state === 'planned' ? '#64748b' : state === 'completed' ? '#92400e' : '#4338ca'
+                                                color: state === 'planned' ? '#64748b' : state === 'completed' ? '#92400e' : state === 'current' ? '#b45309' : '#4338ca'
                                             }}>
                                                 S{node.num}
                                             </span>
@@ -290,7 +301,7 @@ const styles = {
     },
     rail: {
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         overflowX: 'auto',
         paddingBottom: 12,
         gap: 0,
@@ -307,8 +318,8 @@ const styles = {
         width: 36,
         height: 3,
         borderRadius: 2,
-        alignSelf: 'center',
-        flexShrink: 0
+        flexShrink: 0,
+        marginTop: 16
     },
     nodeCircle: {
         width: 34,
