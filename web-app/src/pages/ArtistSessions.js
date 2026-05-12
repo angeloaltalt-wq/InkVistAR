@@ -1121,15 +1121,15 @@ function ArtistSessions() {
                                             </label>
                                             <button onClick={closeInventoryModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={16} /></button>
                                         </div>
-                                        <div className="premium-search-box">
-                                            <Search size={18} className="text-muted" />
+                                        <div className="premium-search-box" style={{ padding: '8px 14px', minHeight: 'auto', borderRadius: '10px' }}>
+                                            <Search size={15} className="text-muted" />
                                             <input
                                                 type="text"
                                                 placeholder="Search by name or category..."
                                                 value={inventorySearch}
                                                 onChange={(e) => setInventorySearch(e.target.value)}
                                                 autoFocus
-                                                style={{ border: 'none', outline: 'none', background: 'transparent', flex: 1, marginLeft: '8px' }}
+                                                style={{ border: 'none', outline: 'none', background: 'transparent', flex: 1, marginLeft: '8px', fontSize: '0.85rem', padding: '4px 0' }}
                                             />
                                         </div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flex: 1 }}>
