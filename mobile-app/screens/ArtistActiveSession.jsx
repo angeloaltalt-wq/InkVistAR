@@ -34,6 +34,9 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
   const [confirmModal, setConfirmModal] = useState({ visible: false, title: '', message: '', onConfirm: null });
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [trackerVisible, setTrackerVisible] = useState(false);
+  const [auditLog, setAuditLog] = useState([]);
+  const [abortModalVisible, setAbortModalVisible] = useState(false);
+  const [abortReason, setAbortReason] = useState('');
   // Structured health data
   const [healthConditions, setHealthConditions] = useState([]);
   const [healthAllergens, setHealthAllergens] = useState([]);
@@ -57,6 +60,15 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
     if (status === 'in_progress') fetchSessionMaterials();
     // B-M1: load project timeline
     if (appointment?.project_id) fetchProjectTimeline(appointment.project_id);
+
+    // Initialize Audit Log
+    if (appointment?.audit_log) {
+      try {
+        setAuditLog(typeof appointment.audit_log === 'string' ? JSON.parse(appointment.audit_log) : appointment.audit_log);
+      } catch (e) {
+        console.warn('Failed to parse audit log');
+      }
+    }
   }, [appointment?.id, status]);
 
   // Keyboard visibility tracking (for extra bottom padding)
@@ -226,15 +238,26 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
         });
       }
 
+      const payload = { 
+        status: newStatus, 
+        isFullyComplete,
+        auditLog: auditLog
+      };
+
+      if (newStatus === 'incomplete') {
+        payload.abortReason = abortReason;
+      }
+
       const r = await (await fetch(`${API_URL}/appointments/${appointment.id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus, isFullyComplete })
+        body: JSON.stringify(payload)
       })).json();
 
       if (r.success) {
         setStatus(newStatus);
         if (newStatus === 'completed') showAlert('Session Completed', `Session marked as complete. Total material cost: P${sessionCost.toLocaleString()}.`, () => onComplete?.());
+        else if (newStatus === 'incomplete') showAlert('Session Aborted', 'Session has been marked as incomplete.', () => onComplete?.());
         else if (newStatus === 'in_progress') setTimeout(fetchSessionMaterials, 1000);
       } else showAlert('Error', r.message || 'Failed to update status');
     } catch (e) { showAlert('Error', 'Connection failed'); } finally { setLoading(false); }
@@ -248,6 +271,14 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
         showAlert('Before Photo Required', 'Please upload a "Before" photo documenting the client\'s current state before starting.');
         return;
       }
+      
+      // Add start event to audit log
+      const startEvent = {
+        timestamp: new Date().toISOString(),
+        event: 'Session Started',
+        note: 'Artist initiated the session.'
+      };
+      setAuditLog(prev => [...prev, startEvent]);
     }
 
     if (newStatus === 'completed') {
@@ -276,12 +307,35 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
         confirmText: 'Fully Complete',
         cancelText: 'Needs Another',
         onConfirm: () => processStatusUpdate('completed', true),
-        onCancel: () => processStatusUpdate('completed', false)
+        onCancel: () => {
+          // Append completed (partial) event
+          setAuditLog(prev => [...prev, { timestamp: new Date().toISOString(), event: 'Session Partially Completed', note: 'Needs another session' }]);
+          processStatusUpdate('completed', false);
+        }
       });
       return;
     }
 
     await processStatusUpdate(newStatus, true);
+  };
+
+  const handleAbortSession = () => {
+    setAbortModalVisible(true);
+  };
+
+  const confirmAbortSession = async () => {
+    if (!abortReason || abortReason.trim().length < 10) {
+      showAlert('Validation Error', 'Please provide a clear reason (at least 10 characters) for aborting this session.');
+      return;
+    }
+    setAbortModalVisible(false);
+    
+    // Append abort event
+    const newLog = [...auditLog, { timestamp: new Date().toISOString(), event: 'Session Aborted', note: `Reason: ${abortReason}` }];
+    setAuditLog(newLog);
+    
+    // We pass the abortReason in state which will be picked up by processStatusUpdate
+    await processStatusUpdate('incomplete', false);
   };
 
   const handleSaveDetails = async () => {
@@ -340,6 +394,11 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
                   <View style={{ marginRight: 10 }}><CheckCircle2 size={18} color="#ffffff" /></View>
                   <Text style={styles.actionBtnText}>Complete Session</Text>
                 </AnimatedTouchable>
+                
+                <AnimatedTouchable style={[styles.actionBtn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.error, marginTop: 12 }]} onPress={handleAbortSession} disabled={loading}>
+                  <View style={{ marginRight: 10 }}><XCircle size={18} color={colors.error} /></View>
+                  <Text style={[styles.actionBtnText, { color: colors.error }]}>Abort Session</Text>
+                </AnimatedTouchable>
               </View>
             )}
 
@@ -348,6 +407,19 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
                 <View style={[styles.statusRing, { borderColor: colors.success }]}>
                   <Text style={[styles.timerText, { color: colors.success }]}>{formatTime(elapsedSeconds)}</Text>
                   <Text style={styles.timerLabel}>FINAL DURATION</Text>
+                </View>
+              </View>
+            )}
+
+            {status === 'incomplete' && (
+              <View style={styles.timerContainer}>
+                <View style={[styles.statusRing, { borderColor: colors.error }]}>
+                  <Text style={[styles.timerText, { color: colors.error }]}>{formatTime(elapsedSeconds)}</Text>
+                  <Text style={styles.timerLabel}>ABORTED AT</Text>
+                </View>
+                <View style={{ marginTop: 16, alignItems: 'center', backgroundColor: colors.errorBg, padding: 12, borderRadius: 12 }}>
+                  <Text style={{ ...typography.bodySmall, color: colors.error, fontWeight: '600', marginBottom: 4 }}>Session Incomplete</Text>
+                  <Text style={{ ...typography.bodyXSmall, color: colors.textSecondary, textAlign: 'center' }}>{abortReason || appointment?.audit_log?.includes('Aborted') ? 'Session was aborted and materials consumed.' : 'Session stopped early.'}</Text>
                 </View>
               </View>
             )}
@@ -646,6 +718,40 @@ export function ArtistActiveSession({ appointment, onBack, onComplete }) {
             <AnimatedTouchable style={styles.modalBtn} onPress={() => { setAlertModal({ ...alertModal, visible: false }); alertModal.onDismiss?.(); }}>
               <Text style={styles.modalBtnText}>OK</Text>
             </AnimatedTouchable>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Abort Session Modal */}
+      <Modal visible={abortModalVisible} animationType="fade" transparent onRequestClose={() => setAbortModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={{ alignItems: 'center', marginBottom: 12 }}>
+              <ShieldAlert size={32} color={colors.error} />
+            </View>
+            <Text style={{ ...typography.h3, color: colors.error, marginBottom: 8, textAlign: 'center' }}>Abort Session</Text>
+            <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: 16, textAlign: 'center' }}>
+              Aborting a session will mark it as incomplete. Any materials logged will be permanently consumed and cannot be reused.
+            </Text>
+            
+            <Text style={{ ...typography.bodySmall, color: colors.textSecondary, fontWeight: '600', marginBottom: 8, alignSelf: 'flex-start' }}>Reason for Aborting (Required)</Text>
+            <TextInput
+              style={[styles.notesInput, { height: 80, width: '100%', marginBottom: 20 }]}
+              placeholder="e.g. Client tapped out, medical emergency..."
+              placeholderTextColor={colors.textTertiary}
+              multiline
+              value={abortReason}
+              onChangeText={setAbortReason}
+            />
+            
+            <View style={{ flexDirection: 'row', width: '100%' }}>
+              <TouchableOpacity style={[styles.modalBtn, { flex: 1, backgroundColor: colors.surfaceLight, marginRight: 6, borderWidth: 1, borderColor: colors.border }]} onPress={() => setAbortModalVisible(false)}>
+                <Text style={[styles.modalBtnText, { color: colors.textPrimary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalBtn, { flex: 1, marginLeft: 6, backgroundColor: colors.error }]} onPress={confirmAbortSession}>
+                <Text style={styles.modalBtnText}>Confirm Abort</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
