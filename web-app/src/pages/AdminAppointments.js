@@ -825,7 +825,9 @@ function AdminAppointments() {
                 sessionNumber: nextSessionNumber,
                 totalSessions: appointment.totalSessions || appointment.total_sessions || '',
                 discountAmount: 0,
-                discountType: 'flat'
+                discountType: 'flat',
+                quotedPrice: appointment.quotedPrice || appointment.quoted_price || previousPrice,
+                isReferral: !!(appointment.isReferral || appointment.is_referral)
             });
             setClientSearch(appointment.clientName);
             setProjectTimeline(null);
