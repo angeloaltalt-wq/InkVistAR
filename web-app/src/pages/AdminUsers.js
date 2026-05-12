@@ -940,6 +940,42 @@ function AdminUsers() {
                 </header>
                 <p className="header-subtitle">Manage platform users, roles, and account status</p>
 
+                {/* Stats Grid */}
+                <div className="users-stats-grid">
+                    <div className="stat-card-v2 glass-card">
+                        <div className="stat-icon-wrapper blue"><Users size={24} /></div>
+                        <div className="stat-info-v2">
+                            <span className="stat-label-v2">Total Users</span>
+                            <h3 className="stat-value-v2">{users.length}</h3>
+                            <div className="stat-trend-v2">Platform Wide</div>
+                        </div>
+                    </div>
+                    <div className="stat-card-v2 glass-card">
+                        <div className="stat-icon-wrapper green"><CheckCircle size={24} /></div>
+                        <div className="stat-info-v2">
+                            <span className="stat-label-v2">Filtered Results</span>
+                            <h3 className="stat-value-v2">{filteredUsers.length}</h3>
+                            <div className="stat-trend-v2">Current View</div>
+                        </div>
+                    </div>
+                    <div className="stat-card-v2 glass-card">
+                        <div className="stat-icon-wrapper purple"><Palette size={24} /></div>
+                        <div className="stat-info-v2">
+                            <span className="stat-label-v2">Active Artists</span>
+                            <h3 className="stat-value-v2">{users.filter(u => u.user_type === 'artist').length}</h3>
+                            <div className="stat-trend-v2">Studio Staff</div>
+                        </div>
+                    </div>
+                    <div className="stat-card-v2 glass-card">
+                        <div className="stat-icon-wrapper orange"><UserCircle size={24} /></div>
+                        <div className="stat-info-v2">
+                            <span className="stat-label-v2">Total Customers</span>
+                            <h3 className="stat-value-v2">{users.filter(u => u.user_type === 'customer').length}</h3>
+                            <div className="stat-trend-v2">Client Base</div>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Filter Bar */}
                 <div className="premium-filter-bar premium-filter-bar--stacked">
                     <div className="premium-search-box premium-search-box--full" ref={searchRef}>
@@ -1015,41 +1051,7 @@ function AdminUsers() {
                     </div>
                 </div>
 
-                {/* Stats Grid */}
-                <div className="users-stats-grid">
-                    <div className="stat-card-v2 glass-card">
-                        <div className="stat-icon-wrapper blue"><Users size={24} /></div>
-                        <div className="stat-info-v2">
-                            <span className="stat-label-v2">Total Users</span>
-                            <h3 className="stat-value-v2">{users.length}</h3>
-                            <div className="stat-trend-v2">Platform Wide</div>
-                        </div>
-                    </div>
-                    <div className="stat-card-v2 glass-card">
-                        <div className="stat-icon-wrapper green"><CheckCircle size={24} /></div>
-                        <div className="stat-info-v2">
-                            <span className="stat-label-v2">Filtered Results</span>
-                            <h3 className="stat-value-v2">{filteredUsers.length}</h3>
-                            <div className="stat-trend-v2">Current View</div>
-                        </div>
-                    </div>
-                    <div className="stat-card-v2 glass-card">
-                        <div className="stat-icon-wrapper purple"><Palette size={24} /></div>
-                        <div className="stat-info-v2">
-                            <span className="stat-label-v2">Active Artists</span>
-                            <h3 className="stat-value-v2">{users.filter(u => u.user_type === 'artist').length}</h3>
-                            <div className="stat-trend-v2">Studio Staff</div>
-                        </div>
-                    </div>
-                    <div className="stat-card-v2 glass-card">
-                        <div className="stat-icon-wrapper orange"><UserCircle size={24} /></div>
-                        <div className="stat-info-v2">
-                            <span className="stat-label-v2">Total Customers</span>
-                            <h3 className="stat-value-v2">{users.filter(u => u.user_type === 'customer').length}</h3>
-                            <div className="stat-trend-v2">Client Base</div>
-                        </div>
-                    </div>
-                </div>
+
 
                 {/* Data Table */}
                 <div className="table-card-container glass-card">

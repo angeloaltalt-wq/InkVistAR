@@ -367,6 +367,17 @@ function AdminStudio() {
 
                 {activeTab === 'branches' ? (
                     <>
+                <div className="stats-row">
+                    <div className="stat-item">
+                        <span className="stat-label">Total Branches</span>
+                        <span className="stat-count">{branches.length}</span>
+                    </div>
+                    <div className="stat-item">
+                        <span className="stat-label">Open Now</span>
+                        <span className="stat-count">{branches.filter(b => b.status === 'Open').length}</span>
+                    </div>
+                </div>
+
                         <div className="premium-filter-bar premium-filter-bar--stacked">
                     <div className="premium-search-box premium-search-box--full" ref={searchRef} style={{ position: 'relative' }}>
                         <Search size={16} className="text-muted" />
@@ -427,16 +438,7 @@ function AdminStudio() {
                     </div>
                 </div>
 
-                <div className="stats-row">
-                    <div className="stat-item">
-                        <span className="stat-label">Total Branches</span>
-                        <span className="stat-count">{branches.length}</span>
-                    </div>
-                    <div className="stat-item">
-                        <span className="stat-label">Open Now</span>
-                        <span className="stat-count">{branches.filter(b => b.status === 'Open').length}</span>
-                    </div>
-                </div>
+
 
                 <div className="portal-content">
                         <div className="table-card">

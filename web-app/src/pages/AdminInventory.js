@@ -737,6 +737,49 @@ function AdminInventory() {
             </header>
                 <p className="header-subtitle">Track, manage, and audit studio supplies</p>
 
+            <div className="inventory-stats-grid">
+                <div className="stat-card-v2 glass-card">
+                    <div className="stat-icon-wrapper blue">
+                        <Package size={24} />
+                    </div>
+                    <div className="stat-info-v2">
+                        <span className="stat-label-v2">Total Items</span>
+                        <h3 className="stat-value-v2">{inventory.length}</h3>
+                        <div className="stat-trend-v2">Across all categories</div>
+                    </div>
+                </div>
+                <div className="stat-card-v2 glass-card">
+                    <div className="stat-icon-wrapper orange">
+                        <AlertTriangle size={24} />
+                    </div>
+                    <div className="stat-info-v2">
+                        <span className="stat-label-v2">Low Stock</span>
+                        <h3 className="stat-value-v2 admin-st-b7dbe9cd">{lowStockItems}</h3>
+                        <div className="stat-trend-v2 admin-st-b7dbe9cd">Needs attention</div>
+                    </div>
+                </div>
+                <div className="stat-card-v2 glass-card">
+                    <div className="stat-icon-wrapper green">
+                        <PhilippinePeso size={24} />
+                    </div>
+                    <div className="stat-info-v2">
+                        <span className="stat-label-v2">Inventory Value</span>
+                        <h3 className="stat-value-v2">₱{totalValue.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                        <div className="stat-trend-v2">Current market cost</div>
+                    </div>
+                </div>
+                <div className="stat-card-v2 glass-card">
+                    <div className="stat-icon-wrapper purple">
+                        <Layers size={24} />
+                    </div>
+                    <div className="stat-info-v2">
+                        <span className="stat-label-v2">Categories</span>
+                        <h3 className="stat-value-v2">{new Set(inventory.map(i => i.category)).size}</h3>
+                        <div className="stat-trend-v2">Product groups</div>
+                    </div>
+                </div>
+            </div>
+
             <div className="premium-filter-bar premium-filter-bar--stacked">
                     <div className="premium-search-box premium-search-box--full" ref={searchRef}>
                         <Search size={16} className="text-muted" />
@@ -830,48 +873,7 @@ function AdminInventory() {
                     </div>
                 </div>
 
-            <div className="inventory-stats-grid">
-                <div className="stat-card-v2 glass-card">
-                    <div className="stat-icon-wrapper blue">
-                        <Package size={24} />
-                    </div>
-                    <div className="stat-info-v2">
-                        <span className="stat-label-v2">Total Items</span>
-                        <h3 className="stat-value-v2">{inventory.length}</h3>
-                        <div className="stat-trend-v2">Across all categories</div>
-                    </div>
-                </div>
-                <div className="stat-card-v2 glass-card">
-                    <div className="stat-icon-wrapper orange">
-                        <AlertTriangle size={24} />
-                    </div>
-                    <div className="stat-info-v2">
-                        <span className="stat-label-v2">Low Stock</span>
-                        <h3 className="stat-value-v2 admin-st-b7dbe9cd">{lowStockItems}</h3>
-                        <div className="stat-trend-v2 admin-st-b7dbe9cd">Needs attention</div>
-                    </div>
-                </div>
-                <div className="stat-card-v2 glass-card">
-                    <div className="stat-icon-wrapper green">
-                        <PhilippinePeso size={24} />
-                    </div>
-                    <div className="stat-info-v2">
-                        <span className="stat-label-v2">Inventory Value</span>
-                        <h3 className="stat-value-v2">₱{totalValue.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
-                        <div className="stat-trend-v2">Current market cost</div>
-                    </div>
-                </div>
-                <div className="stat-card-v2 glass-card">
-                    <div className="stat-icon-wrapper purple">
-                        <Layers size={24} />
-                    </div>
-                    <div className="stat-info-v2">
-                        <span className="stat-label-v2">Categories</span>
-                        <h3 className="stat-value-v2">{new Set(inventory.map(i => i.category)).size}</h3>
-                        <div className="stat-trend-v2">Product groups</div>
-                    </div>
-                </div>
-            </div>
+
 
             <div className="table-card-container glass-card">
                 <div className="table-responsive">
