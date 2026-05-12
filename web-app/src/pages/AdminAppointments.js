@@ -1793,7 +1793,14 @@ function AdminAppointments() {
                                         <Image size={28} className="text-bronze" />
                                     </div>
                                     <div>
-                                        <h2 className="admin-m-0">Archive Record: {selectedAppointment.clientName}</h2>
+                                        <h2 className="admin-m-0" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            Archive Record: {selectedAppointment.clientName}
+                                            {selectedAppointment.totalSessions > 1 && (
+                                                <span style={{ fontSize: '0.85rem', padding: '3px 10px', borderRadius: '12px', background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(99,102,241,0.05))', color: '#4338ca', fontWeight: 700, border: '1px solid rgba(99,102,241,0.3)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <Layers size={14} /> Session {selectedAppointment.sessionNumber || 1} of {selectedAppointment.totalSessions}
+                                                </span>
+                                            )}
+                                        </h2>
                                         <p className="admin-st-107902df">Project: {selectedAppointment.designTitle}</p>
                                     </div>
                                 </div>
