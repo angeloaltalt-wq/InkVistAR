@@ -1252,8 +1252,25 @@ function ArtistSessions() {
 
             {/* Inventory Selection Modal */}
             {inventoryModal.mounted && (
-                <div className={`modal-overlay ${inventoryModal.visible ? 'open' : ''}`} onClick={closeInventoryModal}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div 
+                    className={`modal-overlay ${inventoryModal.visible ? 'open' : ''}`} 
+                    onClick={closeInventoryModal}
+                    style={{ backgroundColor: 'rgba(15, 23, 42, 0.1)', justifyContent: 'flex-end', padding: 0 }}
+                >
+                    <div 
+                        className="modal-content" 
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            margin: 0,
+                            height: '100%',
+                            maxHeight: '100vh',
+                            width: '420px',
+                            maxWidth: '90vw',
+                            borderRadius: '24px 0 0 24px',
+                            transform: inventoryModal.visible ? 'translateX(0)' : 'translateX(100%)',
+                            transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                        }}
+                    >
                         <div className="modal-header">
                             <div>
                                 <h2 style={{ margin: 0 }}>Add Supplies</h2>
