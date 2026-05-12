@@ -504,11 +504,12 @@ function CustomerProfile() {
                                                     >{tag}</button>
                                                 ))}
                                             </div>
-                                            <div style={{ display: 'flex', gap: '8px', marginBottom: errors.customCondition ? '4px' : '16px' }}>
+                                            <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
                                                 <input type="text" id="profile-custom-condition"
                                                     placeholder="Other condition..."
                                                     value={customCondition}
-                                                    onChange={e => { setCustomCondition(e.target.value); if(errors.customCondition) setErrors(prev => ({ ...prev, customCondition: '' })); }}
+                                                    maxLength={60}
+                                                    onChange={e => { setCustomCondition(e.target.value.replace(/[<>]/g, '')); if(errors.customCondition) setErrors(prev => ({ ...prev, customCondition: '' })); }}
                                                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddHealthCondition(); } }}
                                                     aria-label="Add a custom health condition"
                                                     className="form-input artist-profile-input"
@@ -518,7 +519,10 @@ function CustomerProfile() {
                                                     onClick={handleAddHealthCondition}
                                                     style={{ padding: '8px 14px', borderRadius: '8px', border: '1.5px solid rgba(190,144,85,0.4)', background: 'rgba(190,144,85,0.08)', color: '#be9055', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}>Add</button>
                                             </div>
-                                            {errors.customCondition && <span style={{ fontSize: '0.75rem', color: '#ef4444', display: 'block', marginBottom: '16px' }}>{errors.customCondition}</span>}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+                                                {errors.customCondition ? <span style={{ fontSize: '0.75rem', color: '#ef4444' }}>{errors.customCondition}</span> : <span />}
+                                                <small style={{ color: customCondition.length >= 55 ? '#ef4444' : '#94a3b8', fontSize: '0.75rem' }}>{customCondition.length}/60</small>
+                                            </div>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '18px' }}>
                                                 {selectedConditions.filter(c => !PRESET_CONDITIONS.includes(c)).map(c => (
                                                     <span key={c} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '20px', fontSize: '0.78rem', background: 'rgba(190,144,85,0.12)', border: '1.5px solid #be9055', color: '#be9055' }}>
@@ -546,11 +550,12 @@ function CustomerProfile() {
                                                     >{tag}</button>
                                                 ))}
                                             </div>
-                                            <div style={{ display: 'flex', gap: '8px', marginBottom: errors.customAllergen ? '4px' : '10px' }}>
+                                            <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
                                                 <input type="text" id="profile-custom-allergen"
                                                     placeholder="Other allergen..."
                                                     value={customAllergen}
-                                                    onChange={e => { setCustomAllergen(e.target.value); if(errors.customAllergen) setErrors(prev => ({ ...prev, customAllergen: '' })); }}
+                                                    maxLength={60}
+                                                    onChange={e => { setCustomAllergen(e.target.value.replace(/[<>]/g, '')); if(errors.customAllergen) setErrors(prev => ({ ...prev, customAllergen: '' })); }}
                                                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddAllergen(); } }}
                                                     aria-label="Add a custom allergen"
                                                     className="form-input artist-profile-input"
@@ -560,7 +565,10 @@ function CustomerProfile() {
                                                     onClick={handleAddAllergen}
                                                     style={{ padding: '8px 14px', borderRadius: '8px', border: '1.5px solid rgba(249,115,22,0.4)', background: 'rgba(249,115,22,0.08)', color: '#f97316', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}>Add</button>
                                             </div>
-                                            {errors.customAllergen && <span style={{ fontSize: '0.75rem', color: '#ef4444', display: 'block', marginBottom: '10px' }}>{errors.customAllergen}</span>}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                                {errors.customAllergen ? <span style={{ fontSize: '0.75rem', color: '#ef4444' }}>{errors.customAllergen}</span> : <span />}
+                                                <small style={{ color: customAllergen.length >= 55 ? '#ef4444' : '#94a3b8', fontSize: '0.75rem' }}>{customAllergen.length}/60</small>
+                                            </div>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                                 {selectedAllergens.filter(a => !PRESET_ALLERGENS.includes(a)).map(a => (
                                                     <span key={a} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '20px', fontSize: '0.78rem', background: 'rgba(249,115,22,0.1)', border: '1.5px solid #f97316', color: '#f97316' }}>
