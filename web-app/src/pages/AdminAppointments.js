@@ -178,7 +178,7 @@ function AdminAppointments() {
 
     const validateField = (field, value, currentState = formData) => {
         let errorMsg = "";
-        
+
         switch (field) {
             case 'clientId':
                 if (!value) errorMsg = "Client is required";
@@ -194,7 +194,9 @@ function AdminAppointments() {
                 break;
             case 'price':
                 if (currentState.serviceType !== 'Consultation' && Number(value) < 5000 && Number(value) > 0) {
-                    errorMsg = "Minimum quote for tattoo sessions is ₱5,000";
+                    if (!((currentState.sessionNumber || 1) > 1)) {
+                        errorMsg = "Minimum quote for tattoo sessions is ₱5,000";
+                    }
                 }
                 break;
             default:
@@ -288,7 +290,7 @@ function AdminAppointments() {
                 if (res.data.success) {
                     setClientHealthData({
                         conditions: Array.isArray(res.data.profile.health_conditions) ? res.data.profile.health_conditions : [],
-                        allergens:  Array.isArray(res.data.profile.allergens)           ? res.data.profile.allergens           : [],
+                        allergens: Array.isArray(res.data.profile.allergens) ? res.data.profile.allergens : [],
                         loaded: true,
                         loading: false
                     });
@@ -662,11 +664,11 @@ function AdminAppointments() {
         setArchiveMode(false);
         setSelectedAppointment(appointment);
         setModalTab('details');
-        
+
         // Check if the stored artistId is a real artist (not admin placeholder)
         const storedArtistId = appointment.artistId || appointment.artist_id;
         const isRealArtist = artists.some(a => String(a.id) === String(storedArtistId));
-        
+
         setFormData({
             clientId: appointment.clientId || appointment.customer_id,
             artistId: isRealArtist ? storedArtistId : '',
@@ -790,12 +792,12 @@ function AdminAppointments() {
     const handleRebookNextSession = (appointment) => {
         showConfirm(`Are you sure you want to Rebook a next session for this project?`, () => {
             const nextSessionNumber = (appointment.sessionNumber || appointment.session_number || 1) + 1;
-            
+
             // Calculate remaining balance from previous session
             const previousPrice = parseFloat(appointment.price) || 0;
             const previousPaid = parseFloat(appointment.totalPaid) || 0;
             const remainingBalance = Math.max(0, previousPrice - previousPaid);
-            
+
             setSelectedAppointment(null);
             setConfirmDialog(prev => ({ ...prev, isOpen: false }));
             setArchiveMode(false);
@@ -908,14 +910,16 @@ function AdminAppointments() {
             }
         }
 
-        if (isTattooSession && finalPrice <= 0 && !isCancellingOrRejecting) {
+        const isSubsequentSession = (parseInt(formData.sessionNumber) || 1) > 1;
+
+        if (isTattooSession && finalPrice <= 0 && !isCancellingOrRejecting && !isSubsequentSession) {
             setModalTab('pricing');
             showAlert('Pricing Required', 'A Tattoo Session requires a price to be set. Please enter the service price in the Pricing tab before saving.', 'warning');
             return;
         }
 
         // Minimum price check: ₱5,000 applies to the total (piercing portion is disregarded for the minimum)
-        if (isTattooSession && finalPrice > 0 && finalPrice < 5000 && !isCancellingOrRejecting) {
+        if (isTattooSession && finalPrice > 0 && finalPrice < 5000 && !isCancellingOrRejecting && !isSubsequentSession) {
             setModalTab('pricing');
             showAlert('Minimum Price', 'The minimum quote for a Tattoo Session is ₱5,000 (base reservation/downpayment rate). Please adjust the price accordingly.', 'warning');
             return;
@@ -988,7 +992,7 @@ function AdminAppointments() {
 
                 if (selectedAppointment) {
                     await Axios.put(`${API_URL}/api/admin/appointments/${selectedAppointment.id}`, payload);
-                    
+
                     if (resolvedProjectId && !hasExistingProject) {
                         Axios.put(`${API_URL}/api/projects/${resolvedProjectId}/link-session`, {
                             appointment_id: selectedAppointment.id,
@@ -1030,7 +1034,7 @@ function AdminAppointments() {
     const handleConfirmReschedule = async () => {
         if (!rescheduleModal.date) return showAlert('Date Required', 'Please select a new date.', 'warning');
         if (formData.serviceType === 'Consultation' && !rescheduleModal.time) return showAlert('Time Required', 'Please select a new time.', 'warning');
-        
+
         try {
             const payload = {
                 customerId: formData.clientId,
@@ -1050,26 +1054,26 @@ function AdminAppointments() {
                 manualPaymentMethod: formData.manualPaymentMethod,
                 rescheduleReason: rescheduleModal.reason
             };
-            
+
             await Axios.put(`${API_URL}/api/admin/appointments/${selectedAppointment.id}`, payload);
-            
+
             setFormData(prev => ({
                 ...prev,
                 date: rescheduleModal.date,
                 time: rescheduleModal.time,
                 rescheduleReason: rescheduleModal.reason
             }));
-            
-            setRescheduleModal(prev => ({...prev, isOpen: false}));
+
+            setRescheduleModal(prev => ({ ...prev, isOpen: false }));
             closeModal();
             fetchAppointments();
-            setConfirmDialog({ 
-                isOpen: true, 
-                title: 'Success', 
-                message: 'Appointment successfully rescheduled.', 
-                type: 'info', 
+            setConfirmDialog({
+                isOpen: true,
+                title: 'Success',
+                message: 'Appointment successfully rescheduled.',
+                type: 'info',
                 isAlert: true,
-                onConfirm: () => setConfirmDialog(prev => ({ ...prev, isOpen: false })) 
+                onConfirm: () => setConfirmDialog(prev => ({ ...prev, isOpen: false }))
             });
         } catch (err) {
             console.error('Error rescheduling appointment:', err);
@@ -1277,236 +1281,236 @@ function AdminAppointments() {
 
                 {viewMode === 'calendar' ? (
                     <div className="calendar-split-view">
-                    <div className="data-card admin-st-96be3bbd calendar-main-pane">
-                        <div className="calendar-header admin-st-07952507">
-                            <div className="admin-st-f21b09cf">
-                                <button onClick={() => changeMonth(-1)} className="action-btn admin-m-0"><ChevronLeft size={20} /></button>
-                                <button onClick={() => setCurrentDate(new Date())} className="action-btn admin-st-505e88db">Today</button>
-                                <button onClick={() => changeMonth(1)} className="action-btn admin-m-0"><ChevronRight size={20} /></button>
-                            </div>
-                            <h2 className="admin-st-dcacbd6e">{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</h2>
-                            <div style={{ position: 'relative' }}>
-                                <button
-                                    onClick={() => setShowCalendarLegend(v => !v)}
-                                    title="Show color legend"
-                                    style={{
-                                        width: '30px', height: '30px', borderRadius: '50%',
-                                        border: '1.5px solid #cbd5e1',
-                                        background: showCalendarLegend ? '#6366f1' : 'white',
-                                        color: showCalendarLegend ? 'white' : '#64748b',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem',
-                                        boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                                        transition: 'all 0.2s ease', flexShrink: 0
-                                    }}
-                                >
-                                    i
-                                </button>
-                                {showCalendarLegend && (
-                                    <div
+                        <div className="data-card admin-st-96be3bbd calendar-main-pane">
+                            <div className="calendar-header admin-st-07952507">
+                                <div className="admin-st-f21b09cf">
+                                    <button onClick={() => changeMonth(-1)} className="action-btn admin-m-0"><ChevronLeft size={20} /></button>
+                                    <button onClick={() => setCurrentDate(new Date())} className="action-btn admin-st-505e88db">Today</button>
+                                    <button onClick={() => changeMonth(1)} className="action-btn admin-m-0"><ChevronRight size={20} /></button>
+                                </div>
+                                <h2 className="admin-st-dcacbd6e">{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</h2>
+                                <div style={{ position: 'relative' }}>
+                                    <button
+                                        onClick={() => setShowCalendarLegend(v => !v)}
+                                        title="Show color legend"
                                         style={{
-                                            position: 'absolute', top: '38px', right: 0,
-                                            background: 'white', borderRadius: '12px',
-                                            boxShadow: '0 8px 30px rgba(0,0,0,0.14)',
-                                            border: '1px solid #e2e8f0',
-                                            padding: '14px 18px', zIndex: 999,
-                                            minWidth: '220px', cursor: 'default'
+                                            width: '30px', height: '30px', borderRadius: '50%',
+                                            border: '1.5px solid #cbd5e1',
+                                            background: showCalendarLegend ? '#6366f1' : 'white',
+                                            color: showCalendarLegend ? 'white' : '#64748b',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem',
+                                            boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                                            transition: 'all 0.2s ease', flexShrink: 0
                                         }}
-                                        onClick={e => e.stopPropagation()}
                                     >
-                                        <p style={{ margin: '0 0 10px', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Booking Status Legend</p>
-                                        {[
-                                            { color: '#38bdf8', label: 'Confirmed' },
-                                            { color: '#f59e0b', label: 'Pending' },
-                                            { color: '#7c3aed', label: 'Scheduled' },
-                                            { color: '#0284c7', label: 'In Session' },
-                                            { color: '#22c55e', label: 'Completed' },
-                                            { color: '#ef4444', label: 'Incomplete' },
-                                            { color: '#94a3b8', label: 'Cancelled / Rejected' },
-                                        ].map(({ color, label }) => (
-                                            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                                                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: color, flexShrink: 0, boxShadow: `0 0 0 2px ${color}33` }} />
-                                                <span style={{ fontSize: '0.85rem', color: '#334155', fontWeight: 500 }}>{label}</span>
+                                        i
+                                    </button>
+                                    {showCalendarLegend && (
+                                        <div
+                                            style={{
+                                                position: 'absolute', top: '38px', right: 0,
+                                                background: 'white', borderRadius: '12px',
+                                                boxShadow: '0 8px 30px rgba(0,0,0,0.14)',
+                                                border: '1px solid #e2e8f0',
+                                                padding: '14px 18px', zIndex: 999,
+                                                minWidth: '220px', cursor: 'default'
+                                            }}
+                                            onClick={e => e.stopPropagation()}
+                                        >
+                                            <p style={{ margin: '0 0 10px', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Booking Status Legend</p>
+                                            {[
+                                                { color: '#38bdf8', label: 'Confirmed' },
+                                                { color: '#f59e0b', label: 'Pending' },
+                                                { color: '#7c3aed', label: 'Scheduled' },
+                                                { color: '#0284c7', label: 'In Session' },
+                                                { color: '#22c55e', label: 'Completed' },
+                                                { color: '#ef4444', label: 'Incomplete' },
+                                                { color: '#94a3b8', label: 'Cancelled / Rejected' },
+                                            ].map(({ color, label }) => (
+                                                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                                                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: color, flexShrink: 0, boxShadow: `0 0 0 2px ${color}33` }} />
+                                                    <span style={{ fontSize: '0.85rem', color: '#334155', fontWeight: 500 }}>{label}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="calendar-grid admin-st-3d636867">
+                                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                                    <div key={d} className="admin-st-24b38fb3">{d}</div>
+                                ))}
+                                {[...Array(firstDayOfMonth)].map((_, i) => <div key={`empty-${i}`} className="admin-st-e2f83dcd"></div>)}
+                                {[...Array(daysInMonth)].map((_, i) => {
+                                    const day = i + 1;
+                                    const dayAppts = getAppointmentsForDate(day);
+                                    const isToday = new Date().getDate() === day && new Date().getMonth() === currentDate.getMonth() && new Date().getFullYear() === currentDate.getFullYear();
+
+                                    return (
+                                        <div key={day} style={{
+                                            border: selectedDay === day
+                                                ? '2px solid #7c3aed'
+                                                : isToday ? '2px solid #6366f1' : '1px solid #e2e8f0',
+                                            padding: '8px',
+                                            borderRadius: '8px',
+                                            backgroundColor: selectedDay === day ? '#f5f3ff' : 'white',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            position: 'relative',
+                                            boxShadow: selectedDay === day ? '0 0 0 3px rgba(124,58,237,0.15)' : 'none'
+                                        }}
+                                            className="calendar-day-cell"
+                                            onClick={() => handleDayClick(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`, day)}>
+                                            <div style={{ fontWeight: 'bold', marginBottom: '5px', color: isToday ? '#6366f1' : '#334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span>{day}</span>
+                                                <Plus size={12} className="admin-st-0dbc0f09" />
                                             </div>
-                                        ))}
+                                            {/* Booking count badge — styled like the sidenav notification-badge */}
+                                            {dayAppts.length > 0 && (
+                                                <div style={{
+                                                    position: 'absolute', top: '6px', right: '6px',
+                                                    background: 'linear-gradient(135deg, #6366f1, #818cf8)',
+                                                    color: '#fff',
+                                                    fontSize: '0.62rem', fontWeight: 800,
+                                                    minWidth: '18px', height: '18px',
+                                                    padding: '0 5px', borderRadius: '9px',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    boxShadow: '0 2px 6px rgba(99,102,241,0.45)',
+                                                    lineHeight: 1, letterSpacing: '-0.3px',
+                                                    pointerEvents: 'none'
+                                                }}>
+                                                    {dayAppts.length > 99 ? '99+' : dayAppts.length}
+                                                </div>
+                                            )}
+                                            <div className="admin-st-5e598434">
+
+                                                {dayAppts.length > 0 && (
+                                                    <div className="admin-st-3c36f78c">
+                                                        {dayAppts.slice(0, 5).map(apt => {
+                                                            let dotColor = '#7c3aed'; // default: scheduled (dark purple)
+                                                            if (apt.status === 'confirmed') dotColor = '#38bdf8';
+                                                            else if (apt.status === 'pending') dotColor = '#f59e0b';
+                                                            else if (apt.status === 'in_progress') dotColor = '#0284c7';
+                                                            else if (apt.status === 'completed') dotColor = '#22c55e';
+                                                            else if (apt.status === 'incomplete') dotColor = '#ef4444';
+                                                            else if (apt.status === 'cancelled' || apt.status === 'rejected') dotColor = '#94a3b8';
+                                                            return (
+                                                                <div key={apt.id} style={{
+                                                                    width: '8px',
+                                                                    height: '8px',
+                                                                    borderRadius: '50%',
+                                                                    backgroundColor: dotColor
+                                                                }} title={formatStatus(apt.status)} />
+                                                            );
+                                                        })}
+                                                        {dayAppts.length > 5 && <span className="admin-st-ba210a9a">+</span>}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="day-view-panel data-card">
+                            <div className="day-view-header">
+                                <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#1e293b' }}>
+                                    {new Date(
+                                        currentDate.getFullYear(),
+                                        currentDate.getMonth(),
+                                        selectedDay || 1
+                                    ).toLocaleDateString('default', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                </h3>
+                                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                    {getAppointmentsForDate(selectedDay || 1).length} Bookings
+                                </span>
+                            </div>
+                            <div className="day-view-body">
+                                {getAppointmentsForDate(selectedDay || 1).map((apt, index) => (
+                                    <div
+                                        key={apt.id}
+                                        className="glass-card day-view-apt-card waterfall-item"
+                                        style={{ animationDelay: `${index * 0.05}s` }}
+                                        onClick={() => handleEdit(apt)}
+                                        title="View appointment details"
+                                    >
+                                        <div className="admin-st-a5c3808d">
+                                            <div style={{
+                                                width: '40px', height: '40px', borderRadius: '50%',
+                                                backgroundColor: '#f1f5f9', overflow: 'hidden',
+                                                border: '2px solid white', boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                                            }}>
+                                                {apt.clientAvatar && apt.clientAvatar.length > 10 ? (
+                                                    <img
+                                                        src={apt.clientAvatar}
+                                                        alt="Profile"
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                        onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; const span = document.createElement('span'); span.style.cssText = 'font-size:14px;font-weight:bold;color:#94a3b8;'; span.textContent = (apt.clientName || '?').replace(/\(Guest\)/i, '').trim().split(' ').filter(p => p).map((p, i, a) => i === 0 || i === a.length - 1 ? p[0] : '').filter(Boolean).join('').toUpperCase().substring(0, 2); e.target.parentElement.appendChild(span); }}
+                                                    />
+                                                ) : (
+                                                    <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#94a3b8' }}>
+                                                        {getInitials(apt.clientName)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#be9055', fontFamily: 'monospace', letterSpacing: '0.02em', marginBottom: '2px' }}>
+                                                    #{getDisplayCode(apt.bookingCode, apt.id)}
+                                                </span>
+                                                <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '0.95rem' }}>
+                                                    {apt.clientName}
+                                                    {apt.isGuestPlaceholder && (
+                                                        <span style={{
+                                                            display: 'inline-block', marginLeft: '6px', padding: '1px 7px',
+                                                            fontSize: '0.6rem', fontWeight: '700', borderRadius: '20px',
+                                                            background: 'linear-gradient(135deg, #f59e0b22, #f59e0b11)',
+                                                            color: '#b45309', border: '1px solid #f59e0b44',
+                                                            verticalAlign: 'middle', letterSpacing: '0.02em'
+                                                        }} title="This booking was made by an unregistered guest">GUEST</span>
+                                                    )}
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                                                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{apt.serviceType || 'Tattoo Session'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <span className={`badge status-${getStatusColor(apt.status)}`} style={{ padding: '4px 8px', fontSize: '0.75rem' }}>
+                                                    {formatStatus(apt.status)}
+                                                </span>
+                                                {apt.hasPendingRescheduleRequest && (
+                                                    <span style={{
+                                                        padding: '2px 6px', borderRadius: '6px', fontSize: '0.6rem',
+                                                        fontWeight: 700, background: '#fffbeb', color: '#d97706',
+                                                        border: '1px solid #fde68a'
+                                                    }}>
+                                                        <RefreshCw size={10} />
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span style={{ color: '#6366f1', fontWeight: '600', fontSize: '0.85rem' }}>{formatTime12Hour(apt.start_time || apt.time)}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                                {getAppointmentsForDate(selectedDay || 1).length === 0 && (
+                                    <div style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem 1rem', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+                                        <Calendar size={32} color="#cbd5e1" style={{ margin: '0 auto 10px' }} />
+                                        No appointments scheduled for this date.
                                     </div>
                                 )}
                             </div>
+                            <div className="day-view-footer">
+                                <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => {
+                                    handleAddNew(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDay || 1).padStart(2, '0')}`);
+                                }}>
+                                    <Plus size={16} style={{ marginRight: '6px' }} /> Add Appointment
+                                </button>
+                            </div>
                         </div>
-                        <div className="calendar-grid admin-st-3d636867">
-                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                                <div key={d} className="admin-st-24b38fb3">{d}</div>
-                            ))}
-                            {[...Array(firstDayOfMonth)].map((_, i) => <div key={`empty-${i}`} className="admin-st-e2f83dcd"></div>)}
-                            {[...Array(daysInMonth)].map((_, i) => {
-                                const day = i + 1;
-                                const dayAppts = getAppointmentsForDate(day);
-                                const isToday = new Date().getDate() === day && new Date().getMonth() === currentDate.getMonth() && new Date().getFullYear() === currentDate.getFullYear();
-
-                                return (
-                                    <div key={day} style={{
-                                        border: selectedDay === day
-                                            ? '2px solid #7c3aed'
-                                            : isToday ? '2px solid #6366f1' : '1px solid #e2e8f0',
-                                        padding: '8px',
-                                        borderRadius: '8px',
-                                        backgroundColor: selectedDay === day ? '#f5f3ff' : 'white',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s ease',
-                                        position: 'relative',
-                                        boxShadow: selectedDay === day ? '0 0 0 3px rgba(124,58,237,0.15)' : 'none'
-                                    }}
-                                        className="calendar-day-cell"
-                                        onClick={() => handleDayClick(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`, day) }>
-                                        <div style={{ fontWeight: 'bold', marginBottom: '5px', color: isToday ? '#6366f1' : '#334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span>{day}</span>
-                                            <Plus size={12} className="admin-st-0dbc0f09" />
-                                        </div>
-                                        {/* Booking count badge — styled like the sidenav notification-badge */}
-                                        {dayAppts.length > 0 && (
-                                            <div style={{
-                                                position: 'absolute', top: '6px', right: '6px',
-                                                background: 'linear-gradient(135deg, #6366f1, #818cf8)',
-                                                color: '#fff',
-                                                fontSize: '0.62rem', fontWeight: 800,
-                                                minWidth: '18px', height: '18px',
-                                                padding: '0 5px', borderRadius: '9px',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                boxShadow: '0 2px 6px rgba(99,102,241,0.45)',
-                                                lineHeight: 1, letterSpacing: '-0.3px',
-                                                pointerEvents: 'none'
-                                            }}>
-                                                {dayAppts.length > 99 ? '99+' : dayAppts.length}
-                                            </div>
-                                        )}
-                                        <div className="admin-st-5e598434">
-
-                                            {dayAppts.length > 0 && (
-                                                <div className="admin-st-3c36f78c">
-                                                    {dayAppts.slice(0, 5).map(apt => {
-                                                        let dotColor = '#7c3aed'; // default: scheduled (dark purple)
-                                                        if (apt.status === 'confirmed') dotColor = '#38bdf8';
-                                                        else if (apt.status === 'pending') dotColor = '#f59e0b';
-                                                        else if (apt.status === 'in_progress') dotColor = '#0284c7';
-                                                        else if (apt.status === 'completed') dotColor = '#22c55e';
-                                                        else if (apt.status === 'incomplete') dotColor = '#ef4444';
-                                                        else if (apt.status === 'cancelled' || apt.status === 'rejected') dotColor = '#94a3b8';
-                                                        return (
-                                                            <div key={apt.id} style={{
-                                                                width: '8px',
-                                                                height: '8px',
-                                                                borderRadius: '50%',
-                                                                backgroundColor: dotColor
-                                                            }} title={formatStatus(apt.status)} />
-                                                        );
-                                                    })}
-                                                    {dayAppts.length > 5 && <span className="admin-st-ba210a9a">+</span>}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    <div className="day-view-panel data-card">
-                        <div className="day-view-header">
-                            <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#1e293b' }}>
-                                {new Date(
-                                    currentDate.getFullYear(),
-                                    currentDate.getMonth(),
-                                    selectedDay || 1
-                                ).toLocaleDateString('default', { month: 'short', day: 'numeric', year: 'numeric' })}
-                            </h3>
-                            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                                {getAppointmentsForDate(selectedDay || 1).length} Bookings
-                            </span>
-                        </div>
-                        <div className="day-view-body">
-                            {getAppointmentsForDate(selectedDay || 1).map((apt, index) => (
-                                <div
-                                    key={apt.id}
-                                    className="glass-card day-view-apt-card waterfall-item"
-                                    style={{ animationDelay: `${index * 0.05}s` }}
-                                    onClick={() => handleEdit(apt)}
-                                    title="View appointment details"
-                                >
-                                    <div className="admin-st-a5c3808d">
-                                        <div style={{
-                                            width: '40px', height: '40px', borderRadius: '50%',
-                                            backgroundColor: '#f1f5f9', overflow: 'hidden',
-                                            border: '2px solid white', boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                                        }}>
-                                            {apt.clientAvatar && apt.clientAvatar.length > 10 ? (
-                                                <img 
-                                                    src={apt.clientAvatar} 
-                                                    alt="Profile" 
-                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                                                    onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; const span = document.createElement('span'); span.style.cssText = 'font-size:14px;font-weight:bold;color:#94a3b8;'; span.textContent = (apt.clientName || '?').replace(/\(Guest\)/i,'').trim().split(' ').filter(p=>p).map((p,i,a)=> i===0||i===a.length-1?p[0]:'').filter(Boolean).join('').toUpperCase().substring(0,2); e.target.parentElement.appendChild(span); }}
-                                                />
-                                            ) : (
-                                                <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#94a3b8' }}>
-                                                    {getInitials(apt.clientName)}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#be9055', fontFamily: 'monospace', letterSpacing: '0.02em', marginBottom: '2px' }}>
-                                                #{getDisplayCode(apt.bookingCode, apt.id)}
-                                            </span>
-                                            <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '0.95rem' }}>
-                                                {apt.clientName}
-                                                {apt.isGuestPlaceholder && (
-                                                    <span style={{
-                                                        display: 'inline-block', marginLeft: '6px', padding: '1px 7px',
-                                                        fontSize: '0.6rem', fontWeight: '700', borderRadius: '20px',
-                                                        background: 'linear-gradient(135deg, #f59e0b22, #f59e0b11)',
-                                                        color: '#b45309', border: '1px solid #f59e0b44',
-                                                        verticalAlign: 'middle', letterSpacing: '0.02em'
-                                                    }} title="This booking was made by an unregistered guest">GUEST</span>
-                                                )}
-                                            </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                                                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{apt.serviceType || 'Tattoo Session'}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <span className={`badge status-${getStatusColor(apt.status)}`} style={{ padding: '4px 8px', fontSize: '0.75rem' }}>
-                                                {formatStatus(apt.status)}
-                                            </span>
-                                            {apt.hasPendingRescheduleRequest && (
-                                                <span style={{
-                                                    padding: '2px 6px', borderRadius: '6px', fontSize: '0.6rem',
-                                                    fontWeight: 700, background: '#fffbeb', color: '#d97706',
-                                                    border: '1px solid #fde68a'
-                                                }}>
-                                                    <RefreshCw size={10} />
-                                                </span>
-                                            )}
-                                        </div>
-                                        <span style={{ color: '#6366f1', fontWeight: '600', fontSize: '0.85rem' }}>{formatTime12Hour(apt.start_time || apt.time)}</span>
-                                    </div>
-                                </div>
-                            ))}
-                            {getAppointmentsForDate(selectedDay || 1).length === 0 && (
-                                <div style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem 1rem', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
-                                    <Calendar size={32} color="#cbd5e1" style={{ margin: '0 auto 10px' }} />
-                                    No appointments scheduled for this date.
-                                </div>
-                            )}
-                        </div>
-                        <div className="day-view-footer">
-                            <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => {
-                                handleAddNew(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDay || 1).padStart(2, '0')}`);
-                            }}>
-                                <Plus size={16} style={{ marginRight: '6px' }} /> Add Appointment
-                            </button>
-                        </div>
-                    </div>
                     </div>
                 ) : (
                     <>
@@ -1531,8 +1535,8 @@ function AdminAppointments() {
                                             .filter(s => s.toLowerCase().includes(searchTerm.toLowerCase()))
                                             .slice(0, 8)
                                             .map((suggestion, index) => (
-                                                <div 
-                                                    key={suggestion} 
+                                                <div
+                                                    key={suggestion}
                                                     className="autocomplete-item waterfall-item"
                                                     style={{ animationDelay: `${index * 0.05}s` }}
                                                     onClick={() => {
@@ -1564,9 +1568,9 @@ function AdminAppointments() {
                             </div>
 
                             <div className="premium-filters-row">
-                                <CustomSelect 
-                                    value={statusFilter} 
-                                    onChange={setStatusFilter} 
+                                <CustomSelect
+                                    value={statusFilter}
+                                    onChange={setStatusFilter}
                                     icon={Filter}
                                     label="Filter:"
                                     options={[
@@ -1580,9 +1584,9 @@ function AdminAppointments() {
                                     ]}
                                 />
 
-                                <CustomSelect 
-                                    value={serviceFilter} 
-                                    onChange={setServiceFilter} 
+                                <CustomSelect
+                                    value={serviceFilter}
+                                    onChange={setServiceFilter}
                                     options={[
                                         { value: 'all', label: 'All Services' },
                                         { value: 'Tattoo Session', label: 'Tattoo Session' },
@@ -1594,9 +1598,9 @@ function AdminAppointments() {
                                 />
 
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <CustomSelect 
-                                        value={timePeriodFilter} 
-                                        onChange={(val) => { setTimePeriodFilter(val); if (val !== 'all') setDateFilter(''); }} 
+                                    <CustomSelect
+                                        value={timePeriodFilter}
+                                        onChange={(val) => { setTimePeriodFilter(val); if (val !== 'all') setDateFilter(''); }}
                                         icon={Calendar}
                                         options={[
                                             { value: 'all', label: 'All Time' },
@@ -1615,9 +1619,9 @@ function AdminAppointments() {
                                     />
                                 </div>
 
-                                <CustomSelect 
-                                    value={sortBy} 
-                                    onChange={setSortBy} 
+                                <CustomSelect
+                                    value={sortBy}
+                                    onChange={setSortBy}
                                     icon={SlidersHorizontal}
                                     label="Sort:"
                                     options={[
@@ -2048,17 +2052,17 @@ function AdminAppointments() {
                                 </div>
                                 {/* Feature B: Rebook Next Session button for project-linked completed sessions */}
                                 {selectedAppointment?.project_id && selectedAppointment?.totalSessions && (
-                                    (selectedAppointment.sessionNumber || 1) < (selectedAppointment.totalSessions) 
+                                    (selectedAppointment.sessionNumber || 1) < (selectedAppointment.totalSessions)
                                 ) && selectedAppointment?.projectStatus !== 'completed' && selectedAppointment?.projectStatus !== 'completed_early' && (
-                                    <button
-                                        className="btn"
-                                        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, rgba(99,102,241,0.12), rgba(99,102,241,0.06))', color: '#6366f1', borderColor: 'rgba(99,102,241,0.3)', fontWeight: 600 }}
-                                        onClick={() => handleRebookNextSession(selectedAppointment)}
-                                        title="Create the next session for this multi-session project"
-                                    >
-                                        <Layers size={16} /> Rebook Next Session ({(selectedAppointment.sessionNumber || 1) + 1} of {selectedAppointment.totalSessions})
-                                    </button>
-                                )}
+                                        <button
+                                            className="btn"
+                                            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, rgba(99,102,241,0.12), rgba(99,102,241,0.06))', color: '#6366f1', borderColor: 'rgba(99,102,241,0.3)', fontWeight: 600 }}
+                                            onClick={() => handleRebookNextSession(selectedAppointment)}
+                                            title="Create the next session for this multi-session project"
+                                        >
+                                            <Layers size={16} /> Rebook Next Session ({(selectedAppointment.sessionNumber || 1) + 1} of {selectedAppointment.totalSessions})
+                                        </button>
+                                    )}
                                 <button className="btn btn-primary admin-st-6948e5f9" onClick={() => closeModal(true)}>Done Reviewing</button>
                             </div>
                         </div>
@@ -2201,134 +2205,86 @@ function AdminAppointments() {
 
                                 {modalTab === 'details' && (
                                     <>
-                                    {/* B-4: Project Timeline — shown when the open appointment is part of a project */}
-                                    {selectedAppointment?.project_id && (
-                                        <SessionTimeline
-                                            project={projectTimeline}
-                                            currentSessionId={selectedAppointment?.id}
-                                            isAdmin={true}
-                                            loading={projectTimelineLoading}
-                                            onProjectUpdated={() => {
-                                                fetchProjectTimeline(selectedAppointment.project_id);
-                                                fetchAppointments();
-                                            }}
-                                        />
-                                    )}
-                                    <div className="grid-3col" style={{ gap: '24px', alignItems: 'stretch' }}>
-                                        {/* Left Column: People & Service */}
-                                        <div className="admin-st-d295c8d6" style={{ justifyContent: 'flex-start' }}>
-                                            <div>
-                                                <label className="premium-input-label">Client Information</label>
-                                                {formData.clientId ? (
-                                                    <div className="admin-st-013bb379" style={{ padding: '12px', alignItems: 'center' }}>
-                                                        <div className="admin-st-b0dbc89c" style={{ gap: '16px' }}>
-                                                            {selectedAppointment && selectedAppointment.clientAvatar ? (
-                                                                <div style={{
-                                                                    width: '44px', height: '44px', borderRadius: '50%',
-                                                                    backgroundColor: '#f1f5f9', overflow: 'hidden',
-                                                                    border: '2px solid white', boxShadow: '0 2px 4px -1px rgba(0,0,0,0.1)',
-                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                                                                }}>
-                                                                    <img src={selectedAppointment.clientAvatar} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                                </div>
-                                                            ) : (
-                                                                <div style={{
-                                                                    width: '44px', height: '44px', borderRadius: '50%',
-                                                                    backgroundColor: '#f1f5f9', overflow: 'hidden',
-                                                                    border: '2px solid white', boxShadow: '0 2px 4px -1px rgba(0,0,0,0.1)',
-                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                                                                }}>
-                                                                    <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#be9055' }}>
-                                                                        {getInitials(clients.find(c => c.id == formData.clientId)?.name || clientSearch)}
-                                                                    </span>
+                                        {/* B-4: Project Timeline — shown when the open appointment is part of a project */}
+                                        {selectedAppointment?.project_id && (
+                                            <SessionTimeline
+                                                project={projectTimeline}
+                                                currentSessionId={selectedAppointment?.id}
+                                                isAdmin={true}
+                                                loading={projectTimelineLoading}
+                                                onProjectUpdated={() => {
+                                                    fetchProjectTimeline(selectedAppointment.project_id);
+                                                    fetchAppointments();
+                                                }}
+                                            />
+                                        )}
+                                        <div className="grid-3col" style={{ gap: '24px', alignItems: 'stretch' }}>
+                                            {/* Left Column: People & Service */}
+                                            <div className="admin-st-d295c8d6" style={{ justifyContent: 'flex-start' }}>
+                                                <div>
+                                                    <label className="premium-input-label">Client Information</label>
+                                                    {formData.clientId ? (
+                                                        <div className="admin-st-013bb379" style={{ padding: '12px', alignItems: 'center' }}>
+                                                            <div className="admin-st-b0dbc89c" style={{ gap: '16px' }}>
+                                                                {selectedAppointment && selectedAppointment.clientAvatar ? (
+                                                                    <div style={{
+                                                                        width: '44px', height: '44px', borderRadius: '50%',
+                                                                        backgroundColor: '#f1f5f9', overflow: 'hidden',
+                                                                        border: '2px solid white', boxShadow: '0 2px 4px -1px rgba(0,0,0,0.1)',
+                                                                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                                                                    }}>
+                                                                        <img src={selectedAppointment.clientAvatar} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                                    </div>
+                                                                ) : (
+                                                                    <div style={{
+                                                                        width: '44px', height: '44px', borderRadius: '50%',
+                                                                        backgroundColor: '#f1f5f9', overflow: 'hidden',
+                                                                        border: '2px solid white', boxShadow: '0 2px 4px -1px rgba(0,0,0,0.1)',
+                                                                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                                                                    }}>
+                                                                        <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#be9055' }}>
+                                                                            {getInitials(clients.find(c => c.id == formData.clientId)?.name || clientSearch)}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                                <span className="admin-st-0e40c814" style={{ fontSize: '0.95rem', fontWeight: '600' }}>
+                                                                    {clients.find(c => c.id == formData.clientId)?.name || clientSearch}
+                                                                </span>
+                                                            </div>
+                                                            <button type="button" onClick={() => { setFormData(prev => ({ ...prev, clientId: null })); setClientSearch(''); }} className="admin-st-f32d59a5">
+                                                                <X size={20} />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="admin-st-d85c4e64">
+                                                            <div className="premium-search-box admin-st-c7f79b45">
+                                                                <Search size={18} />
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="Search for a client..."
+                                                                    value={clientSearch}
+                                                                    onChange={(e) => setClientSearch(e.target.value)}
+                                                                    onFocus={() => setClientDropdownOpen(true)}
+                                                                    onBlur={() => setTimeout(() => setClientDropdownOpen(false), 200)}
+                                                                    maxLength={100}
+                                                                />
+                                                            </div>
+                                                            {(clientDropdownOpen || clientSearch) && (
+                                                                <div className="glass-card admin-st-83ac1cb2">
+                                                                    {clients.filter(c => c.name && c.name.toLowerCase().includes(clientSearch.toLowerCase())).map(c => (
+                                                                        <div key={c.id} className="admin-st-824731e9" onClick={() => { setFormData({ ...formData, clientId: c.id }); setClientSearch(c.name); }}>
+                                                                            <User size={16} color="#be9055" />
+                                                                            <span className="admin-st-9d3db44b">{c.name}</span>
+                                                                        </div>
+                                                                    ))}
                                                                 </div>
                                                             )}
-                                                            <span className="admin-st-0e40c814" style={{ fontSize: '0.95rem', fontWeight: '600' }}>
-                                                                {clients.find(c => c.id == formData.clientId)?.name || clientSearch}
-                                                            </span>
-                                                        </div>
-                                                        <button type="button" onClick={() => { setFormData(prev => ({ ...prev, clientId: null })); setClientSearch(''); }} className="admin-st-f32d59a5">
-                                                            <X size={20} />
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <div className="admin-st-d85c4e64">
-                                                        <div className="premium-search-box admin-st-c7f79b45">
-                                                            <Search size={18} />
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Search for a client..."
-                                                                value={clientSearch}
-                                                                onChange={(e) => setClientSearch(e.target.value)}
-                                                                onFocus={() => setClientDropdownOpen(true)}
-                                                                onBlur={() => setTimeout(() => setClientDropdownOpen(false), 200)}
-                                                                maxLength={100}
-                                                            />
-                                                        </div>
-                                                        {(clientDropdownOpen || clientSearch) && (
-                                                            <div className="glass-card admin-st-83ac1cb2">
-                                                                {clients.filter(c => c.name && c.name.toLowerCase().includes(clientSearch.toLowerCase())).map(c => (
-                                                                    <div key={c.id} className="admin-st-824731e9" onClick={() => { setFormData({ ...formData, clientId: c.id }); setClientSearch(c.name); }}>
-                                                                        <User size={16} color="#be9055" />
-                                                                        <span className="admin-st-9d3db44b">{c.name}</span>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Health & Safety — EDIT MODE: client has data */}
-                                            {selectedAppointment && (selectedAppointment.clientHealthConditions?.length > 0 || selectedAppointment.clientAllergens?.length > 0) && (
-                                                <div style={{
-                                                    marginTop: '12px', padding: '14px 16px', borderRadius: '12px',
-                                                    background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)',
-                                                    border: '1.5px solid #fed7aa', boxShadow: '0 2px 8px rgba(249,115,22,0.1)'
-                                                }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                                                        <ShieldAlert size={16} color="#ea580c" />
-                                                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#9a3412', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Client Health &amp; Safety</span>
-                                                    </div>
-                                                    {selectedAppointment.clientHealthConditions?.length > 0 && (
-                                                        <div style={{ marginBottom: '8px' }}>
-                                                            <p style={{ margin: '0 0 6px', fontSize: '0.72rem', fontWeight: 700, color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Health Conditions</p>
-                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                                                                {selectedAppointment.clientHealthConditions.map(c => (
-                                                                    <span key={c} style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600, background: 'rgba(190,144,85,0.15)', border: '1.5px solid rgba(190,144,85,0.4)', color: '#92400e' }}>{c}</span>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                    {selectedAppointment.clientAllergens?.length > 0 && (
-                                                        <div>
-                                                            <p style={{ margin: '0 0 6px', fontSize: '0.72rem', fontWeight: 700, color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Known Allergens</p>
-                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                                                                {selectedAppointment.clientAllergens.map(a => (
-                                                                    <span key={a} style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600, background: 'rgba(239,68,68,0.1)', border: '1.5px solid rgba(239,68,68,0.3)', color: '#b91c1c' }}>{a}</span>
-                                                                ))}
-                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>
-                                            )}
 
-                                            {/* Health & Safety — EDIT MODE: client has no data on file */}
-                                            {selectedAppointment && selectedAppointment.clientHealthConditions?.length === 0 && selectedAppointment.clientAllergens?.length === 0 && formData.clientId && (
-                                                <div style={{
-                                                    marginTop: '12px', padding: '10px 14px', borderRadius: '10px',
-                                                    background: '#f8fafc', border: '1px dashed #cbd5e1',
-                                                    display: 'flex', alignItems: 'center', gap: '8px'
-                                                }}>
-                                                    <Heart size={14} color="#94a3b8" />
-                                                    <span style={{ fontSize: '0.78rem', color: '#64748b' }}>No health or allergy data on file for this client.</span>
-                                                </div>
-                                            )}
-
-                                            {/* Health & Safety — CREATE MODE: fetched data display or reminder */}
-                                            {!selectedAppointment && formData.clientId && clientHealthData.loaded && (
-                                                clientHealthData.conditions.length > 0 || clientHealthData.allergens.length > 0 ? (
-                                                    // Client has health data — show it as an alert
+                                                {/* Health & Safety — EDIT MODE: client has data */}
+                                                {selectedAppointment && (selectedAppointment.clientHealthConditions?.length > 0 || selectedAppointment.clientAllergens?.length > 0) && (
                                                     <div style={{
                                                         marginTop: '12px', padding: '14px 16px', borderRadius: '12px',
                                                         background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)',
@@ -2338,215 +2294,263 @@ function AdminAppointments() {
                                                             <ShieldAlert size={16} color="#ea580c" />
                                                             <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#9a3412', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Client Health &amp; Safety</span>
                                                         </div>
-                                                        {clientHealthData.conditions.length > 0 && (
+                                                        {selectedAppointment.clientHealthConditions?.length > 0 && (
                                                             <div style={{ marginBottom: '8px' }}>
                                                                 <p style={{ margin: '0 0 6px', fontSize: '0.72rem', fontWeight: 700, color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Health Conditions</p>
                                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                                                                    {clientHealthData.conditions.map(c => (
+                                                                    {selectedAppointment.clientHealthConditions.map(c => (
                                                                         <span key={c} style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600, background: 'rgba(190,144,85,0.15)', border: '1.5px solid rgba(190,144,85,0.4)', color: '#92400e' }}>{c}</span>
                                                                     ))}
                                                                 </div>
                                                             </div>
                                                         )}
-                                                        {clientHealthData.allergens.length > 0 && (
+                                                        {selectedAppointment.clientAllergens?.length > 0 && (
                                                             <div>
                                                                 <p style={{ margin: '0 0 6px', fontSize: '0.72rem', fontWeight: 700, color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Known Allergens</p>
                                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                                                                    {clientHealthData.allergens.map(a => (
+                                                                    {selectedAppointment.clientAllergens.map(a => (
                                                                         <span key={a} style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600, background: 'rgba(239,68,68,0.1)', border: '1.5px solid rgba(239,68,68,0.3)', color: '#b91c1c' }}>{a}</span>
                                                                     ))}
                                                                 </div>
                                                             </div>
                                                         )}
                                                     </div>
-                                                ) : (
-                                                    // No health data on file — show a soft reminder to ask verbally
-                                                    <div style={{
-                                                        marginTop: '12px', padding: '12px 14px', borderRadius: '10px',
-                                                        background: 'linear-gradient(135deg, #fffbeb 0%, #fef9c3 100%)',
-                                                        border: '1.5px solid #fde68a',
-                                                        display: 'flex', alignItems: 'flex-start', gap: '10px'
-                                                    }}>
-                                                        <Heart size={15} color="#d97706" style={{ flexShrink: 0, marginTop: '1px' }} />
-                                                        <div>
-                                                            <p style={{ margin: '0 0 3px', fontSize: '0.8rem', fontWeight: 700, color: '#92400e' }}>Health Reminder</p>
-                                                            <p style={{ margin: 0, fontSize: '0.78rem', color: '#b45309', lineHeight: 1.5 }}>
-                                                                This client has no health or allergy data on file. Please verbally ask them about any known conditions or allergens before scheduling.
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                )
-                                            )}
+                                                )}
 
-                                            {/* Loading state while fetching */}
-                                            {!selectedAppointment && formData.clientId && clientHealthData.loading && (
-                                                <div style={{ marginTop: '10px', padding: '8px 12px', borderRadius: '8px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <Heart size={14} color="#94a3b8" />
-                                                    <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Checking health profile...</span>
-                                                </div>
-                                            )}
-
-                                            <div>
-                                                <label className="premium-input-label">Service Details</label>
-                                                <div>
-                                                    <div className="admin-st-fefecdf0">
-                                                        <div className="premium-input-group">
-                                                            <label className={`admin-st-b8618eb2 ${errors.serviceType ? 'text-red-500' : ''}`}>Service Type *</label>
-                                                            <select value={formData.serviceType} onChange={(e) => handleInputChange('serviceType', e.target.value)} className={`premium-select-v2 ${errors.serviceType ? 'border-red-500 bg-red-50' : ''}`}>
-                                                                <option value="Tattoo Session">Tattoo Session</option>
-                                                                <option value="Consultation">Consultation</option>
-                                                                <option value="Piercing">Piercing</option>
-                                                                <option value="Tattoo + Piercing">Tattoo + Piercing</option>
-                                                                <option value="Touch-up">Touch-up</option>
-                                                            </select>
-                                                            {errors.serviceType && <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.serviceType}</span>}
-                                                        </div>
-                                                        <div className="premium-input-group">
-                                                            <label className={`admin-st-b8618eb2 ${errors.designTitle ? 'text-red-500' : ''}`}>Design / Idea</label>
-                                                            <input type="text" value={formData.designTitle} onChange={(e) => handleInputChange('designTitle', filterName(e.target.value).slice(0, 50))} maxLength={50} className={`premium-input-v2 ${errors.designTitle ? 'border-red-500 bg-red-50' : ''}`} placeholder="e.g. Neo-Trad" />
-                                                            {errors.designTitle && <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.designTitle}</span>}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                {/* Consultation Method badge (visible when it exists) */}
-                                                {selectedAppointment?.consultationMethod && (
+                                                {/* Health & Safety — EDIT MODE: client has no data on file */}
+                                                {selectedAppointment && selectedAppointment.clientHealthConditions?.length === 0 && selectedAppointment.clientAllergens?.length === 0 && formData.clientId && (
                                                     <div style={{
-                                                        marginTop: '12px', padding: '12px 16px', borderRadius: '10px',
-                                                        background: selectedAppointment.consultationMethod === 'Face-to-Face' ? '#f0fdf4' : '#f5f3ff',
-                                                        border: `1px solid ${selectedAppointment.consultationMethod === 'Face-to-Face' ? '#bbf7d0' : '#ddd6fe'}`,
-                                                        display: 'flex', alignItems: 'center', gap: '10px'
+                                                        marginTop: '12px', padding: '10px 14px', borderRadius: '10px',
+                                                        background: '#f8fafc', border: '1px dashed #cbd5e1',
+                                                        display: 'flex', alignItems: 'center', gap: '8px'
                                                     }}>
-                                                        <span style={{
-                                                            padding: '4px 10px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '700',
-                                                            background: selectedAppointment.consultationMethod === 'Face-to-Face' ? '#dcfce7' : '#ede9fe',
-                                                            color: selectedAppointment.consultationMethod === 'Face-to-Face' ? '#166534' : '#5b21b6'
-                                                        }}>
-                                                            {selectedAppointment.consultationMethod}
-                                                        </span>
-                                                        <span style={{ fontSize: '0.82rem', color: '#475569', fontWeight: '500' }}>
-                                                            {selectedAppointment.consultationMethod === 'Face-to-Face'
-                                                                ? 'Customer will visit the studio in person'
-                                                                : `Customer prefers to be contacted via ${selectedAppointment.consultationMethod.replace('Online (', '').replace(')', '') || 'messaging'}`}
-                                                        </span>
+                                                        <Heart size={14} color="#94a3b8" />
+                                                        <span style={{ fontSize: '0.78rem', color: '#64748b' }}>No health or allergy data on file for this client.</span>
                                                     </div>
                                                 )}
-                                            </div>
-                                        </div>
 
-                                        {/* Column 2: Staff & Schedule */}
-                                        <div className="admin-st-d295c8d6" style={{ justifyContent: 'flex-start' }}>
-                                            <div>
-                                                <label className="premium-input-label">Staff Assignment</label>
-                                                {(() => {
-                                                    const isDualService = formData.serviceType === 'Tattoo + Piercing';
-                                                    const isDualConsultation = formData.serviceType === 'Consultation' && (formData.notes || '').toLowerCase().includes('piercing');
-                                                    const requiresDualStaff = isDualService || isDualConsultation;
-                                                    const primaryLabel = isDualService
-                                                        ? <span><Syringe size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /> Tattoo Artist <span style={{ color: '#ef4444' }}>*</span></span>
-                                                        : <span>Primary Staff <span style={{ color: '#ef4444' }}>*</span></span>;
-                                                    const secondaryLabel = isDualService
-                                                        ? <span><Wrench size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /> Piercer <span style={{ color: '#ef4444' }}>*</span></span>
-                                                        : requiresDualStaff
-                                                            ? <span>Secondary Staff <span style={{ color: '#ef4444' }}>*</span></span>
-                                                            : 'Tattoo Artist 2';
-                                                    return (
-                                                <div>
-                                                    <div className="admin-st-fefecdf0">
-                                                        <div className="premium-input-group">
-                                                            <label className="admin-st-b8618eb2">{primaryLabel}</label>
-                                                            <select value={formData.artistId} onChange={(e) => handleInputChange('artistId', e.target.value)} className="premium-select-v2">
-                                                                <option value="">Select Staff</option>
-                                                                {artists.map(a => <option key={a.id} value={a.id}>{a.name}{a.specialization ? ` — ${a.specialization}` : ''}</option>)}
-                                                            </select>
-                                                        </div>
-                                                        <div className="premium-input-group">
-                                                            <label className="admin-st-b8618eb2" style={{ whiteSpace: 'nowrap' }}>
-                                                                {secondaryLabel}
-                                                                {selectedAppointment?.status === 'completed' && <span style={{ fontSize: '0.65rem', color: '#94a3b8', marginLeft: '4px', fontWeight: 500 }}>(Locked)</span>}
-                                                            </label>
-                                                            <select value={formData.secondaryArtistId || ''} onChange={(e) => handleInputChange('secondaryArtistId', e.target.value)} className="premium-select-v2" disabled={selectedAppointment?.status === 'completed'}
-                                                                style={requiresDualStaff && !formData.secondaryArtistId ? { borderColor: '#f59e0b', boxShadow: '0 0 0 2px rgba(245,158,11,0.15)' } : {}}
-                                                            >
-                                                                <option value="">{requiresDualStaff ? 'Select Staff (Required)' : 'None (Solo)'}</option>
-                                                                {artists.map(a => <option key={a.id} value={a.id}>{a.name}{a.specialization ? ` — ${a.specialization}` : ''}</option>)}
-                                                            </select>
-                                                            {requiresDualStaff && (
-                                                                <span style={{ fontSize: '0.72rem', color: '#f59e0b', fontWeight: 600, marginTop: '4px', display: 'block' }}>
-                                                                    <AlertTriangle size={12} style={{ display: 'inline', verticalAlign: '-2px' }} /> Dual topic selected
-                                                                </span>
+                                                {/* Health & Safety — CREATE MODE: fetched data display or reminder */}
+                                                {!selectedAppointment && formData.clientId && clientHealthData.loaded && (
+                                                    clientHealthData.conditions.length > 0 || clientHealthData.allergens.length > 0 ? (
+                                                        // Client has health data — show it as an alert
+                                                        <div style={{
+                                                            marginTop: '12px', padding: '14px 16px', borderRadius: '12px',
+                                                            background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)',
+                                                            border: '1.5px solid #fed7aa', boxShadow: '0 2px 8px rgba(249,115,22,0.1)'
+                                                        }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                                                                <ShieldAlert size={16} color="#ea580c" />
+                                                                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#9a3412', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Client Health &amp; Safety</span>
+                                                            </div>
+                                                            {clientHealthData.conditions.length > 0 && (
+                                                                <div style={{ marginBottom: '8px' }}>
+                                                                    <p style={{ margin: '0 0 6px', fontSize: '0.72rem', fontWeight: 700, color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Health Conditions</p>
+                                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                                                                        {clientHealthData.conditions.map(c => (
+                                                                            <span key={c} style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600, background: 'rgba(190,144,85,0.15)', border: '1.5px solid rgba(190,144,85,0.4)', color: '#92400e' }}>{c}</span>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            {clientHealthData.allergens.length > 0 && (
+                                                                <div>
+                                                                    <p style={{ margin: '0 0 6px', fontSize: '0.72rem', fontWeight: 700, color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Known Allergens</p>
+                                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                                                                        {clientHealthData.allergens.map(a => (
+                                                                            <span key={a} style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600, background: 'rgba(239,68,68,0.1)', border: '1.5px solid rgba(239,68,68,0.3)', color: '#b91c1c' }}>{a}</span>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
                                                             )}
                                                         </div>
-                                                    </div>
-                                                    {/* Commission split slider: only for collab tattoo sessions (NOT for Tattoo + Piercing dual-service) */}
-                                                    {formData.secondaryArtistId && formData.serviceType !== 'Consultation' && formData.serviceType !== 'Tattoo + Piercing' && (
-                                                        <div className="admin-st-953ba7ac">
-                                                            <label className="admin-st-15b3be7e">Split % (Artist 1/Artist 2):</label>
-                                                            <input type="number" min="1" max="99" value={formData.commissionSplit} onChange={(e) => setFormData({ ...formData, commissionSplit: clampNumber(e.target.value, 1, 99) })} className="premium-input-v2 admin-st-e070afd8" disabled={selectedAppointment?.status === 'completed'} />
-                                                            <span className="admin-st-7206c648">/ {100 - (formData.commissionSplit || 0)}</span>
+                                                    ) : (
+                                                        // No health data on file — show a soft reminder to ask verbally
+                                                        <div style={{
+                                                            marginTop: '12px', padding: '12px 14px', borderRadius: '10px',
+                                                            background: 'linear-gradient(135deg, #fffbeb 0%, #fef9c3 100%)',
+                                                            border: '1.5px solid #fde68a',
+                                                            display: 'flex', alignItems: 'flex-start', gap: '10px'
+                                                        }}>
+                                                            <Heart size={15} color="#d97706" style={{ flexShrink: 0, marginTop: '1px' }} />
+                                                            <div>
+                                                                <p style={{ margin: '0 0 3px', fontSize: '0.8rem', fontWeight: 700, color: '#92400e' }}>Health Reminder</p>
+                                                                <p style={{ margin: 0, fontSize: '0.78rem', color: '#b45309', lineHeight: 1.5 }}>
+                                                                    This client has no health or allergy data on file. Please verbally ask them about any known conditions or allergens before scheduling.
+                                                                </p>
+                                                            </div>
                                                         </div>
-                                                    )}
-                                                    {/* Dual-service note: commission is per-service-line */}
-                                                    {formData.secondaryArtistId && formData.serviceType === 'Tattoo + Piercing' && (
-                                                        <div style={{ marginTop: '8px', padding: '8px 12px', borderRadius: '8px', background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: '0.75rem', color: '#166534', fontWeight: 500 }}>
-                                                            <CheckCircle size={12} style={{ display: 'inline', verticalAlign: '-2px' }} /> Commission calculated per service line — Tattoo Artist earns from tattoo quote, Piercer earns from piercing quote.
+                                                    )
+                                                )}
+
+                                                {/* Loading state while fetching */}
+                                                {!selectedAppointment && formData.clientId && clientHealthData.loading && (
+                                                    <div style={{ marginTop: '10px', padding: '8px 12px', borderRadius: '8px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <Heart size={14} color="#94a3b8" />
+                                                        <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Checking health profile...</span>
+                                                    </div>
+                                                )}
+
+                                                <div>
+                                                    <label className="premium-input-label">Service Details</label>
+                                                    <div>
+                                                        <div className="admin-st-fefecdf0">
+                                                            <div className="premium-input-group">
+                                                                <label className={`admin-st-b8618eb2 ${errors.serviceType ? 'text-red-500' : ''}`}>Service Type *</label>
+                                                                <select value={formData.serviceType} onChange={(e) => handleInputChange('serviceType', e.target.value)} className={`premium-select-v2 ${errors.serviceType ? 'border-red-500 bg-red-50' : ''}`}>
+                                                                    <option value="Tattoo Session">Tattoo Session</option>
+                                                                    <option value="Consultation">Consultation</option>
+                                                                    <option value="Piercing">Piercing</option>
+                                                                    <option value="Tattoo + Piercing">Tattoo + Piercing</option>
+                                                                    <option value="Touch-up">Touch-up</option>
+                                                                </select>
+                                                                {errors.serviceType && <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.serviceType}</span>}
+                                                            </div>
+                                                            <div className="premium-input-group">
+                                                                <label className={`admin-st-b8618eb2 ${errors.designTitle ? 'text-red-500' : ''}`}>Design / Idea</label>
+                                                                <input type="text" value={formData.designTitle} onChange={(e) => handleInputChange('designTitle', filterName(e.target.value).slice(0, 50))} maxLength={50} className={`premium-input-v2 ${errors.designTitle ? 'border-red-500 bg-red-50' : ''}`} placeholder="e.g. Neo-Trad" />
+                                                                {errors.designTitle && <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.designTitle}</span>}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    {/* Consultation Method badge (visible when it exists) */}
+                                                    {selectedAppointment?.consultationMethod && (
+                                                        <div style={{
+                                                            marginTop: '12px', padding: '12px 16px', borderRadius: '10px',
+                                                            background: selectedAppointment.consultationMethod === 'Face-to-Face' ? '#f0fdf4' : '#f5f3ff',
+                                                            border: `1px solid ${selectedAppointment.consultationMethod === 'Face-to-Face' ? '#bbf7d0' : '#ddd6fe'}`,
+                                                            display: 'flex', alignItems: 'center', gap: '10px'
+                                                        }}>
+                                                            <span style={{
+                                                                padding: '4px 10px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '700',
+                                                                background: selectedAppointment.consultationMethod === 'Face-to-Face' ? '#dcfce7' : '#ede9fe',
+                                                                color: selectedAppointment.consultationMethod === 'Face-to-Face' ? '#166534' : '#5b21b6'
+                                                            }}>
+                                                                {selectedAppointment.consultationMethod}
+                                                            </span>
+                                                            <span style={{ fontSize: '0.82rem', color: '#475569', fontWeight: '500' }}>
+                                                                {selectedAppointment.consultationMethod === 'Face-to-Face'
+                                                                    ? 'Customer will visit the studio in person'
+                                                                    : `Customer prefers to be contacted via ${selectedAppointment.consultationMethod.replace('Online (', '').replace(')', '') || 'messaging'}`}
+                                                            </span>
                                                         </div>
                                                     )}
                                                 </div>
-                                                    );
-                                                })()}
-
-                                                {/* ── Artist Referral ── */}
-                                                {(() => {
-                                                    const isSolo = !formData.secondaryArtistId || String(formData.secondaryArtistId) === '' || String(formData.secondaryArtistId) === 'null';
-                                                    const isCompleted = selectedAppointment?.status === 'completed';
-                                                    const canToggle = isSolo && !isCompleted;
-
-                                                    const handleReferralToggle = (e) => {
-                                                        const newValue = e.target.checked;
-                                                        const newSplit = newValue ? '70% Artist / 30% Studio' : '30% Artist / 70% Studio';
-                                                        showConfirm(
-                                                            newValue ? 'Enable Artist Referral' : 'Remove Artist Referral',
-                                                            `This will change the commission split to ${newSplit}. Proceed?`,
-                                                            () => {
-                                                                handleInputChange('isReferral', newValue);
-                                                                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-                                                            }
-                                                        );
-                                                    };
-
-                                                    return (
-                                                        <div className="premium-input-group" style={{ marginTop: '8px' }}>
-                                                            <label className="admin-st-b8618eb2">Commission</label>
-                                                            <label style={{
-                                                                display: 'flex', alignItems: 'center', gap: '10px',
-                                                                padding: '10px 14px',
-                                                                background: '#f8fafc',
-                                                                border: `1px solid ${formData.isReferral ? 'rgba(16, 185, 129, 0.35)' : '#e2e8f0'}`,
-                                                                borderRadius: '12px',
-                                                                cursor: canToggle ? 'pointer' : 'not-allowed',
-                                                                opacity: canToggle ? 1 : 0.45,
-                                                                transition: 'all 0.2s ease',
-                                                                fontSize: '0.88rem', fontWeight: 500,
-                                                                color: '#1e293b'
-                                                            }}>
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={!!formData.isReferral}
-                                                                    onChange={canToggle ? handleReferralToggle : undefined}
-                                                                    disabled={!canToggle}
-                                                                    style={{ accentColor: '#10b981', width: '16px', height: '16px', cursor: canToggle ? 'pointer' : 'not-allowed' }}
-                                                                />
-                                                                <span>Artist Referral</span>
-                                                                {formData.isReferral && (
-                                                                    <span style={{ marginLeft: 'auto', fontSize: '0.75rem', fontWeight: 600, color: '#10b981' }}>70/30</span>
-                                                                )}
-                                                            </label>
-                                                        </div>
-                                                    );
-                                                })()}
                                             </div>
 
-                                            <div>
+                                            {/* Column 2: Staff & Schedule */}
+                                            <div className="admin-st-d295c8d6" style={{ justifyContent: 'flex-start' }}>
+                                                <div>
+                                                    <label className="premium-input-label">Staff Assignment</label>
+                                                    {(() => {
+                                                        const isDualService = formData.serviceType === 'Tattoo + Piercing';
+                                                        const isDualConsultation = formData.serviceType === 'Consultation' && (formData.notes || '').toLowerCase().includes('piercing');
+                                                        const requiresDualStaff = isDualService || isDualConsultation;
+                                                        const primaryLabel = isDualService
+                                                            ? <span><Syringe size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /> Tattoo Artist <span style={{ color: '#ef4444' }}>*</span></span>
+                                                            : <span>Primary Staff <span style={{ color: '#ef4444' }}>*</span></span>;
+                                                        const secondaryLabel = isDualService
+                                                            ? <span><Wrench size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /> Piercer <span style={{ color: '#ef4444' }}>*</span></span>
+                                                            : requiresDualStaff
+                                                                ? <span>Secondary Staff <span style={{ color: '#ef4444' }}>*</span></span>
+                                                                : 'Tattoo Artist 2';
+                                                        return (
+                                                            <div>
+                                                                <div className="admin-st-fefecdf0">
+                                                                    <div className="premium-input-group">
+                                                                        <label className="admin-st-b8618eb2">{primaryLabel}</label>
+                                                                        <select value={formData.artistId} onChange={(e) => handleInputChange('artistId', e.target.value)} className="premium-select-v2">
+                                                                            <option value="">Select Staff</option>
+                                                                            {artists.map(a => <option key={a.id} value={a.id}>{a.name}{a.specialization ? ` — ${a.specialization}` : ''}</option>)}
+                                                                        </select>
+                                                                    </div>
+                                                                    <div className="premium-input-group">
+                                                                        <label className="admin-st-b8618eb2" style={{ whiteSpace: 'nowrap' }}>
+                                                                            {secondaryLabel}
+                                                                            {selectedAppointment?.status === 'completed' && <span style={{ fontSize: '0.65rem', color: '#94a3b8', marginLeft: '4px', fontWeight: 500 }}>(Locked)</span>}
+                                                                        </label>
+                                                                        <select value={formData.secondaryArtistId || ''} onChange={(e) => handleInputChange('secondaryArtistId', e.target.value)} className="premium-select-v2" disabled={selectedAppointment?.status === 'completed'}
+                                                                            style={requiresDualStaff && !formData.secondaryArtistId ? { borderColor: '#f59e0b', boxShadow: '0 0 0 2px rgba(245,158,11,0.15)' } : {}}
+                                                                        >
+                                                                            <option value="">{requiresDualStaff ? 'Select Staff (Required)' : 'None (Solo)'}</option>
+                                                                            {artists.map(a => <option key={a.id} value={a.id}>{a.name}{a.specialization ? ` — ${a.specialization}` : ''}</option>)}
+                                                                        </select>
+                                                                        {requiresDualStaff && (
+                                                                            <span style={{ fontSize: '0.72rem', color: '#f59e0b', fontWeight: 600, marginTop: '4px', display: 'block' }}>
+                                                                                <AlertTriangle size={12} style={{ display: 'inline', verticalAlign: '-2px' }} /> Dual topic selected
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                {/* Commission split slider: only for collab tattoo sessions (NOT for Tattoo + Piercing dual-service) */}
+                                                                {formData.secondaryArtistId && formData.serviceType !== 'Consultation' && formData.serviceType !== 'Tattoo + Piercing' && (
+                                                                    <div className="admin-st-953ba7ac">
+                                                                        <label className="admin-st-15b3be7e">Split % (Artist 1/Artist 2):</label>
+                                                                        <input type="number" min="1" max="99" value={formData.commissionSplit} onChange={(e) => setFormData({ ...formData, commissionSplit: clampNumber(e.target.value, 1, 99) })} className="premium-input-v2 admin-st-e070afd8" disabled={selectedAppointment?.status === 'completed'} />
+                                                                        <span className="admin-st-7206c648">/ {100 - (formData.commissionSplit || 0)}</span>
+                                                                    </div>
+                                                                )}
+                                                                {/* Dual-service note: commission is per-service-line */}
+                                                                {formData.secondaryArtistId && formData.serviceType === 'Tattoo + Piercing' && (
+                                                                    <div style={{ marginTop: '8px', padding: '8px 12px', borderRadius: '8px', background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: '0.75rem', color: '#166534', fontWeight: 500 }}>
+                                                                        <CheckCircle size={12} style={{ display: 'inline', verticalAlign: '-2px' }} /> Commission calculated per service line — Tattoo Artist earns from tattoo quote, Piercer earns from piercing quote.
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()}
+
+                                                    {/* ── Artist Referral ── */}
+                                                    {(() => {
+                                                        const isSolo = !formData.secondaryArtistId || String(formData.secondaryArtistId) === '' || String(formData.secondaryArtistId) === 'null';
+                                                        const isCompleted = selectedAppointment?.status === 'completed';
+                                                        const canToggle = isSolo && !isCompleted;
+
+                                                        const handleReferralToggle = (e) => {
+                                                            const newValue = e.target.checked;
+                                                            const newSplit = newValue ? '70% Artist / 30% Studio' : '30% Artist / 70% Studio';
+                                                            showConfirm(
+                                                                newValue ? 'Enable Artist Referral' : 'Remove Artist Referral',
+                                                                `This will change the commission split to ${newSplit}. Proceed?`,
+                                                                () => {
+                                                                    handleInputChange('isReferral', newValue);
+                                                                    setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                                                                }
+                                                            );
+                                                        };
+
+                                                        return (
+                                                            <div className="premium-input-group" style={{ marginTop: '8px' }}>
+                                                                <label className="admin-st-b8618eb2">Commission</label>
+                                                                <label style={{
+                                                                    display: 'flex', alignItems: 'center', gap: '10px',
+                                                                    padding: '10px 14px',
+                                                                    background: '#f8fafc',
+                                                                    border: `1px solid ${formData.isReferral ? 'rgba(16, 185, 129, 0.35)' : '#e2e8f0'}`,
+                                                                    borderRadius: '12px',
+                                                                    cursor: canToggle ? 'pointer' : 'not-allowed',
+                                                                    opacity: canToggle ? 1 : 0.45,
+                                                                    transition: 'all 0.2s ease',
+                                                                    fontSize: '0.88rem', fontWeight: 500,
+                                                                    color: '#1e293b'
+                                                                }}>
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={!!formData.isReferral}
+                                                                        onChange={canToggle ? handleReferralToggle : undefined}
+                                                                        disabled={!canToggle}
+                                                                        style={{ accentColor: '#10b981', width: '16px', height: '16px', cursor: canToggle ? 'pointer' : 'not-allowed' }}
+                                                                    />
+                                                                    <span>Artist Referral</span>
+                                                                    {formData.isReferral && (
+                                                                        <span style={{ marginLeft: 'auto', fontSize: '0.75rem', fontWeight: 600, color: '#10b981' }}>70/30</span>
+                                                                    )}
+                                                                </label>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </div>
+
+                                                <div>
                                                     <label className="premium-input-label">
                                                         <Clock size={14} style={{ marginRight: '6px', verticalAlign: '-2px' }} />
                                                         Booking Date & Time
@@ -2597,87 +2601,88 @@ function AdminAppointments() {
                                                         </div>
                                                     )}
                                                 </div>
-                                        </div>
+                                            </div>
 
-                                        {/* Column 3: Status */}
-                                        <div className="admin-st-d295c8d6" style={{ justifyContent: 'flex-start' }}>
-                                            <div>
-                                                <label className="premium-input-label">Booking Status</label>
+                                            {/* Column 3: Status */}
+                                            <div className="admin-st-d295c8d6" style={{ justifyContent: 'flex-start' }}>
                                                 <div>
-                                                    <div className="premium-input-group">
-                                                        <label className="admin-st-b8618eb2">Booking Status</label>
-                                                        <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="premium-select-v2">
-                                                            <option value="pending">Pending Review</option>
-                                                            <option value="confirmed">Confirmed</option>
-                                                            <option value="completed">Completed</option>
-                                                            <option value="cancelled">Cancelled</option>
-                                                            <option value="rejected">Rejected</option>
-                                                        </select>
-                                                    </div>
-                                                    {formData.status === 'rejected' && (
-                                                        <div className="premium-input-group" style={{ marginTop: '12px' }}>
-                                                            <label className="admin-st-b8618eb2">Rejection Reason</label>
-                                                            <textarea
-                                                                className="premium-input-v2"
-                                                                style={{ minHeight: '80px', resize: 'vertical' }}
-                                                                maxLength="500"
-                                                                value={formData.rejectionReason || ''}
-                                                                onChange={(e) => setFormData({ ...formData, rejectionReason: e.target.value })}
-                                                                placeholder="Please provide a reason for rejecting this appointment (Sent to customer)"
-                                                            />
-                                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8', textAlign: 'right', marginTop: '4px' }}>
-                                                                {formData.rejectionReason ? formData.rejectionReason.length : 0}/500 characters
-                                                            </div>
+                                                    <label className="premium-input-label">Booking Status</label>
+                                                    <div>
+                                                        <div className="premium-input-group">
+                                                            <label className="admin-st-b8618eb2">Booking Status</label>
+                                                            <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="premium-select-v2">
+                                                                <option value="pending">Pending Review</option>
+                                                                <option value="confirmed">Confirmed</option>
+                                                                <option value="in_progress">In Progress (Active)</option>
+                                                                <option value="completed">Completed</option>
+                                                                <option value="cancelled">Cancelled</option>
+                                                                <option value="rejected">Rejected</option>
+                                                            </select>
                                                         </div>
-                                                    )}
+                                                        {formData.status === 'rejected' && (
+                                                            <div className="premium-input-group" style={{ marginTop: '12px' }}>
+                                                                <label className="admin-st-b8618eb2">Rejection Reason</label>
+                                                                <textarea
+                                                                    className="premium-input-v2"
+                                                                    style={{ minHeight: '80px', resize: 'vertical' }}
+                                                                    maxLength="500"
+                                                                    value={formData.rejectionReason || ''}
+                                                                    onChange={(e) => setFormData({ ...formData, rejectionReason: e.target.value })}
+                                                                    placeholder="Please provide a reason for rejecting this appointment (Sent to customer)"
+                                                                />
+                                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', textAlign: 'right', marginTop: '4px' }}>
+                                                                    {formData.rejectionReason ? formData.rejectionReason.length : 0}/500 characters
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
 
-                                        {/* --- PIERCING JEWELRY SELECTIONS (read-only info panel) --- */}
-                                        {(() => {
-                                            let jewels = [];
-                                            try {
-                                                const raw = selectedAppointment?.piercingJewelry || selectedAppointment?.piercing_jewelry;
-                                                if (raw) jewels = typeof raw === 'string' ? JSON.parse(raw) : raw;
-                                            } catch (e) { /* ignore */ }
-                                            if (!Array.isArray(jewels) || jewels.length === 0) return null;
-                                            return (
-                                                <div style={{ gridColumn: '1 / -1', marginTop: '4px', padding: '18px 20px', background: 'linear-gradient(135deg, rgba(190,144,85,0.06) 0%, rgba(190,144,85,0.02) 100%)', border: '1.5px solid rgba(190,144,85,0.25)', borderRadius: '14px' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                                                        <Gem size={18} color="#be9055" />
-                                                        <span style={{ fontWeight: '700', color: '#1e293b', fontSize: '0.9rem' }}>Piercing Jewelry Selections</span>
-                                                        <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '20px', background: 'rgba(190,144,85,0.15)', color: '#be9055', fontWeight: '700' }}>
-                                                            {jewels.filter(j => j.type === 'studio').length > 0
-                                                                ? `${jewels.filter(j => j.type === 'studio').length} studio item(s) — auto-held on confirm`
-                                                                : 'Client brings own jewelry'}
-                                                        </span>
-                                                    </div>
-                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                                        {jewels.map((j, idx) => (
-                                                            <div key={idx} style={{ background: 'white', borderRadius: '10px', padding: '12px 14px', border: `1.5px solid ${j.type === 'studio' ? 'rgba(190,144,85,0.3)' : '#e2e8f0'}`, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '160px' }}>
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                                                                    <Gem size={12} color="#be9055" />
-                                                                    <span style={{ fontSize: '0.78rem', fontWeight: '700', color: '#1e293b' }}>{j.bodyPart}</span>
+                                            {/* --- PIERCING JEWELRY SELECTIONS (read-only info panel) --- */}
+                                            {(() => {
+                                                let jewels = [];
+                                                try {
+                                                    const raw = selectedAppointment?.piercingJewelry || selectedAppointment?.piercing_jewelry;
+                                                    if (raw) jewels = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                                                } catch (e) { /* ignore */ }
+                                                if (!Array.isArray(jewels) || jewels.length === 0) return null;
+                                                return (
+                                                    <div style={{ gridColumn: '1 / -1', marginTop: '4px', padding: '18px 20px', background: 'linear-gradient(135deg, rgba(190,144,85,0.06) 0%, rgba(190,144,85,0.02) 100%)', border: '1.5px solid rgba(190,144,85,0.25)', borderRadius: '14px' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                                                            <Gem size={18} color="#be9055" />
+                                                            <span style={{ fontWeight: '700', color: '#1e293b', fontSize: '0.9rem' }}>Piercing Jewelry Selections</span>
+                                                            <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '20px', background: 'rgba(190,144,85,0.15)', color: '#be9055', fontWeight: '700' }}>
+                                                                {jewels.filter(j => j.type === 'studio').length > 0
+                                                                    ? `${jewels.filter(j => j.type === 'studio').length} studio item(s) — auto-held on confirm`
+                                                                    : 'Client brings own jewelry'}
+                                                            </span>
+                                                        </div>
+                                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                                            {jewels.map((j, idx) => (
+                                                                <div key={idx} style={{ background: 'white', borderRadius: '10px', padding: '12px 14px', border: `1.5px solid ${j.type === 'studio' ? 'rgba(190,144,85,0.3)' : '#e2e8f0'}`, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '160px' }}>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                                                                        <Gem size={12} color="#be9055" />
+                                                                        <span style={{ fontSize: '0.78rem', fontWeight: '700', color: '#1e293b' }}>{j.bodyPart}</span>
+                                                                    </div>
+                                                                    {j.type === 'studio' ? (
+                                                                        <>
+                                                                            <span style={{ fontSize: '0.82rem', color: '#334155', fontWeight: '600' }}>{j.itemName}</span>
+                                                                            <span style={{ fontSize: '0.78rem', color: '#be9055', fontWeight: '700' }}>₱{parseFloat(j.price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                                                                            <span style={{ fontSize: '0.68rem', fontWeight: '700', marginTop: '2px', padding: '2px 6px', borderRadius: '6px', alignSelf: 'flex-start', background: ['confirmed', 'in_progress', 'completed'].includes(selectedAppointment?.status) ? '#f0fdf4' : '#fef9f2', color: ['confirmed', 'in_progress', 'completed'].includes(selectedAppointment?.status) ? '#166534' : '#92400e' }}>
+                                                                                {['confirmed', 'in_progress', 'completed'].includes(selectedAppointment?.status) ? 'Stock Held' : 'Pending Hold'}
+                                                                            </span>
+                                                                        </>
+                                                                    ) : (
+                                                                        <span style={{ fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' }}>Client will bring own jewelry</span>
+                                                                    )}
                                                                 </div>
-                                                                {j.type === 'studio' ? (
-                                                                    <>
-                                                                        <span style={{ fontSize: '0.82rem', color: '#334155', fontWeight: '600' }}>{j.itemName}</span>
-                                                                        <span style={{ fontSize: '0.78rem', color: '#be9055', fontWeight: '700' }}>₱{parseFloat(j.price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
-                                                                        <span style={{ fontSize: '0.68rem', fontWeight: '700', marginTop: '2px', padding: '2px 6px', borderRadius: '6px', alignSelf: 'flex-start', background: ['confirmed','in_progress','completed'].includes(selectedAppointment?.status) ? '#f0fdf4' : '#fef9f2', color: ['confirmed','in_progress','completed'].includes(selectedAppointment?.status) ? '#166534' : '#92400e' }}>
-                                                                            {['confirmed','in_progress','completed'].includes(selectedAppointment?.status) ? 'Stock Held' : 'Pending Hold'}
-                                                                        </span>
-                                                                    </>
-                                                                ) : (
-                                                                    <span style={{ fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' }}>Client will bring own jewelry</span>
-                                                                )}
-                                                            </div>
-                                                        ))}
+                                                            ))}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            );
-                                        })()}
-                                    </div>
+                                                );
+                                            })()}
+                                        </div>
                                     </>
                                 )}
 
@@ -2693,33 +2698,33 @@ function AdminAppointments() {
                                                     <>
                                                         <div className="form-group">
                                                             <label className={`admin-st-6ad161f7 ${errors.tattooPrice ? 'text-red-500' : ''}`}><Syringe size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /> Tattoo Quote (₱) *</label>
-                                                            <input 
-                                                                type="text" 
+                                                            <input
+                                                                type="text"
                                                                 inputMode="numeric"
-                                                                value={formData.tattooPrice === 0 || formData.tattooPrice === '0' ? '' : formData.tattooPrice} 
+                                                                value={formData.tattooPrice === 0 || formData.tattooPrice === '0' ? '' : formData.tattooPrice}
                                                                 onChange={(e) => {
                                                                     const raw = e.target.value.replace(/[^0-9]/g, '');
                                                                     const val = raw === '' ? 0 : Number(raw);
                                                                     setFormData(prev => ({ ...prev, tattooPrice: val, price: val + (Number(prev.piercingPrice) || 0) }));
-                                                                }} 
+                                                                }}
                                                                 placeholder="e.g. 5000"
-                                                                className={`premium-input-v2 admin-st-1a49bbe7 ${errors.tattooPrice ? 'border-red-500 bg-red-50' : ''}`} 
+                                                                className={`premium-input-v2 admin-st-1a49bbe7 ${errors.tattooPrice ? 'border-red-500 bg-red-50' : ''}`}
                                                             />
                                                             {errors.tattooPrice && <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.tattooPrice}</span>}
                                                         </div>
                                                         <div className="form-group">
                                                             <label className={`admin-st-6ad161f7 ${errors.piercingPrice ? 'text-red-500' : ''}`}><Wrench size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /> Piercing Quote (₱) *</label>
-                                                            <input 
-                                                                type="text" 
+                                                            <input
+                                                                type="text"
                                                                 inputMode="numeric"
-                                                                value={formData.piercingPrice === 0 || formData.piercingPrice === '0' ? '' : formData.piercingPrice} 
+                                                                value={formData.piercingPrice === 0 || formData.piercingPrice === '0' ? '' : formData.piercingPrice}
                                                                 onChange={(e) => {
                                                                     const raw = e.target.value.replace(/[^0-9]/g, '');
                                                                     const val = raw === '' ? 0 : Number(raw);
                                                                     setFormData(prev => ({ ...prev, piercingPrice: val, price: (Number(prev.tattooPrice) || 0) + val }));
-                                                                }} 
+                                                                }}
                                                                 placeholder="e.g. 2500"
-                                                                className={`premium-input-v2 admin-st-1a49bbe7 ${errors.piercingPrice ? 'border-red-500 bg-red-50' : ''}`} 
+                                                                className={`premium-input-v2 admin-st-1a49bbe7 ${errors.piercingPrice ? 'border-red-500 bg-red-50' : ''}`}
                                                             />
                                                             {errors.piercingPrice && <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.piercingPrice}</span>}
                                                         </div>
@@ -2746,16 +2751,16 @@ function AdminAppointments() {
                                                 ) : (
                                                     <div className="form-group">
                                                         <label className={`admin-st-6ad161f7 ${errors.price ? 'text-red-500' : ''}`}>Total Quote (₱) *</label>
-                                                        <input 
-                                                            type="text" 
+                                                        <input
+                                                            type="text"
                                                             inputMode="numeric"
-                                                            value={formData.price === 0 || formData.price === '0' ? '' : formData.price} 
+                                                            value={formData.price === 0 || formData.price === '0' ? '' : formData.price}
                                                             onChange={(e) => {
                                                                 const raw = e.target.value.replace(/[^0-9]/g, '');
                                                                 handleInputChange('price', raw === '' ? 0 : Number(raw));
-                                                            }} 
+                                                            }}
                                                             placeholder="e.g. 5000"
-                                                            className={`premium-input-v2 admin-st-1a49bbe7 ${errors.price ? 'border-red-500 bg-red-50' : ''}`} 
+                                                            className={`premium-input-v2 admin-st-1a49bbe7 ${errors.price ? 'border-red-500 bg-red-50' : ''}`}
                                                         />
                                                         {errors.price && <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{errors.price}</span>}
                                                     </div>
@@ -3078,24 +3083,24 @@ function AdminAppointments() {
                                                     Project Session History
                                                 </h4>
                                                 {(selectedAppointment && formData.designTitle) ? (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                    {appointments.filter(a => a.customer_id === selectedAppointment.customer_id && a.design_title === formData.designTitle)
-                                                        .sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date))
-                                                        .map((session, idx) => (
-                                                            <div key={session.id} style={{ display: 'flex', flexDirection: 'column', padding: '10px 14px', borderRadius: '8px', background: session.id === selectedAppointment.id ? '#eff6ff' : '#f8fafc', border: `1px solid ${session.id === selectedAppointment.id ? '#bfdbfe' : '#e2e8f0'}` }}>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                                                    <span style={{ fontWeight: session.id === selectedAppointment.id ? '700' : '600', color: session.id === selectedAppointment.id ? '#2563eb' : '#475569', fontSize: '0.95rem' }}>Session {idx + 1}</span>
-                                                                    <span className={`badge status-${session.status.toLowerCase() === 'completed' ? 'active' : session.status.toLowerCase() === 'pending' ? 'pending' : 'expired'}`} style={{ fontSize: '0.7rem', padding: '2px 6px' }}>
-                                                                        {session.status}
-                                                                    </span>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                        {appointments.filter(a => a.customer_id === selectedAppointment.customer_id && a.design_title === formData.designTitle)
+                                                            .sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date))
+                                                            .map((session, idx) => (
+                                                                <div key={session.id} style={{ display: 'flex', flexDirection: 'column', padding: '10px 14px', borderRadius: '8px', background: session.id === selectedAppointment.id ? '#eff6ff' : '#f8fafc', border: `1px solid ${session.id === selectedAppointment.id ? '#bfdbfe' : '#e2e8f0'}` }}>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                                                        <span style={{ fontWeight: session.id === selectedAppointment.id ? '700' : '600', color: session.id === selectedAppointment.id ? '#2563eb' : '#475569', fontSize: '0.95rem' }}>Session {idx + 1}</span>
+                                                                        <span className={`badge status-${session.status.toLowerCase() === 'completed' ? 'active' : session.status.toLowerCase() === 'pending' ? 'pending' : 'expired'}`} style={{ fontSize: '0.7rem', padding: '2px 6px' }}>
+                                                                            {session.status}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                        <Calendar size={12} />
+                                                                        {new Date(session.appointment_date).toLocaleDateString()} at {session.start_time}
+                                                                    </div>
                                                                 </div>
-                                                                <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                    <Calendar size={12} />
-                                                                    {new Date(session.appointment_date).toLocaleDateString()} at {session.start_time}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                </div>
+                                                            ))}
+                                                    </div>
                                                 ) : (
                                                     <div className="admin-st-28e6a799">
                                                         <Clock size={40} className="admin-st-04217666" style={{ marginBottom: '8px', opacity: 0.5 }} />
@@ -3176,21 +3181,21 @@ function AdminAppointments() {
                                         {selectedAppointment && (
                                             <>
                                                 {formData.status === 'confirmed' && (
-                                                <button
-                                                    type="button"
-                                                    className="btn"
-                                                    onClick={() => {
-                                                        setRescheduleModal({
-                                                            isOpen: true,
-                                                            date: formData.date || '',
-                                                            time: formData.time || '',
-                                                            reason: ''
-                                                        });
-                                                    }}
-                                                    style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#fef3c7', color: '#92400e', borderColor: '#fcd34d' }}
-                                                >
-                                                    <Calendar size={16} /> Reschedule
-                                                </button>
+                                                    <button
+                                                        type="button"
+                                                        className="btn"
+                                                        onClick={() => {
+                                                            setRescheduleModal({
+                                                                isOpen: true,
+                                                                date: formData.date || '',
+                                                                time: formData.time || '',
+                                                                reason: ''
+                                                            });
+                                                        }}
+                                                        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#fef3c7', color: '#92400e', borderColor: '#fcd34d' }}
+                                                    >
+                                                        <Calendar size={16} /> Reschedule
+                                                    </button>
                                                 )}
                                                 <button
                                                     type="button"
@@ -3271,7 +3276,7 @@ function AdminAppointments() {
 
             </div>
 
-            
+
             {/* Reschedule Modal */}
             {rescheduleModal.isOpen && (
                 <div className="modal-overlay admin-st-032d51d4" onClick={() => setRescheduleModal({ ...rescheduleModal, isOpen: false })}>
