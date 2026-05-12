@@ -1070,7 +1070,7 @@ function AdminUsers() {
                                             <td data-label="ID">#{user.id}</td>
                                             <td data-label="Name">{user.name}</td>
                                             <td data-label="Email">{user.email}</td>
-                                            <td data-label="Phone">{user.phone || '-'}</td>
+                                            <td data-label="Phone">{user.phone ? user.phone.replace(/^(\+63)0+/, '$1') : '-'}</td>
                                             <td data-label="Role"><span className={`badge role-${user.user_type}`}>{user.user_type}</span></td>
                                             <td data-label="Status">
                                                 <span className={`badge status-${user.is_deleted ? 'deleted' : (user.account_status || 'active')}`}>

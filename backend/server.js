@@ -245,6 +245,17 @@ db.getConnection((err, connection) => {
           }
         });
 
+        // MIGRATION: Sanitize legacy phone numbers that contain a leading zero after +63
+        // e.g., +630927... → +63927...
+        db.query(
+          "UPDATE users SET phone = CONCAT('+63', SUBSTRING(phone, 5)) WHERE phone LIKE '+630%'",
+          (err, result) => {
+            if (!err && result && result.affectedRows > 0) {
+              console.log(`[MIGRATE] Sanitized ${result.affectedRows} phone number(s) in users table (removed leading zero after +63)`);
+            }
+          }
+        );
+
         // MIGRATION: Add lockout tracking columns if they don't exist
         db.query("SHOW COLUMNS FROM users LIKE 'failed_login_attempts'", (err, results) => {
           if (!err && results.length === 0) {
@@ -313,6 +324,16 @@ db.getConnection((err, connection) => {
           db.query("ALTER TABLE artists ADD COLUMN phone VARCHAR(20)");
         }
       });
+
+      // MIGRATION: Sanitize legacy phone numbers in artists table
+      db.query(
+        "UPDATE artists SET phone = CONCAT('+63', SUBSTRING(phone, 5)) WHERE phone LIKE '+630%'",
+        (err, result) => {
+          if (!err && result && result.affectedRows > 0) {
+            console.log(`[MIGRATE] Sanitized ${result.affectedRows} phone number(s) in artists table`);
+          }
+        }
+      );
 
       // MIGRATION: Check if 'studio_name' column exists
       db.query("SHOW COLUMNS FROM artists LIKE 'studio_name'", (err, results) => {
@@ -441,6 +462,16 @@ db.getConnection((err, connection) => {
           db.query("ALTER TABLE customers ADD COLUMN phone VARCHAR(20) NULL, ADD COLUMN location VARCHAR(255) NULL, ADD COLUMN notes TEXT NULL");
         }
       });
+
+      // MIGRATION: Sanitize legacy phone numbers in customers table
+      db.query(
+        "UPDATE customers SET phone = CONCAT('+63', SUBSTRING(phone, 5)) WHERE phone LIKE '+630%'",
+        (err, result) => {
+          if (!err && result && result.affectedRows > 0) {
+            console.log(`[MIGRATE] Sanitized ${result.affectedRows} phone number(s) in customers table`);
+          }
+        }
+      );
 
       // MIGRATION: Check if 'profile_image' column exists in customers
       db.query("SHOW COLUMNS FROM customers LIKE 'profile_image'", (err, results) => {
