@@ -171,6 +171,12 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
     // ═══ Real-time slot conflict detection via Socket.IO ═══
     // Listens for slot_booked broadcasts from the backend so that Laptop 2
     // instantly knows when Laptop 1 just claimed the same date+time slot.
+    const stepRef = useRef(step);
+    useEffect(() => { stepRef.current = step; }, [step]);
+
+    const loadingRef = useRef(loading);
+    useEffect(() => { loadingRef.current = loading; }, [loading]);
+
     useEffect(() => {
         const socket = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
 
@@ -178,6 +184,11 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
             setFormData(prev => {
                 // Only trigger if the user currently has this exact slot selected
                 // and hasn't already submitted (step < 5)
+                // We use stepRef and loadingRef to prevent showing the conflict modal for our own successful booking.
+                if (loadingRef.current || stepRef.current >= 6) {
+                    return prev;
+                }
+
                 if (prev.date === bookedDate && prev.time === bookedTime) {
                     // Refresh the calendar so the newly blocked slot is reflected visually
                     fetchAvailability();

@@ -538,11 +538,13 @@ function ArtistSessions() {
                     try {
                         const payRes = await Axios.get(`${API_URL}/api/appointments/${activeSession.id}/payment-status`);
                         if (payRes.data.success) {
+                            const payStatus = (payRes.data.payment_status || '').toLowerCase();
                             const price = Number(payRes.data.price || 0);
                             const totalPaid = Number(payRes.data.totalPaid || 0);
                             const isUnquoted = price <= 0;
                             const hasOutstandingBalance = price > 0 && totalPaid < price;
-                            if (isUnquoted || hasOutstandingBalance) {
+                            // Only show the banner if there is genuinely an issue (not when fully paid)
+                            if (payStatus !== 'paid' && (isUnquoted || hasOutstandingBalance)) {
                                 setPaymentInfo({ hasOutstandingBalance, remaining: price - totalPaid, isUnquoted });
                             }
                         }

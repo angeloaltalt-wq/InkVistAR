@@ -7759,7 +7759,10 @@ app.get('/api/appointments/:id/payment-status', async (req, res) => {
   try {
     // 1. Check DB first
     db.query(`
-      SELECT ap.payment_status, ap.status, ap.customer_id, ap.artist_id, ap.appointment_date, ap.start_time, ap.booking_code, u.name as customer_name, u.email as cx_email 
+      SELECT ap.payment_status, ap.status, ap.customer_id, ap.artist_id, ap.appointment_date, ap.start_time, ap.booking_code, ap.price,
+        COALESCE(ap.manual_paid_amount, 0) as manual_paid_amount,
+        (SELECT COALESCE(SUM(p.amount), 0) FROM payments p WHERE p.appointment_id = ap.id AND p.status = 'paid') as online_paid_centavos,
+        u.name as customer_name, u.email as cx_email 
       FROM appointments ap 
       JOIN users u ON ap.customer_id = u.id 
       WHERE ap.id = ?`, [appointmentId], async (err, results) => {
@@ -7769,6 +7772,12 @@ app.get('/api/appointments/:id/payment-status', async (req, res) => {
       let appt = results[0];
       let currentPaymentStatus = appt.payment_status;
       let currentAptStatus = appt.status;
+
+      // Compute price and totalPaid for the frontend banner
+      const apptPrice = Number(appt.price || 0);
+      const onlinePaidPesos = Number(appt.online_paid_centavos || 0) / 100;
+      const manualPaidPesos = Number(appt.manual_paid_amount || 0);
+      const computedTotalPaid = onlinePaidPesos + manualPaidPesos;
 
       if (currentPaymentStatus === 'paid') {
         // Payment already confirmed — but admin notifications may not have been sent
@@ -7790,13 +7799,13 @@ app.get('/api/appointments/:id/payment-status', async (req, res) => {
             });
           }
         });
-        return res.json({ success: true, payment_status: 'paid', booking_code: appt.booking_code || null });
+        return res.json({ success: true, payment_status: 'paid', booking_code: appt.booking_code || null, price: apptPrice, totalPaid: computedTotalPaid });
       }
 
       // 2. If not paid, check if we have an active checkout session
       db.query('SELECT session_id, amount FROM payments WHERE appointment_id = ? ORDER BY created_at DESC LIMIT 1', [appointmentId], async (pErr, pResults) => {
         if (pErr || pResults.length === 0 || !pResults[0].session_id) {
-          return res.json({ success: true, payment_status: currentPaymentStatus, booking_code: appt.booking_code || null });
+          return res.json({ success: true, payment_status: currentPaymentStatus, booking_code: appt.booking_code || null, price: apptPrice, totalPaid: computedTotalPaid });
         }
 
         const sessionId = pResults[0].session_id;
@@ -7879,7 +7888,7 @@ app.get('/api/appointments/:id/payment-status', async (req, res) => {
               if (updErr) console.error(`[ERROR] Failed to update payments record to paid for ${sessionId}:`, updErr.message);
             });
 
-            return res.json({ success: true, payment_status: newPaymentStatus, booking_code: appt.booking_code || null });
+            return res.json({ success: true, payment_status: newPaymentStatus, booking_code: appt.booking_code || null, price: apptPrice, totalPaid: computedTotalPaid });
           } else {
             console.log(`[INFO] Polling result: Payment is still NOT detected as paid for Appt ${appointmentId}`);
           }
@@ -7887,7 +7896,7 @@ app.get('/api/appointments/:id/payment-status', async (req, res) => {
           console.error('[ERROR] Polling PayMongo API error:', pollErr.message);
         }
 
-        res.json({ success: true, payment_status: currentPaymentStatus, booking_code: appt.booking_code || null });
+        res.json({ success: true, payment_status: currentPaymentStatus, booking_code: appt.booking_code || null, price: apptPrice, totalPaid: computedTotalPaid });
       });
     });
   } catch (error) {
