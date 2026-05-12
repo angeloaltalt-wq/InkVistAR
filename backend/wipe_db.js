@@ -23,6 +23,7 @@ async function wipeDatabase() {
             'appointments',
             'payments',
             'invoices',
+            'payouts',
             'session_materials',
             'audit_logs',
             'slot_locks',

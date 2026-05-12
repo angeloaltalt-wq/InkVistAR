@@ -4838,6 +4838,19 @@ app.post('/api/admin/appointments', async (req, res) => {
     return res.status(400).json({ success: false, message: 'customerId, artistId, and date are required.' });
   }
 
+  // Sanitize waiverAcceptedAt to MySQL DATETIME format
+  let sanitizedWaiverAt = null;
+  if (waiverAcceptedAt) {
+    try {
+      const d = new Date(waiverAcceptedAt);
+      if (!isNaN(d.getTime())) {
+        sanitizedWaiverAt = d.toISOString().slice(0, 19).replace('T', ' ');
+      }
+    } catch (e) {
+      console.warn('[WARN] Invalid waiver_accepted_at format:', waiverAcceptedAt);
+    }
+  }
+
   // ═══ Rolling Booking Limit: max 2 pending appointments per user/device ═══
   if (isFromWizard || (serviceType && customerId)) {
     const limitCheck = await new Promise((resolve) => {
@@ -4942,7 +4955,7 @@ app.post('/api/admin/appointments', async (req, res) => {
             (customer_id, artist_id, secondary_artist_id, commission_split, appointment_date, start_time, design_title, service_type, status, notes, price, tattoo_price, piercing_price, manual_paid_amount, payment_status, is_deleted, before_photo, booking_code, device_id, consultation_method, guest_email, guest_phone, waiver_accepted_at, piercing_jewelry, is_guest_placeholder)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 0, ?, 'PENDING', ?, ?, ?, ?, ?, ?, ?)
         `;
-        conn.query(query, [customerId, artistId, secondaryArtistId || null, commissionSplit || 50, date, startTime || null, combinedTitle, serviceType || 'General Session', finalStatus, notes || '', finalPrice, sanitizedTattooPrice, sanitizedPiercingPrice, manualPaidAmount || 0, referenceImage || null, deviceId || null, consultationMethod || null, guestEmail || null, guestPhone || null, waiverAcceptedAt || null, sanitizedJewelry || null, isGuestPlaceholder ? 1 : 0], (err, result) => {
+        conn.query(query, [customerId, artistId, secondaryArtistId || null, commissionSplit || 50, date, startTime || null, combinedTitle, serviceType || 'General Session', finalStatus, notes || '', finalPrice, sanitizedTattooPrice, sanitizedPiercingPrice, manualPaidAmount || 0, referenceImage || null, deviceId || null, consultationMethod || null, guestEmail || null, guestPhone || null, sanitizedWaiverAt, sanitizedJewelry || null, isGuestPlaceholder ? 1 : 0], (err, result) => {
           if (err) {
             // Graceful fallback if waiver_accepted_at column doesn't exist yet
             if (err.code === 'ER_BAD_FIELD_ERROR' && err.message.includes('waiver_accepted_at')) {
@@ -6935,7 +6948,7 @@ app.put('/api/appointments/:id/status', (req, res) => {
         }
 
         // ── SESSION COMPLETED ──
-      } else if (status === 'completed') {
+      } else if (status === 'completed' && appointment.status !== 'completed') {
         if (isFullyComplete || isFullyComplete === undefined) {
           createNotification(appointment.customer_id, 'Tattoo Journey Complete!', `Your session for "${designTitle}" is finished! We hope you love your new ink.`, 'appointment_completed', id);
 
