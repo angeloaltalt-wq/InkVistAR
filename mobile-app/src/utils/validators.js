@@ -28,14 +28,25 @@ export const isValidEmail = (email) => {
 export const sanitizePhone = (phone) => {
   if (!phone) return '';
   // Remove anything that isn't a digit, plus, or space
-  return String(phone).replace(/[^\d+\s-]/g, '').trim();
+  let sanitized = String(phone).replace(/[^\d+\s-]/g, '').trim();
+  // Strip leading zeros from the local number portion
+  sanitized = sanitized.replace(/^0+/, '');
+  return sanitized;
 };
 
 export const isValidPhone = (phone) => {
   const sanitized = sanitizePhone(phone);
-  // Phone should be between 7 and 15 digits
-  const digitCount = sanitized.replace(/\D/g, '').length;
-  return digitCount >= 7 && digitCount <= 15;
+  if (!sanitized) return true; // Phone is optional in some contexts
+  // For PH numbers (no +prefix), must be 10 digits starting with 9
+  const digitsOnly = sanitized.replace(/\D/g, '');
+  if (digitsOnly.length === 10 && digitsOnly.startsWith('9')) return true;
+  // For international format (+63XXXXXXXXXX)
+  if (sanitized.startsWith('+63')) {
+    const local = sanitized.replace('+63', '').replace(/\D/g, '');
+    return local.length === 10 && local.startsWith('9');
+  }
+  // Generic fallback for other country codes
+  return digitsOnly.length >= 7 && digitsOnly.length <= 15;
 };
 
 export const sanitizeNumeric = (val, allowDecimal = false) => {

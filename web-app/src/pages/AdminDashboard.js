@@ -162,8 +162,8 @@ function AdminDashboard() {
                         last7Days[aptDateStr]++;
                     }
 
-                    // Revenue Calculation
-                    if (apt.status !== 'cancelled') {
+                    // Revenue Calculation (exclude guest placeholder bookings from admin's personal stats)
+                    if (apt.status !== 'cancelled' && !apt.is_guest_placeholder) {
                         const paidTotal = Number(apt.total_paid) || 0;
                         totalRev += paidTotal;
                         if (aptDateStr === todayStr) dailyRev += paidTotal;
@@ -728,7 +728,18 @@ function AdminDashboard() {
                                             <tbody>
                                                 {displayedAppointments.length > 0 ? displayedAppointments.map((appointment) => (
                                                     <tr key={appointment.id}>
-                                                        <td data-label="Client">{appointment.client_name}</td>
+                                                        <td data-label="Client">
+                                                            {appointment.client_name}
+                                                            {appointment.is_guest_placeholder ? (
+                                                                <span style={{
+                                                                    display: 'inline-block', marginLeft: '6px', padding: '1px 7px',
+                                                                    fontSize: '0.65rem', fontWeight: '700', borderRadius: '20px',
+                                                                    background: 'linear-gradient(135deg, #f59e0b22, #f59e0b11)',
+                                                                    color: '#b45309', border: '1px solid #f59e0b44',
+                                                                    verticalAlign: 'middle', letterSpacing: '0.02em'
+                                                                }} title="This booking was made by an unregistered guest">GUEST</span>
+                                                            ) : null}
+                                                        </td>
                                                         <td data-label="Staff">{appointment.artist_name}</td>
                                                         <td data-label="Service">
                                                             <span className="badge-v2 pending admin-st-606efc58">

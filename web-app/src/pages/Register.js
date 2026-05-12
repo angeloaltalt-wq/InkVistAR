@@ -120,7 +120,7 @@ function Register() {
     } else if (name === 'email') {
       sanitizedValue = value.replace(/\s/g, '').slice(0, 254); // No spaces in email
     } else if (name === 'phone') {
-      sanitizedValue = filterDigits(value).replace(/^0+/, '').slice(0, 11); // Only numbers, no leading 0, max 11
+      sanitizedValue = filterDigits(value).replace(/^0+/, '').slice(0, 10); // Only numbers, no leading 0, max 10
     } else if (name === 'password' || name === 'confirmPassword') {
       sanitizedValue = value.slice(0, 128);
     } else {
@@ -169,8 +169,9 @@ function Register() {
 
     if (name === 'phone') {
       if (!value) errorMsg = "Phone number is required";
-      else if (value.length < 10) errorMsg = "Phone number must be 10-11 digits";
-      else if (value.length > 11) errorMsg = "Phone number must be 10-11 digits";
+      else if (formData.countryCode === '+63' && !value.startsWith('9')) errorMsg = "PH numbers must start with 9 (e.g. 9171234567)";
+      else if (formData.countryCode === '+63' && value.length !== 10) errorMsg = "Phone number must be exactly 10 digits (e.g. 9171234567)";
+      else if (formData.countryCode !== '+63' && value.length < 7) errorMsg = "Phone number is too short";
     }
 
     setErrors(prev => ({ ...prev, [name]: errorMsg }));
@@ -300,73 +301,77 @@ function Register() {
                 style={{ borderRadius: '10px' }}
               />
               <div style={{ flex: 1, position: 'relative' }}>
-                <input type="tel" name="phone" className={`form-input ${errors.phone ? 'error' : ''}`} style={{ width: '100%' }} value={formData.phone} onChange={handleChange} placeholder="Phone Number" maxLength={11} />
+                <input type="tel" name="phone" className={`form-input ${errors.phone ? 'error' : ''}`} style={{ width: '100%' }} value={formData.phone} onChange={handleChange} placeholder="9XXXXXXXXX" maxLength={10} />
                 <span style={{ position: 'absolute', right: '12px', top: '14px', color: '#ef4444', fontSize: '1.1rem', lineHeight: '1', pointerEvents: 'none' }}>*</span>
               </div>
             </div>
             {errors.phone && <small style={{ color: '#ef4444', display: 'block', marginTop: '4px', fontSize: '0.8rem' }}>{errors.phone}</small>}
             <div className="form-row" style={{ display: 'flex', gap: '1rem' }}>
-              <div className="form-group" style={{ flex: 1, position: 'relative' }}>
-                <input type={showPassword ? "text" : "password"} name="password" className={`form-input ${errors.password ? 'error' : ''}`} placeholder="Create Password" value={formData.password} onChange={handleChange} onFocus={() => setPasswordFocused(true)} onBlur={(e) => { handleBlur(e); if (!formData.password) setPasswordFocused(false); }} onPaste={(e) => e.preventDefault()} maxLength={128} />
-                <span style={{ position: 'absolute', right: '40px', top: '14px', color: '#ef4444', fontSize: '1.1rem', lineHeight: '1', pointerEvents: 'none' }}>*</span>
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '4px',
-                    color: '#64748b'
-                  }}
-                >
-                  {showPassword ? (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                      <line x1="1" y1="1" x2="23" y2="23"></line>
-                    </svg>
-                  ) : (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                      <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                  )}
-                </button>
+              <div className="form-group" style={{ flex: 1 }}>
+                <div style={{ position: 'relative' }}>
+                  <input type={showPassword ? "text" : "password"} name="password" className={`form-input ${errors.password ? 'error' : ''}`} placeholder="Create Password" value={formData.password} onChange={handleChange} onFocus={() => setPasswordFocused(true)} onBlur={(e) => { handleBlur(e); if (!formData.password) setPasswordFocused(false); }} onPaste={(e) => e.preventDefault()} maxLength={128} />
+                  <span style={{ position: 'absolute', right: '40px', top: '14px', color: '#ef4444', fontSize: '1.1rem', lineHeight: '1', pointerEvents: 'none' }}>*</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      color: '#64748b'
+                    }}
+                  >
+                    {showPassword ? (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                      </svg>
+                    ) : (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </div>
-              <div className="form-group" style={{ flex: 1, position: 'relative' }}>
-                <input type={showConfirmPassword ? "text" : "password"} name="confirmPassword" className={`form-input ${errors.confirmPassword ? 'error' : ''}`} placeholder="Confirm Password" value={formData.confirmPassword} onChange={handleChange} onBlur={handleBlur} onPaste={(e) => e.preventDefault()} maxLength={128} />
-                <span style={{ position: 'absolute', right: '40px', top: '14px', color: '#ef4444', fontSize: '1.1rem', lineHeight: '1', pointerEvents: 'none' }}>*</span>
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '4px',
-                    color: '#64748b'
-                  }}
-                >
-                  {showConfirmPassword ? (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                      <line x1="1" y1="1" x2="23" y2="23"></line>
-                    </svg>
-                  ) : (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                      <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                  )}
-                </button>
+              <div className="form-group" style={{ flex: 1 }}>
+                <div style={{ position: 'relative' }}>
+                  <input type={showConfirmPassword ? "text" : "password"} name="confirmPassword" className={`form-input ${errors.confirmPassword ? 'error' : ''}`} placeholder="Confirm Password" value={formData.confirmPassword} onChange={handleChange} onBlur={handleBlur} onPaste={(e) => e.preventDefault()} maxLength={128} />
+                  <span style={{ position: 'absolute', right: '40px', top: '14px', color: '#ef4444', fontSize: '1.1rem', lineHeight: '1', pointerEvents: 'none' }}>*</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      color: '#64748b'
+                    }}
+                  >
+                    {showConfirmPassword ? (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                      </svg>
+                    ) : (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    )}
+                  </button>
+                </div>
                 {errors.confirmPassword && <small style={{ color: '#ef4444', display: 'block', marginTop: '4px', fontSize: '0.8rem' }}>{errors.confirmPassword}</small>}
               </div>
             </div>
@@ -377,7 +382,7 @@ function Register() {
 
 
             {/* Health & Safety — Optional Collapsible Section */}
-            <div style={{ margin: '4px 0 16px', border: '1px solid rgba(190,144,85,0.25)', borderRadius: '12px', overflow: 'hidden', transition: 'all 0.3s ease' }}>
+            <div style={{ margin: '4px 0 16px', border: '1px solid #ddd', borderRadius: '10px', overflow: 'hidden', transition: 'all 0.3s ease', backgroundColor: 'white' }}>
               <button
                 type="button"
                 id="health-section-toggle"
@@ -387,43 +392,42 @@ function Register() {
                 title="Optionally disclose health conditions or allergens relevant to your tattoo session"
                 style={{
                   width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '12px 16px', background: 'rgba(190,144,85,0.08)', border: 'none',
-                  cursor: 'pointer', color: '#be9055', fontWeight: 600, fontSize: '0.85rem', textAlign: 'left'
+                  padding: '14px 16px', background: '#fafafa', border: 'none', borderBottom: showHealthSection ? '1px solid #eee' : 'none',
+                  cursor: 'pointer', color: '#333', fontWeight: 600, fontSize: '0.95rem', textAlign: 'left'
                 }}
               >
-                <span>Health &amp; Safety Information <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: '0.78rem' }}>(Optional — helps your artist prepare)</span></span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                <span>Health &amp; Safety Information <span style={{ fontWeight: 400, color: '#666', fontSize: '0.8rem' }}>(Optional)</span></span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.5"
                   style={{ transform: showHealthSection ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.25s ease', flexShrink: 0 }}>
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
               </button>
 
               {showHealthSection && (
-                <div id="health-section-body" style={{ padding: '16px', background: 'rgba(255,255,255,0.03)' }}>
-                  <p style={{ margin: '0 0 12px', fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.6 }}>
+                <div id="health-section-body" style={{ padding: '16px', background: '#ffffff' }}>
+                  <p style={{ margin: '0 0 16px', fontSize: '0.85rem', color: '#666', lineHeight: 1.5 }}>
                     This information is private, shared only with your assigned artist to ensure a safe session.
-                    Disclosing it now saves time during your consultation.
                   </p>
 
                   {/* Health Conditions */}
-                  <p style={{ margin: '0 0 8px', fontSize: '0.8rem', fontWeight: 600, color: '#e2e8f0' }}>Known Health Conditions</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+                  <p style={{ margin: '0 0 8px', fontSize: '0.85rem', fontWeight: 600, color: '#333' }}>Known Health Conditions</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
                     {PRESET_CONDITIONS.map(tag => (
                       <button
                         key={tag} type="button"
                         title={`Toggle: ${tag}`}
                         onClick={() => toggleTag(selectedConditions, setSelectedConditions, tag)}
                         style={{
-                          padding: '5px 12px', borderRadius: '20px', fontSize: '0.78rem', cursor: 'pointer',
-                          border: selectedConditions.includes(tag) ? '1.5px solid #be9055' : '1.5px solid rgba(255,255,255,0.12)',
-                          background: selectedConditions.includes(tag) ? 'rgba(190,144,85,0.18)' : 'transparent',
-                          color: selectedConditions.includes(tag) ? '#be9055' : '#94a3b8',
-                          transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)', fontWeight: selectedConditions.includes(tag) ? 600 : 400
+                          padding: '6px 14px', borderRadius: '20px', fontSize: '0.8rem', cursor: 'pointer',
+                          border: selectedConditions.includes(tag) ? '1px solid #be9055' : '1px solid #ddd',
+                          background: selectedConditions.includes(tag) ? 'rgba(190,144,85,0.1)' : '#fff',
+                          color: selectedConditions.includes(tag) ? '#be9055' : '#555',
+                          transition: 'all 0.2s ease', fontWeight: selectedConditions.includes(tag) ? 600 : 400
                         }}
                       >{tag}</button>
                     ))}
                   </div>
-                  <div style={{ display: 'flex', gap: '8px', marginBottom: '18px' }}>
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
                     <input
                       type="text" id="custom-condition-input"
                       placeholder="Other condition..."
@@ -431,34 +435,34 @@ function Register() {
                       onChange={e => setCustomCondition(e.target.value.replace(/[<>]/g, '').slice(0, 60))}
                       onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag(selectedConditions, setSelectedConditions, customCondition, setCustomCondition); } }}
                       aria-label="Add a custom health condition"
-                      style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '0.82rem' }}
+                      style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid #ddd', background: '#fff', color: '#333', fontSize: '0.9rem' }}
                     />
                     <button type="button" onClick={() => addCustomTag(selectedConditions, setSelectedConditions, customCondition, setCustomCondition)}
                       title="Add custom condition"
-                      style={{ padding: '8px 14px', borderRadius: '8px', border: '1.5px solid rgba(190,144,85,0.4)', background: 'rgba(190,144,85,0.1)', color: '#be9055', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}>Add</button>
+                      style={{ padding: '0 16px', borderRadius: '8px', border: 'none', background: '#be9055', color: '#fff', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>Add</button>
                   </div>
                   {selectedConditions.filter(c => !PRESET_CONDITIONS.includes(c)).map(c => (
-                    <span key={c} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', margin: '0 4px 6px 0', padding: '4px 10px', borderRadius: '20px', fontSize: '0.78rem', background: 'rgba(190,144,85,0.18)', border: '1.5px solid #be9055', color: '#be9055' }}>
+                    <span key={c} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', margin: '0 6px 8px 0', padding: '5px 12px', borderRadius: '20px', fontSize: '0.8rem', background: 'rgba(190,144,85,0.1)', border: '1px solid #be9055', color: '#be9055' }}>
                       {c}
                       <button type="button" onClick={() => setSelectedConditions(p => p.filter(x => x !== c))} aria-label={`Remove ${c}`}
-                        style={{ background: 'none', border: 'none', color: '#be9055', cursor: 'pointer', padding: 0, fontSize: '1rem', lineHeight: 1 }}>×</button>
+                        style={{ background: 'none', border: 'none', color: '#be9055', cursor: 'pointer', padding: 0, fontSize: '1.2rem', lineHeight: 1 }}>×</button>
                     </span>
                   ))}
 
                   {/* Allergens */}
-                  <p style={{ margin: '8px 0 8px', fontSize: '0.8rem', fontWeight: 600, color: '#e2e8f0' }}>Known Allergens</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+                  <p style={{ margin: '8px 0 8px', fontSize: '0.85rem', fontWeight: 600, color: '#333' }}>Known Allergens</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
                     {PRESET_ALLERGENS.map(tag => (
                       <button
                         key={tag} type="button"
                         title={`Toggle: ${tag}`}
                         onClick={() => toggleTag(selectedAllergens, setSelectedAllergens, tag)}
                         style={{
-                          padding: '5px 12px', borderRadius: '20px', fontSize: '0.78rem', cursor: 'pointer',
-                          border: selectedAllergens.includes(tag) ? '1.5px solid #f97316' : '1.5px solid rgba(255,255,255,0.12)',
-                          background: selectedAllergens.includes(tag) ? 'rgba(249,115,22,0.15)' : 'transparent',
-                          color: selectedAllergens.includes(tag) ? '#f97316' : '#94a3b8',
-                          transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)', fontWeight: selectedAllergens.includes(tag) ? 600 : 400
+                          padding: '6px 14px', borderRadius: '20px', fontSize: '0.8rem', cursor: 'pointer',
+                          border: selectedAllergens.includes(tag) ? '1px solid #f97316' : '1px solid #ddd',
+                          background: selectedAllergens.includes(tag) ? 'rgba(249,115,22,0.1)' : '#fff',
+                          color: selectedAllergens.includes(tag) ? '#f97316' : '#555',
+                          transition: 'all 0.2s ease', fontWeight: selectedAllergens.includes(tag) ? 600 : 400
                         }}
                       >{tag}</button>
                     ))}
@@ -471,17 +475,17 @@ function Register() {
                       onChange={e => setCustomAllergen(e.target.value.replace(/[<>]/g, '').slice(0, 60))}
                       onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag(selectedAllergens, setSelectedAllergens, customAllergen, setCustomAllergen); } }}
                       aria-label="Add a custom allergen"
-                      style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '0.82rem' }}
+                      style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid #ddd', background: '#fff', color: '#333', fontSize: '0.9rem' }}
                     />
                     <button type="button" onClick={() => addCustomTag(selectedAllergens, setSelectedAllergens, customAllergen, setCustomAllergen)}
                       title="Add custom allergen"
-                      style={{ padding: '8px 14px', borderRadius: '8px', border: '1.5px solid rgba(249,115,22,0.4)', background: 'rgba(249,115,22,0.1)', color: '#f97316', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}>Add</button>
+                      style={{ padding: '0 16px', borderRadius: '8px', border: 'none', background: '#f97316', color: '#fff', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>Add</button>
                   </div>
                   {selectedAllergens.filter(a => !PRESET_ALLERGENS.includes(a)).map(a => (
-                    <span key={a} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', margin: '0 4px 6px 0', padding: '4px 10px', borderRadius: '20px', fontSize: '0.78rem', background: 'rgba(249,115,22,0.15)', border: '1.5px solid #f97316', color: '#f97316' }}>
+                    <span key={a} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', margin: '0 6px 8px 0', padding: '5px 12px', borderRadius: '20px', fontSize: '0.8rem', background: 'rgba(249,115,22,0.1)', border: '1px solid #f97316', color: '#f97316' }}>
                       {a}
                       <button type="button" onClick={() => setSelectedAllergens(p => p.filter(x => x !== a))} aria-label={`Remove ${a}`}
-                        style={{ background: 'none', border: 'none', color: '#f97316', cursor: 'pointer', padding: 0, fontSize: '1rem', lineHeight: 1 }}>×</button>
+                        style={{ background: 'none', border: 'none', color: '#f97316', cursor: 'pointer', padding: 0, fontSize: '1.2rem', lineHeight: 1 }}>×</button>
                     </span>
                   ))}
                 </div>

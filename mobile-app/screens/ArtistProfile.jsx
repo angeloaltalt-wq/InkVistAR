@@ -214,7 +214,7 @@ export const ArtistProfile = ({ userId, userName, userEmail, onLogout }) => {
             <ScrollView showsVerticalScrollIndicator={false}>
               {[
                 { label: 'Full Name', key: 'name', kb: 'default' },
-                { label: 'Phone Number', key: 'phone', kb: 'phone-pad' },
+                { label: 'Phone Number (+63)', key: 'phone', kb: 'number-pad' },
                 { label: 'Experience (Years)', key: 'experience_years', kb: 'numeric' },
               ].map(field => (
                 <View key={field.key}>
@@ -222,9 +222,18 @@ export const ArtistProfile = ({ userId, userName, userEmail, onLogout }) => {
                   <TextInput
                     style={styles.input}
                     value={String(editForm[field.key] || '')}
-                    onChangeText={t => setEditForm({ ...editForm, [field.key]: t })}
+                    onChangeText={t => {
+                      if (field.key === 'phone') {
+                        const digits = t.replace(/\D/g, '').replace(/^0+/, '').slice(0, 10);
+                        setEditForm({ ...editForm, [field.key]: digits });
+                      } else {
+                        setEditForm({ ...editForm, [field.key]: t });
+                      }
+                    }}
                     keyboardType={field.kb}
                     placeholderTextColor={theme.textTertiary}
+                    placeholder={field.key === 'phone' ? '9XXXXXXXXX' : ''}
+                    maxLength={field.key === 'phone' ? 10 : undefined}
                   />
                 </View>
               ))}

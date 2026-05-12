@@ -110,6 +110,10 @@ export const AdminUserManagement = ({ navigation }) => {
       Alert.alert('Validation Error', 'Please enter a valid email address');
       return;
     }
+    if (sPhone && sPhone.startsWith('0')) {
+      Alert.alert('Validation Error', 'Phone number cannot start with 0. Use format: 9XXXXXXXXX');
+      return;
+    }
     if (!editingUser && !formData.password) {
       Alert.alert('Validation Error', 'Password is required for new users');
       return;
@@ -413,11 +417,15 @@ export const AdminUserManagement = ({ navigation }) => {
             />
             <TextInput
               style={styles.input}
-              placeholder="Phone (Optional)"
+              placeholder="9XXXXXXXXX"
               placeholderTextColor={theme.textTertiary}
               value={formData.phone}
-              onChangeText={t => setFormData({ ...formData, phone: t })}
-              keyboardType="phone-pad"
+              onChangeText={t => {
+                const digits = t.replace(/\D/g, '').replace(/^0+/, '').slice(0, 10);
+                setFormData({ ...formData, phone: digits });
+              }}
+              keyboardType="number-pad"
+              maxLength={10}
             />
 
             {/* Role Selector */}

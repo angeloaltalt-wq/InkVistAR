@@ -3,7 +3,7 @@
  * Validation mirrors web-app/src/pages/Register.js exactly:
  * - firstName, lastName (required), suffix (optional, letters/dots/spaces, max 5)
  * - email: no spaces, max 254, regex validated
- * - phone: digits only, max 11, 10-11 digits required
+ * - phone: digits only, no leading 0, max 10, must start with 9 for PH (+63)
  * - password: min 8, uppercase, lowercase, number, symbol (@$!%*?&#)
  * - confirmPassword: must match
  * Animated tattoo background slideshow, no divider under INKVICTUS.
@@ -131,8 +131,9 @@ export function RegisterPage({ onRegister, onSwitchToLogin }) {
     }
     if (name === 'phone') {
       if (!value) errorMsg = 'Phone number is required';
-      else if (value.length < 10) errorMsg = 'Phone number must be 10-11 digits';
-      else if (value.length > 11) errorMsg = 'Phone number must be 10-11 digits';
+      else if (form.phoneCode === '+63' && !value.startsWith('9')) errorMsg = 'PH numbers must start with 9 (e.g. 9171234567)';
+      else if (form.phoneCode === '+63' && value.length !== 10) errorMsg = 'Phone number must be exactly 10 digits (e.g. 9171234567)';
+      else if (form.phoneCode !== '+63' && value.length < 7) errorMsg = 'Phone number is too short';
     }
     setErrors(prev => ({ ...prev, [name]: errorMsg }));
     return errorMsg === '';
@@ -148,7 +149,7 @@ export function RegisterPage({ onRegister, onSwitchToLogin }) {
     } else if (name === 'email') {
       value = raw.replace(/\s/g, '').slice(0, 254);
     } else if (name === 'phone') {
-      value = filterDigits(raw).slice(0, 11);
+      value = filterDigits(raw).replace(/^0+/, '').slice(0, 10);
     } else if (name === 'password' || name === 'confirmPassword') {
       value = raw.slice(0, 128);
     }
@@ -327,7 +328,7 @@ export function RegisterPage({ onRegister, onSwitchToLogin }) {
 
             {/* Phone */}
             <View style={styles.inputGroup}>
-              {renderInput('phone', 'Phone number', Phone, { prefix: form.phoneCode, onPrefixPress: () => setShowPhoneDropdown(true), extra: { keyboardType: 'numbers-and-punctuation', returnKeyType: 'done', onSubmitEditing: Keyboard.dismiss } })}
+              {renderInput('phone', '9XXXXXXXXX', Phone, { prefix: form.phoneCode, onPrefixPress: () => setShowPhoneDropdown(true), extra: { keyboardType: 'number-pad', returnKeyType: 'done', maxLength: 10, onSubmitEditing: Keyboard.dismiss } })}
               {errors.phone ? <Text style={styles.errorText}>{errors.phone}</Text> : null}
             </View>
 

@@ -442,7 +442,7 @@ export function CustomerProfilePage({ userId, userName, userEmail, onLogout }) {
             <ScrollView showsVerticalScrollIndicator={false}>
               {[
                 { label: 'Full Name', key: 'name', kb: 'default' },
-                { label: 'Phone Number', key: 'phone', kb: 'phone-pad' },
+                { label: 'Phone Number (+63)', key: 'phone', kb: 'number-pad' },
                 { label: 'Location', key: 'location', kb: 'default' },
               ].map(f => (
                 <View key={f.key}>
@@ -450,9 +450,18 @@ export function CustomerProfilePage({ userId, userName, userEmail, onLogout }) {
                   <TextInput
                     style={styles.input}
                     value={String(editForm[f.key] || '')}
-                    onChangeText={t => setEditForm({ ...editForm, [f.key]: t })}
+                    onChangeText={t => {
+                      if (f.key === 'phone') {
+                        const digits = t.replace(/\D/g, '').replace(/^0+/, '').slice(0, 10);
+                        setEditForm({ ...editForm, [f.key]: digits });
+                      } else {
+                        setEditForm({ ...editForm, [f.key]: t });
+                      }
+                    }}
                     keyboardType={f.kb}
                     placeholderTextColor={theme.textTertiary}
+                    placeholder={f.key === 'phone' ? '9XXXXXXXXX' : ''}
+                    maxLength={f.key === 'phone' ? 10 : undefined}
                   />
                 </View>
               ))}

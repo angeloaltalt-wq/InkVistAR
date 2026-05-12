@@ -57,6 +57,7 @@ import { AdminReviewModeration } from './screens/AdminReviewModeration.jsx';
 import { AdminBilling } from './screens/AdminBilling.jsx';
 import { AdminStaff } from './screens/AdminStaff.jsx';
 import { AdminClients } from './screens/AdminClients.jsx';
+import { AdminSalesReports } from './screens/AdminSalesReports.jsx';
 
 // Placeholder for AR Tab
 import PlaceholderScreen from './components/PlaceholderScreen.jsx';
@@ -396,6 +397,7 @@ function AppContent() {
                 <Stack.Screen name="admin-billing" component={AdminBilling} />
                 <Stack.Screen name="admin-staff" component={AdminStaff} />
                 <Stack.Screen name="admin-clients" component={AdminClients} />
+                <Stack.Screen name="admin-reports" component={AdminSalesReports} />
               </>
             ) : user.type === 'manager' ? (
               <>
@@ -405,6 +407,7 @@ function AppContent() {
                 <Stack.Screen name="admin-inventory" component={AdminInventory} />
                 <Stack.Screen name="admin-analytics" component={AdminAnalytics} />
                 <Stack.Screen name="admin-notifications" component={AdminNotifications} />
+                <Stack.Screen name="admin-reports" component={AdminSalesReports} />
               </>
             ) : user.type === 'artist' ? (
               <>

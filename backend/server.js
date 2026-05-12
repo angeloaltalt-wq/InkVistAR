@@ -1047,6 +1047,29 @@ db.getConnection((err, connection) => {
             });
           }
         });
+
+        // MIGRATION: Add 'is_guest_placeholder' flag to segregate guest bookings from admin data (B1 fix)
+        db.query("SHOW COLUMNS FROM appointments LIKE 'is_guest_placeholder'", (err, results) => {
+          if (!err && results.length === 0) {
+            console.log('[MIGRATE] Adding is_guest_placeholder column to appointments...');
+            db.query("ALTER TABLE appointments ADD COLUMN is_guest_placeholder TINYINT(1) DEFAULT 0", (alterErr) => {
+              if (alterErr) {
+                console.error('[WARN] Could not add is_guest_placeholder column:', alterErr.message);
+              } else {
+                console.log('[OK] Added is_guest_placeholder column to appointments');
+                // Retroactive fix: flag all existing guest bookings that were polluting admin data
+                db.query(
+                  `UPDATE appointments SET is_guest_placeholder = 1 WHERE guest_email IS NOT NULL AND guest_email != '' AND is_deleted = 0`,
+                  (fixErr, fixResult) => {
+                    if (!fixErr && fixResult.affectedRows > 0) {
+                      console.log(`[FIX] Retroactively flagged ${fixResult.affectedRows} existing guest booking(s) as is_guest_placeholder`);
+                    }
+                  }
+                );
+              }
+            });
+          }
+        });
       }
     });
 
@@ -2199,7 +2222,7 @@ app.post('/api/login', async (req, res) => {
       logAction(user.id, 'LOGIN', `Logged in as ${user.user_type} on ${device}`, req.ip || '::1');
 
       if (req.body.orphanAppointmentId) {
-        db.query('UPDATE appointments SET customer_id = ? WHERE id = ?', [user.id, req.body.orphanAppointmentId], (updateErr) => {
+        db.query('UPDATE appointments SET customer_id = ?, is_guest_placeholder = 0 WHERE id = ?', [user.id, req.body.orphanAppointmentId], (updateErr) => {
           if (updateErr) console.error('Error claiming orphan appointment:', updateErr);
           else {
             db.query("SELECT id FROM users WHERE user_type = 'admin' ORDER BY id ASC LIMIT 1", (err, results) => {
@@ -2212,7 +2235,7 @@ app.post('/api/login', async (req, res) => {
 
       // ═══ Migrate ALL orphan appointments by guest_email match (same as registration) ═══
       db.query(
-        'UPDATE appointments SET customer_id = ? WHERE guest_email = ? AND customer_id != ? AND is_deleted = 0',
+        'UPDATE appointments SET customer_id = ?, is_guest_placeholder = 0 WHERE guest_email = ? AND customer_id != ? AND is_deleted = 0',
         [user.id, user.email, user.id],
         (migErr, migResult) => {
           const emailMigratedCount = migResult ? migResult.affectedRows : 0;
@@ -2988,7 +3011,7 @@ app.post('/api/register', async (req, res) => {
         function sendSuccessResponse(userId) {
           // Claim a specific orphan appointment (from session storage)
           if (orphanAppointmentId) {
-            db.query('UPDATE appointments SET customer_id = ? WHERE id = ?', [userId, orphanAppointmentId], (updateErr) => {
+            db.query('UPDATE appointments SET customer_id = ?, is_guest_placeholder = 0 WHERE id = ?', [userId, orphanAppointmentId], (updateErr) => {
               if (updateErr) console.error('Error claiming orphan appointment during registration:', updateErr);
               else {
                 db.query("SELECT id FROM users WHERE user_type = 'admin' ORDER BY id ASC LIMIT 1", (err, results) => {
@@ -3001,7 +3024,7 @@ app.post('/api/register', async (req, res) => {
 
           // ═══ Migrate ALL orphan appointments by guest_email match ═══
           db.query(
-            'UPDATE appointments SET customer_id = ? WHERE guest_email = ? AND customer_id != ? AND is_deleted = 0',
+            'UPDATE appointments SET customer_id = ?, is_guest_placeholder = 0 WHERE guest_email = ? AND customer_id != ? AND is_deleted = 0',
             [userId, email, userId],
             (migErr, migResult) => {
               const migratedCount = migResult ? migResult.affectedRows : 0;
@@ -4630,15 +4653,24 @@ app.get('/api/admin/appointments', (req, res) => {
   const query = `
     SELECT 
       ap.*,
-      u_cust.name as client_name,
-      u_cust.email as client_email,
+      CASE 
+        WHEN COALESCE(ap.is_guest_placeholder, 0) = 1 THEN COALESCE(NULLIF(ap.guest_email, ''), 'Guest (Unregistered)')
+        ELSE u_cust.name 
+      END as client_name,
+      CASE 
+        WHEN COALESCE(ap.is_guest_placeholder, 0) = 1 THEN COALESCE(ap.guest_email, u_cust.email)
+        ELSE u_cust.email 
+      END as client_email,
       u_art.name as artist_name,
       u_sec.name as secondary_artist_name,
       ar.commission_rate,
       ((SELECT COALESCE(SUM(amount), 0) FROM payments p WHERE p.appointment_id = ap.id AND p.status = 'paid') / 100) + COALESCE(ap.manual_paid_amount, 0) as total_paid,
       ap.manual_payment_method,
-      cust.profile_image as client_avatar,
-      cust.phone as client_phone,
+      CASE WHEN COALESCE(ap.is_guest_placeholder, 0) = 1 THEN NULL ELSE cust.profile_image END as client_avatar,
+      CASE 
+        WHEN COALESCE(ap.is_guest_placeholder, 0) = 1 THEN COALESCE(ap.guest_phone, cust.phone)
+        ELSE cust.phone 
+      END as client_phone,
       cust.health_conditions as client_health_conditions,
       cust.allergens as client_allergens,
       (SELECT COALESCE(SUM(sm.quantity * i.cost), 0) FROM session_materials sm JOIN inventory i ON sm.inventory_id = i.id WHERE sm.appointment_id = ap.id AND sm.status != 'released') as total_material_cost,
@@ -4662,10 +4694,17 @@ app.get('/api/admin/appointments', (req, res) => {
       console.error('[ERROR] Error fetching all appointments:', err);
       return res.status(500).json({ success: false, message: 'Database error' });
     }
-    // Parse health JSON arrays on each row
+    // Parse health JSON arrays on each row + extract guest names for placeholder bookings
     results.forEach(row => {
       try { row.client_health_conditions = JSON.parse(row.client_health_conditions || '[]'); } catch { row.client_health_conditions = []; }
       try { row.client_allergens = JSON.parse(row.client_allergens || '[]'); } catch { row.client_allergens = []; }
+      // B1 fix: For guest placeholder bookings, extract the real guest name from the structured notes
+      if (row.is_guest_placeholder) {
+        const nameMatch = (row.notes || '').match(/Name:\s*(.+)/i);
+        if (nameMatch && nameMatch[1].trim()) {
+          row.client_name = nameMatch[1].trim();
+        }
+      }
     });
     res.json({ success: true, data: results });
   });
@@ -4758,11 +4797,16 @@ app.post('/api/admin/appointments', async (req, res) => {
     }
   }
 
+  let isGuestPlaceholder = false; // B1 fix: tracks whether this booking is a guest placeholder
+
   const resolveAdminIds = (callback) => {
     if (customerId === 'admin' || artistId === 'admin') {
       db.query("SELECT id FROM users WHERE user_type = 'admin' ORDER BY id ASC LIMIT 1", (err, results) => {
         const actualAdminId = (results && results.length > 0) ? results[0].id : 1;
-        if (customerId === 'admin') customerId = actualAdminId;
+        if (customerId === 'admin') {
+          customerId = actualAdminId;
+          isGuestPlaceholder = true; // Flag: this customer_id is a placeholder, not a real customer
+        }
         if (artistId === 'admin') artistId = actualAdminId;
         callback();
       });
@@ -4808,20 +4852,20 @@ app.post('/api/admin/appointments', async (req, res) => {
 
         const query = `
           INSERT INTO appointments 
-            (customer_id, artist_id, secondary_artist_id, commission_split, appointment_date, start_time, design_title, service_type, status, notes, price, tattoo_price, piercing_price, manual_paid_amount, payment_status, is_deleted, before_photo, booking_code, device_id, consultation_method, guest_email, guest_phone, waiver_accepted_at, piercing_jewelry)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 0, ?, 'PENDING', ?, ?, ?, ?, ?, ?)
+            (customer_id, artist_id, secondary_artist_id, commission_split, appointment_date, start_time, design_title, service_type, status, notes, price, tattoo_price, piercing_price, manual_paid_amount, payment_status, is_deleted, before_photo, booking_code, device_id, consultation_method, guest_email, guest_phone, waiver_accepted_at, piercing_jewelry, is_guest_placeholder)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 0, ?, 'PENDING', ?, ?, ?, ?, ?, ?, ?)
         `;
-        conn.query(query, [customerId, artistId, secondaryArtistId || null, commissionSplit || 50, date, startTime || null, combinedTitle, serviceType || 'General Session', finalStatus, notes || '', finalPrice, sanitizedTattooPrice, sanitizedPiercingPrice, manualPaidAmount || 0, referenceImage || null, deviceId || null, consultationMethod || null, guestEmail || null, guestPhone || null, waiverAcceptedAt || null, sanitizedJewelry || null], (err, result) => {
+        conn.query(query, [customerId, artistId, secondaryArtistId || null, commissionSplit || 50, date, startTime || null, combinedTitle, serviceType || 'General Session', finalStatus, notes || '', finalPrice, sanitizedTattooPrice, sanitizedPiercingPrice, manualPaidAmount || 0, referenceImage || null, deviceId || null, consultationMethod || null, guestEmail || null, guestPhone || null, waiverAcceptedAt || null, sanitizedJewelry || null, isGuestPlaceholder ? 1 : 0], (err, result) => {
           if (err) {
             // Graceful fallback if waiver_accepted_at column doesn't exist yet
             if (err.code === 'ER_BAD_FIELD_ERROR' && err.message.includes('waiver_accepted_at')) {
               console.warn('[WARN] waiver_accepted_at column not found, retrying INSERT without it...');
               const fallbackQuery = `
                 INSERT INTO appointments 
-                  (customer_id, artist_id, secondary_artist_id, commission_split, appointment_date, start_time, design_title, service_type, status, notes, price, tattoo_price, piercing_price, manual_paid_amount, payment_status, is_deleted, before_photo, booking_code, device_id, consultation_method, guest_email, guest_phone, piercing_jewelry)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 0, ?, 'PENDING', ?, ?, ?, ?, ?)
+                  (customer_id, artist_id, secondary_artist_id, commission_split, appointment_date, start_time, design_title, service_type, status, notes, price, tattoo_price, piercing_price, manual_paid_amount, payment_status, is_deleted, before_photo, booking_code, device_id, consultation_method, guest_email, guest_phone, piercing_jewelry, is_guest_placeholder)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 0, ?, 'PENDING', ?, ?, ?, ?, ?, ?)
               `;
-              return conn.query(fallbackQuery, [customerId, artistId, secondaryArtistId || null, commissionSplit || 50, date, startTime || null, combinedTitle, serviceType || 'General Session', finalStatus, notes || '', finalPrice, sanitizedTattooPrice, sanitizedPiercingPrice, manualPaidAmount || 0, referenceImage || null, deviceId || null, consultationMethod || null, guestEmail || null, guestPhone || null, sanitizedJewelry || null], (fbErr, fbResult) => {
+              return conn.query(fallbackQuery, [customerId, artistId, secondaryArtistId || null, commissionSplit || 50, date, startTime || null, combinedTitle, serviceType || 'General Session', finalStatus, notes || '', finalPrice, sanitizedTattooPrice, sanitizedPiercingPrice, manualPaidAmount || 0, referenceImage || null, deviceId || null, consultationMethod || null, guestEmail || null, guestPhone || null, sanitizedJewelry || null, isGuestPlaceholder ? 1 : 0], (fbErr, fbResult) => {
                 if (fbErr) {
                   console.error('[ERROR] Fallback INSERT also failed:', fbErr);
                   return conn.rollback(() => { conn.release(); res.status(500).json({ success: false, message: 'Database error: ' + fbErr.message }); });
@@ -5087,20 +5131,20 @@ app.post('/api/admin/appointments', async (req, res) => {
 
           const query = `
             INSERT INTO appointments 
-              (customer_id, artist_id, secondary_artist_id, commission_split, appointment_date, start_time, design_title, service_type, status, notes, price, tattoo_price, piercing_price, manual_paid_amount, payment_status, is_deleted, before_photo, booking_code, device_id, consultation_method, guest_email, guest_phone, waiver_accepted_at, piercing_jewelry)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 0, ?, 'PENDING', ?, ?, ?, ?, ?, ?)
+              (customer_id, artist_id, secondary_artist_id, commission_split, appointment_date, start_time, design_title, service_type, status, notes, price, tattoo_price, piercing_price, manual_paid_amount, payment_status, is_deleted, before_photo, booking_code, device_id, consultation_method, guest_email, guest_phone, waiver_accepted_at, piercing_jewelry, is_guest_placeholder)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 0, ?, 'PENDING', ?, ?, ?, ?, ?, ?, ?)
           `;
-          connection.query(query, [customerId, artistId, secondaryArtistId || null, commissionSplit || 50, date, startTime || null, combinedTitle, serviceType || 'General Session', finalStatus, notes || '', finalPrice, sanitizedTattooPrice, sanitizedPiercingPrice, manualPaidAmount || 0, referenceImage || null, deviceId || null, consultationMethod || null, guestEmail || null, guestPhone || null, waiverAcceptedAt || null, sanitizedJewelry || null], (err, result) => {
+          connection.query(query, [customerId, artistId, secondaryArtistId || null, commissionSplit || 50, date, startTime || null, combinedTitle, serviceType || 'General Session', finalStatus, notes || '', finalPrice, sanitizedTattooPrice, sanitizedPiercingPrice, manualPaidAmount || 0, referenceImage || null, deviceId || null, consultationMethod || null, guestEmail || null, guestPhone || null, waiverAcceptedAt || null, sanitizedJewelry || null, isGuestPlaceholder ? 1 : 0], (err, result) => {
             if (err) {
               // Graceful fallback if waiver_accepted_at column doesn't exist yet
               if (err.code === 'ER_BAD_FIELD_ERROR' && err.message.includes('waiver_accepted_at')) {
                 console.warn('[WARN] waiver_accepted_at column not found, retrying INSERT without it...');
                 const fallbackQuery = `
               INSERT INTO appointments 
-                (customer_id, artist_id, secondary_artist_id, commission_split, appointment_date, start_time, design_title, service_type, status, notes, price, tattoo_price, piercing_price, manual_paid_amount, payment_status, is_deleted, before_photo, booking_code, device_id, consultation_method, guest_email, guest_phone, piercing_jewelry)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 0, ?, 'PENDING', ?, ?, ?, ?, ?)
+                (customer_id, artist_id, secondary_artist_id, commission_split, appointment_date, start_time, design_title, service_type, status, notes, price, tattoo_price, piercing_price, manual_paid_amount, payment_status, is_deleted, before_photo, booking_code, device_id, consultation_method, guest_email, guest_phone, piercing_jewelry, is_guest_placeholder)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 0, ?, 'PENDING', ?, ?, ?, ?, ?, ?)
             `;
-                return connection.query(fallbackQuery, [customerId, artistId, secondaryArtistId || null, commissionSplit || 50, date, startTime || null, combinedTitle, serviceType || 'General Session', finalStatus, notes || '', finalPrice, sanitizedTattooPrice, sanitizedPiercingPrice, manualPaidAmount || 0, referenceImage || null, deviceId || null, consultationMethod || null, guestEmail || null, guestPhone || null, sanitizedJewelry || null], (fbErr, fbResult) => {
+                return connection.query(fallbackQuery, [customerId, artistId, secondaryArtistId || null, commissionSplit || 50, date, startTime || null, combinedTitle, serviceType || 'General Session', finalStatus, notes || '', finalPrice, sanitizedTattooPrice, sanitizedPiercingPrice, manualPaidAmount || 0, referenceImage || null, deviceId || null, consultationMethod || null, guestEmail || null, guestPhone || null, sanitizedJewelry || null, isGuestPlaceholder ? 1 : 0], (fbErr, fbResult) => {
                   if (fbErr) {
                     console.error('[ERROR] Fallback INSERT also failed:', fbErr);
                     return connection.rollback(() => { connection.release(); res.status(500).json({ success: false, message: 'Database error: ' + fbErr.message }); });

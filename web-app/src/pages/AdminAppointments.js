@@ -321,7 +321,13 @@ function AdminAppointments() {
             if (response.data.success) {
                 const mappedAppointments = response.data.data.map(apt => {
                     let finalClientName = apt.client_name;
-                    if (apt.guest_email && apt.notes) {
+                    const isGuest = !!apt.is_guest_placeholder;
+                    if (isGuest && apt.notes) {
+                        const nameMatch = apt.notes.match(/Name:\s*(.+?)(?:\\n|\n|$)/);
+                        if (nameMatch && nameMatch[1]) {
+                            finalClientName = nameMatch[1].trim();
+                        }
+                    } else if (apt.guest_email && apt.notes) {
                         const nameMatch = apt.notes.match(/Name:\s*(.+?)(?:\\n|\n|$)/);
                         if (nameMatch && nameMatch[1]) {
                             finalClientName = `${nameMatch[1].trim()} (Guest)`;
@@ -371,7 +377,8 @@ function AdminAppointments() {
                         selectedJewelryName: apt.selected_jewelry_name || null,
                         piercingJewelry: apt.piercing_jewelry || null,
                         clientHealthConditions: Array.isArray(apt.client_health_conditions) ? apt.client_health_conditions : [],
-                        clientAllergens: Array.isArray(apt.client_allergens) ? apt.client_allergens : []
+                        clientAllergens: Array.isArray(apt.client_allergens) ? apt.client_allergens : [],
+                        isGuestPlaceholder: !!apt.is_guest_placeholder
                     };
                 });
                 setAppointments(mappedAppointments);
@@ -1419,7 +1426,18 @@ function AdminAppointments() {
                                             <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#be9055', fontFamily: 'monospace', letterSpacing: '0.02em', marginBottom: '2px' }}>
                                                 #{getDisplayCode(apt.bookingCode, apt.id)}
                                             </span>
-                                            <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '0.95rem' }}>{apt.clientName}</div>
+                                            <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '0.95rem' }}>
+                                                {apt.clientName}
+                                                {apt.isGuestPlaceholder && (
+                                                    <span style={{
+                                                        display: 'inline-block', marginLeft: '6px', padding: '1px 7px',
+                                                        fontSize: '0.6rem', fontWeight: '700', borderRadius: '20px',
+                                                        background: 'linear-gradient(135deg, #f59e0b22, #f59e0b11)',
+                                                        color: '#b45309', border: '1px solid #f59e0b44',
+                                                        verticalAlign: 'middle', letterSpacing: '0.02em'
+                                                    }} title="This booking was made by an unregistered guest">GUEST</span>
+                                                )}
+                                            </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
                                                 <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{apt.serviceType || 'Tattoo Session'}</span>
                                             </div>
@@ -1629,7 +1647,18 @@ function AdminAppointments() {
                                                             {getDisplayCode(appointment.bookingCode, appointment.id)}
                                                         </span>
                                                     </td>
-                                                    <td data-label="Client Name">{appointment.clientName}</td>
+                                                    <td data-label="Client Name">
+                                                        {appointment.clientName}
+                                                        {appointment.isGuestPlaceholder && (
+                                                            <span style={{
+                                                                display: 'inline-block', marginLeft: '6px', padding: '1px 7px',
+                                                                fontSize: '0.65rem', fontWeight: '700', borderRadius: '20px',
+                                                                background: 'linear-gradient(135deg, #f59e0b22, #f59e0b11)',
+                                                                color: '#b45309', border: '1px solid #f59e0b44',
+                                                                verticalAlign: 'middle', letterSpacing: '0.02em'
+                                                            }} title="This booking was made by an unregistered guest">GUEST</span>
+                                                        )}
+                                                    </td>
                                                     <td data-label="Staff">{appointment.artistName}</td>
                                                     <td data-label="Service" className="admin-st-775cebbf" title={appointment.serviceType}>
                                                         {appointment.serviceType}

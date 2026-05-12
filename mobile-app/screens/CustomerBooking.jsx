@@ -67,7 +67,7 @@ export function CustomerBooking({ customerId, onBack, initialUser }) {
     firstName: getFirstName(),
     lastName: getLastName(),
     email: initialUser?.email || '',
-    phone: initialUser?.phone || '+63',
+    phone: initialUser?.phone ? initialUser.phone.replace(/^0+/, '') : '',
   });
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -257,11 +257,8 @@ export function CustomerBooking({ customerId, onBack, initialUser }) {
         followupNote = `\n\nFollow-up of Booking ${refCode}`;
       }
 
-      let rawPhone = formData.phone.trim();
-      if (rawPhone.length === 11 && formData.phoneCode === '+63' && rawPhone.startsWith('0')) {
-        rawPhone = rawPhone.substring(1);
-      }
-      const fullPhone = `${formData.phoneCode} ${rawPhone}`;
+      let rawPhone = formData.phone.trim().replace(/^0+/, '');
+      const fullPhone = `${formData.phoneCode || '+63'} ${rawPhone}`;
 
       const payload = {
         customerId: customerId || null,

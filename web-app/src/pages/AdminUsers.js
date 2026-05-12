@@ -800,7 +800,8 @@ function AdminUsers() {
         if (name === 'phone') {
             if (!value) error = 'Phone number is required';
             else if (!/^\d+$/.test(value)) error = 'Digits only';
-            else if (value.length !== 11) error = 'Phone number must be exactly 11 digits';
+            else if (!value.startsWith('9')) error = 'PH numbers must start with 9 (e.g. 9171234567)';
+            else if (value.length !== 10) error = 'Phone number must be exactly 10 digits';
         }
         if (name === 'password') {
             const strongRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
@@ -828,7 +829,7 @@ function AdminUsers() {
         if (name === 'firstName' || name === 'lastName') sanitized = filterName(value).slice(0, 50);
         else if (name === 'suffix') sanitized = filterName(value).slice(0, 5);
         else if (name === 'email') sanitized = value.replace(/\s/g, '').slice(0, 254);
-        else if (name === 'phone') sanitized = filterDigits(value).slice(0, 11);
+        else if (name === 'phone') sanitized = filterDigits(value).replace(/^0+/, '').slice(0, 10);
         else if (name === 'password' || name === 'confirmPassword') sanitized = value.slice(0, 128);
         else if (name === 'age') sanitized = filterDigits(value).slice(0, 3);
         setCreateFormData(prev => ({ ...prev, [name]: sanitized }));
@@ -863,7 +864,7 @@ function AdminUsers() {
         return createFormData.firstName.trim() &&
             createFormData.lastName.trim() &&
             /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(createFormData.email) &&
-            createFormData.phone.length === 11 &&
+            createFormData.phone.length === 10 &&
             createFormData.countryCode &&
             isCreatePasswordStrong() &&
             createFormData.confirmPassword === createFormData.password;
@@ -1144,7 +1145,7 @@ function AdminUsers() {
                                                 value={formData.countryCode || '+63'}
                                                 onChange={(code) => setFormData({ ...formData, countryCode: code })}
                                             />
-                                            <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: filterDigits(e.target.value).replace(/^0+/, '').slice(0, 11) })} maxLength={11} className="form-input" style={{ flex: 1 }} placeholder="9123456789" />
+                                            <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: filterDigits(e.target.value).replace(/^0+/, '').slice(0, 10) })} maxLength={10} className="form-input" style={{ flex: 1 }} placeholder="9XXXXXXXXX" />
                                         </div>
                                     </div>
                                 </div>
@@ -1247,7 +1248,7 @@ function AdminUsers() {
                                                     </div>
                                                     <div className="form-group">
                                                         <label className="admin-st-19644797">Primary Contact</label>
-                                                        <input type="text" className="form-input" value={clientFormData.phone || ''} onChange={e => setClientFormData({ ...clientFormData, phone: filterDigits(e.target.value).replace(/^0+/, '').slice(0, 11) })} maxLength={11} />
+                                                        <input type="text" className="form-input" value={clientFormData.phone || ''} onChange={e => setClientFormData({ ...clientFormData, phone: filterDigits(e.target.value).replace(/^0+/, '').slice(0, 10) })} maxLength={10} placeholder="9XXXXXXXXX" />
                                                     </div>
                                                 </div>
                                                 <div className="admin-st-ff43421e">
@@ -1671,7 +1672,7 @@ function AdminUsers() {
                                             <input type="tel" className={`form-input ${createErrors.phone ? 'error' : ''}`}
                                                 style={{ flex: 1 }} placeholder="9XXXXXXXXX" value={createFormData.phone}
                                                 onChange={(e) => handleCreateFieldChange('phone', e.target.value.replace(/^0+/, ''))}
-                                                onBlur={() => handleCreateBlur('phone')} maxLength={11} />
+                                                onBlur={() => handleCreateBlur('phone')} maxLength={10} />
                                         </div>
                                         {createErrors.phone && <small style={{ color: '#ef4444', display: 'block', marginTop: '4px', fontSize: '0.8rem' }}>{createErrors.phone}</small>}
                                     </div>

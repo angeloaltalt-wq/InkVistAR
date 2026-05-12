@@ -291,6 +291,7 @@ export const AdminDashboard = ({ onLogout, navigation }) => {
             <QuickAction icon={Users} label="Users" color={theme.info} onPress={() => navigation?.navigate?.('Users')} />
             <QuickAction icon={Package} label="Inventory" color={theme.warning} onPress={() => navigation?.navigate?.('admin-inventory')} />
             <QuickAction icon={BarChart3} label="Analytics" color={theme.textPrimary} onPress={() => navigation?.navigate?.('admin-analytics')} />
+            <QuickAction icon={FileText} label="Reports" color={theme.success} onPress={() => navigation?.navigate?.('admin-reports')} />
             <QuickAction icon={MessageSquare} label="Chat" color={theme.textSecondary} onPress={() => navigation?.navigate?.('admin-chat')} />
             <QuickAction icon={Settings} label="Settings" color={theme.textTertiary} onPress={() => navigation?.navigate?.('admin-settings')} />
           </ScrollView>
