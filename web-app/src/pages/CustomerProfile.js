@@ -90,10 +90,42 @@ function CustomerProfile() {
     const toggleTag = (list, setList, tag) =>
         setList(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
 
-    const addCustomTag = (list, setList, value, setValue) => {
-        const trimmed = value.trim().replace(/[<>]/g, '').slice(0, 60);
-        if (trimmed && !list.includes(trimmed)) setList(prev => [...prev, trimmed]);
-        setValue('');
+    const handleAddHealthCondition = () => {
+        const trimmed = customCondition.trim().replace(/[<>]/g, '');
+        if (!trimmed) {
+            setErrors(prev => ({ ...prev, customCondition: 'Please enter a health condition.' }));
+            return;
+        }
+        if (selectedConditions.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
+            setErrors(prev => ({ ...prev, customCondition: 'This condition is already added.' }));
+            return;
+        }
+        if (trimmed.length > 60) {
+            setErrors(prev => ({ ...prev, customCondition: 'Condition must be under 60 characters.' }));
+            return;
+        }
+        setErrors(prev => ({ ...prev, customCondition: '' }));
+        setSelectedConditions(prev => [...prev, trimmed]);
+        setCustomCondition('');
+    };
+
+    const handleAddAllergen = () => {
+        const trimmed = customAllergen.trim().replace(/[<>]/g, '');
+        if (!trimmed) {
+            setErrors(prev => ({ ...prev, customAllergen: 'Please enter an allergen.' }));
+            return;
+        }
+        if (selectedAllergens.some(a => a.toLowerCase() === trimmed.toLowerCase())) {
+            setErrors(prev => ({ ...prev, customAllergen: 'This allergen is already added.' }));
+            return;
+        }
+        if (trimmed.length > 60) {
+            setErrors(prev => ({ ...prev, customAllergen: 'Allergen must be under 60 characters.' }));
+            return;
+        }
+        setErrors(prev => ({ ...prev, customAllergen: '' }));
+        setSelectedAllergens(prev => [...prev, trimmed]);
+        setCustomAllergen('');
     };
 
     const validateProfileField = (name, value) => {
@@ -191,6 +223,16 @@ function CustomerProfile() {
         const nameValid = validateProfileField('name', profile.name);
         if (!nameValid) {
             setMessage({ type: 'error', text: errors.name || 'Please fix validation errors.' });
+            setSaving(false);
+            return;
+        }
+        if (customCondition.trim()) {
+            setMessage({ type: 'error', text: 'You have unadded text in Health Conditions. Please click "Add" or clear the input.' });
+            setSaving(false);
+            return;
+        }
+        if (customAllergen.trim()) {
+            setMessage({ type: 'error', text: 'You have unadded text in Known Allergens. Please click "Add" or clear the input.' });
             setSaving(false);
             return;
         }
@@ -462,20 +504,21 @@ function CustomerProfile() {
                                                     >{tag}</button>
                                                 ))}
                                             </div>
-                                            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                                            <div style={{ display: 'flex', gap: '8px', marginBottom: errors.customCondition ? '4px' : '16px' }}>
                                                 <input type="text" id="profile-custom-condition"
                                                     placeholder="Other condition..."
                                                     value={customCondition}
-                                                    onChange={e => setCustomCondition(e.target.value.replace(/[<>]/g, '').slice(0, 60))}
-                                                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag(selectedConditions, setSelectedConditions, customCondition, setCustomCondition); } }}
+                                                    onChange={e => { setCustomCondition(e.target.value); if(errors.customCondition) setErrors(prev => ({ ...prev, customCondition: '' })); }}
+                                                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddHealthCondition(); } }}
                                                     aria-label="Add a custom health condition"
                                                     className="form-input artist-profile-input"
-                                                    style={{ flex: 1 }}
+                                                    style={{ flex: 1, border: errors.customCondition ? '1px solid #ef4444' : undefined }}
                                                 />
                                                 <button type="button" title="Add custom condition"
-                                                    onClick={() => addCustomTag(selectedConditions, setSelectedConditions, customCondition, setCustomCondition)}
+                                                    onClick={handleAddHealthCondition}
                                                     style={{ padding: '8px 14px', borderRadius: '8px', border: '1.5px solid rgba(190,144,85,0.4)', background: 'rgba(190,144,85,0.08)', color: '#be9055', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}>Add</button>
                                             </div>
+                                            {errors.customCondition && <span style={{ fontSize: '0.75rem', color: '#ef4444', display: 'block', marginBottom: '16px' }}>{errors.customCondition}</span>}
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '18px' }}>
                                                 {selectedConditions.filter(c => !PRESET_CONDITIONS.includes(c)).map(c => (
                                                     <span key={c} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '20px', fontSize: '0.78rem', background: 'rgba(190,144,85,0.12)', border: '1.5px solid #be9055', color: '#be9055' }}>
@@ -503,20 +546,21 @@ function CustomerProfile() {
                                                     >{tag}</button>
                                                 ))}
                                             </div>
-                                            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                                            <div style={{ display: 'flex', gap: '8px', marginBottom: errors.customAllergen ? '4px' : '10px' }}>
                                                 <input type="text" id="profile-custom-allergen"
                                                     placeholder="Other allergen..."
                                                     value={customAllergen}
-                                                    onChange={e => setCustomAllergen(e.target.value.replace(/[<>]/g, '').slice(0, 60))}
-                                                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag(selectedAllergens, setSelectedAllergens, customAllergen, setCustomAllergen); } }}
+                                                    onChange={e => { setCustomAllergen(e.target.value); if(errors.customAllergen) setErrors(prev => ({ ...prev, customAllergen: '' })); }}
+                                                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddAllergen(); } }}
                                                     aria-label="Add a custom allergen"
                                                     className="form-input artist-profile-input"
-                                                    style={{ flex: 1 }}
+                                                    style={{ flex: 1, border: errors.customAllergen ? '1px solid #ef4444' : undefined }}
                                                 />
                                                 <button type="button" title="Add custom allergen"
-                                                    onClick={() => addCustomTag(selectedAllergens, setSelectedAllergens, customAllergen, setCustomAllergen)}
+                                                    onClick={handleAddAllergen}
                                                     style={{ padding: '8px 14px', borderRadius: '8px', border: '1.5px solid rgba(249,115,22,0.4)', background: 'rgba(249,115,22,0.08)', color: '#f97316', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}>Add</button>
                                             </div>
+                                            {errors.customAllergen && <span style={{ fontSize: '0.75rem', color: '#ef4444', display: 'block', marginBottom: '10px' }}>{errors.customAllergen}</span>}
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                                 {selectedAllergens.filter(a => !PRESET_ALLERGENS.includes(a)).map(a => (
                                                     <span key={a} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '20px', fontSize: '0.78rem', background: 'rgba(249,115,22,0.1)', border: '1.5px solid #f97316', color: '#f97316' }}>
