@@ -75,7 +75,7 @@ export default function WaiverPrintView() {
 
     const a = appointment;
     const bookingCode = getDisplayCode(a.booking_code, a.id);
-    const clientName = a.customer_name || a.guest_email || 'Client';
+    const clientName = a.customer_name || a.client_name || a.guest_email || 'Client';
     const waiverDate = a.waiver_accepted_at
         ? new Date(a.waiver_accepted_at).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })
         : null;

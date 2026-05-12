@@ -1104,6 +1104,20 @@ db.getConnection((err, connection) => {
       }
     });
 
+    // MIGRATION: Add waiver_accepted_at column to appointments (stores when the service waiver was signed)
+    db.query("SHOW COLUMNS FROM appointments LIKE 'waiver_accepted_at'", (err, results) => {
+      if (!err && results.length === 0) {
+        console.log('[MIGRATE] Adding waiver_accepted_at column to appointments...');
+        db.query("ALTER TABLE appointments ADD COLUMN waiver_accepted_at DATETIME NULL", (alterErr) => {
+          if (alterErr) {
+            console.error('[WARN] Could not add waiver_accepted_at column:', alterErr.message);
+          } else {
+            console.log('[OK] Added waiver_accepted_at column to appointments');
+          }
+        });
+      }
+    });
+
     // Create Tattoo Projects Table (Feature B — Multi-session timeline grouping)
     db.query(`
       CREATE TABLE IF NOT EXISTS tattoo_projects (
@@ -4748,6 +4762,7 @@ app.get('/api/admin/appointments/:id', (req, res) => {
     SELECT 
       ap.*, 
       u_cust.name as client_name, 
+      u_cust.name as customer_name,
       u_cust.email as client_email,
       u_art.name as artist_name,
       u_sec.name as secondary_artist_name,
@@ -4773,7 +4788,16 @@ app.get('/api/admin/appointments/:id', (req, res) => {
     if (results.length === 0) {
       return res.status(404).json({ success: false, message: 'Appointment not found' });
     }
-    res.json({ success: true, appointment: results[0] });
+    const row = results[0];
+    // For guest placeholder bookings, extract the real guest name from structured notes
+    if (row.is_guest_placeholder) {
+      const nameMatch = (row.notes || '').match(/Name:\s*(.+)/i);
+      if (nameMatch && nameMatch[1].trim()) {
+        row.client_name = nameMatch[1].trim();
+        row.customer_name = nameMatch[1].trim();
+      }
+    }
+    res.json({ success: true, appointment: row });
   });
 });
 

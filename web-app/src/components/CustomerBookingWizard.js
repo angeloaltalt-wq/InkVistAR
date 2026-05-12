@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import Axios from 'axios';
-import { CheckCircle, ChevronLeft, ChevronRight, Calendar, User, MessageSquare, Info, Image as ImageIcon, Upload, MapPin, UserPlus, Clock, CalendarCheck, UserCog, Gift, Check, Paintbrush, Gem, Star, CreditCard, Eye, Shield, Bell, Sparkles, Award, Video, Users, FileWarning } from 'lucide-react';
+import { CheckCircle, ChevronLeft, ChevronRight, Calendar, User, MessageSquare, Info, Image as ImageIcon, Upload, MapPin, UserPlus, Clock, CalendarCheck, UserCog, Gift, Check, Paintbrush, Gem, Star, CreditCard, Eye, Shield, Bell, Sparkles, Award, Video, Users, FileWarning, Heart, AlertTriangle, Plus, X } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { API_URL, SOCKET_URL } from '../config';
 import io from 'socket.io-client';
@@ -57,6 +57,26 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
         piercingJewelry: [] // [{ bodyPart, type: 'studio'|'own', itemId, itemName, price }]
     });
 
+    // ═══ Health & Safety State ═══
+    const PRESET_CONDITIONS = ['Diabetes', 'Hypertension', 'Heart Condition', 'Blood Disorder', 'Epilepsy', 'Pregnancy', 'Skin Condition', 'Immunocompromised'];
+    const PRESET_ALLERGENS = ['Latex', 'Nickel', 'Ink / Dye', 'Adhesive / Tape', 'Lidocaine', 'Iodine', 'Antibiotics'];
+    const [selectedConditions, setSelectedConditions] = useState([]);
+    const [customCondition, setCustomCondition] = useState('');
+    const [selectedAllergens, setSelectedAllergens] = useState([]);
+    const [customAllergen, setCustomAllergen] = useState('');
+    const [healthNoneConfirmed, setHealthNoneConfirmed] = useState(false);
+
+    const toggleHealthTag = (list, setList, tag) => {
+        setList(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+        if (healthNoneConfirmed) setHealthNoneConfirmed(false);
+    };
+    const addCustomHealthTag = (list, setList, value, setValue) => {
+        const trimmed = value.trim().replace(/[<>]/g, '').slice(0, 60);
+        if (trimmed && !list.includes(trimmed)) setList(prev => [...prev, trimmed]);
+        setValue('');
+        if (healthNoneConfirmed) setHealthNoneConfirmed(false);
+    };
+
     // Toggle a value in/out of an array field
     const toggleArrayField = (field, item) => {
         setFormData(prev => {
@@ -80,7 +100,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
     const [authView, setAuthView] = useState('register'); // 'login' or 'register'
     useEffect(() => {
         let interval;
-        if (step === 5) {
+        if (step === 6) {
             interval = setInterval(() => {
                 setActiveFeature((prev) => (prev + 1) % features.length);
             }, 5000);
@@ -281,6 +301,10 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
             const consultTypeStr = formData.consultationFor.length > 0 ? formData.consultationFor.join(' & ') : 'General';
             const consultMethodStr = formData.consultationMethod === 'Online' ? `Online (${formData.onlinePlatform || 'TBD'})` : 'Face-to-Face';
 
+            // Build health disclosure section for notes
+            const healthConditionsStr = selectedConditions.length > 0 ? selectedConditions.join(', ') : 'None disclosed';
+            const allergensStr = selectedAllergens.length > 0 ? selectedAllergens.join(', ') : 'None disclosed';
+
             const response = await Axios.post(`${API_URL}/api/admin/appointments`, {
                 customerId: uid,
                 artistId: 'admin',
@@ -289,7 +313,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                 endTime: formData.time || '13:00',
                 serviceType: 'Consultation',
                 designTitle: formData.designTitle,
-                notes: `DESIGN DETAILS\nIdea: ${formData.designTitle}\nConsultation for: ${consultTypeStr}\nConsultation method: ${consultMethodStr}\nPlacement: ${placementStr}${formData.placementNotes ? `\nSpecific notes: ${formData.placementNotes}` : ''}\nNotes: ${formData.notes || 'No additional notes'}\n\nCLIENT CONTEXT\nName: ${currentUser?.name || generatedName}\nEmail: ${currentUser?.email || formData.email}\nPhone: ${formData.phoneCode || '+63'}${formData.phone.replace(/^0+/, '')}`,
+                notes: `DESIGN DETAILS\nIdea: ${formData.designTitle}\nConsultation for: ${consultTypeStr}\nConsultation method: ${consultMethodStr}\nPlacement: ${placementStr}${formData.placementNotes ? `\nSpecific notes: ${formData.placementNotes}` : ''}\nNotes: ${formData.notes || 'No additional notes'}\n\nCLIENT CONTEXT\nName: ${currentUser?.name || generatedName}\nEmail: ${currentUser?.email || formData.email}\nPhone: ${formData.phoneCode || '+63'}${formData.phone.replace(/^0+/, '')}\n\nHEALTH & SAFETY\nHealth Conditions: ${healthConditionsStr}\nAllergens: ${allergensStr}`,
                 referenceImage: formData.referenceImage,
                 status: 'pending',
                 price: 0,
@@ -318,7 +342,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                         phone: formData.phone
                     }));
                 }
-                setStep(5); // Show consultation completed screen on step 5
+                setStep(6); // Show consultation completed screen on step 6
             } else {
                 alert('Request Failed: ' + (response.data.message || 'An unknown error occurred.'));
             }
@@ -925,10 +949,199 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
         </div>
     );
 
+    const renderStepHealth = () => (
+        <div className="fade-in">
+            <h3 style={{fontSize: '1.4rem', fontWeight: '800', color: '#1e293b', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px'}}>
+                <Heart className="text-bronze" size={22} /> 4. Health & Safety
+            </h3>
+            <p style={{color: '#64748b', marginBottom: '20px', fontSize: '0.95rem'}}>
+                For your safety, please disclose any relevant health conditions or allergens. This information is shared only with your assigned artist.
+            </p>
+
+            {/* Health Conditions Section */}
+            <div style={{ padding: '24px', borderRadius: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
+                <label style={{ fontWeight: '700', color: '#1e293b', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem' }}>
+                    <AlertTriangle size={16} color="#f59e0b" /> Known Health Conditions
+                </label>
+                <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: '0 0 14px', lineHeight: 1.5 }}>
+                    Select any that apply, or add a custom condition below.
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+                    {PRESET_CONDITIONS.map(tag => {
+                        const isSelected = selectedConditions.includes(tag);
+                        return (
+                            <button key={tag} type="button" title={`Toggle: ${tag}`}
+                                onClick={() => toggleHealthTag(selectedConditions, setSelectedConditions, tag)}
+                                style={{
+                                    padding: '8px 14px', borderRadius: '20px', fontSize: '0.82rem', cursor: 'pointer',
+                                    border: `1.5px solid ${isSelected ? '#be9055' : '#e2e8f0'}`,
+                                    background: isSelected ? 'rgba(190,144,85,0.1)' : 'white',
+                                    color: isSelected ? '#be9055' : '#64748b',
+                                    fontWeight: isSelected ? 700 : 500, transition: 'all 0.2s ease'
+                                }}>
+                                {isSelected && <Check size={12} style={{ marginRight: '4px', verticalAlign: 'middle' }} />}
+                                {tag}
+                            </button>
+                        );
+                    })}
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <input type="text" placeholder="Other condition..." value={customCondition}
+                        onChange={e => setCustomCondition(e.target.value.replace(/[<>]/g, '').slice(0, 60))}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomHealthTag(selectedConditions, setSelectedConditions, customCondition, setCustomCondition); } }}
+                        aria-label="Add a custom health condition" maxLength={60}
+                        className="form-input" style={{ flex: 1, padding: '10px 14px' }} />
+                    <button type="button" title="Add custom condition"
+                        onClick={() => addCustomHealthTag(selectedConditions, setSelectedConditions, customCondition, setCustomCondition)}
+                        style={{ padding: '0 16px', borderRadius: '10px', border: 'none', background: '#be9055', color: '#fff', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.2s' }}>
+                        <Plus size={16} />
+                    </button>
+                </div>
+                {selectedConditions.filter(c => !PRESET_CONDITIONS.includes(c)).length > 0 && (
+                    <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {selectedConditions.filter(c => !PRESET_CONDITIONS.includes(c)).map(c => (
+                            <span key={c} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 12px', borderRadius: '20px', fontSize: '0.8rem', background: 'rgba(190,144,85,0.1)', border: '1px solid #be9055', color: '#be9055' }}>
+                                {c}
+                                <button type="button" onClick={() => setSelectedConditions(p => p.filter(x => x !== c))} aria-label={`Remove ${c}`}
+                                    style={{ background: 'none', border: 'none', color: '#be9055', cursor: 'pointer', padding: 0, lineHeight: 1, display: 'flex' }}>
+                                    <X size={14} />
+                                </button>
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Allergens Section */}
+            <div style={{ padding: '24px', borderRadius: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
+                <label style={{ fontWeight: '700', color: '#1e293b', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem' }}>
+                    <Shield size={16} color="#ef4444" /> Known Allergens
+                </label>
+                <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: '0 0 14px', lineHeight: 1.5 }}>
+                    Select any materials or substances you are allergic to.
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+                    {PRESET_ALLERGENS.map(tag => {
+                        const isSelected = selectedAllergens.includes(tag);
+                        return (
+                            <button key={tag} type="button" title={`Toggle: ${tag}`}
+                                onClick={() => toggleHealthTag(selectedAllergens, setSelectedAllergens, tag)}
+                                style={{
+                                    padding: '8px 14px', borderRadius: '20px', fontSize: '0.82rem', cursor: 'pointer',
+                                    border: `1.5px solid ${isSelected ? '#f97316' : '#e2e8f0'}`,
+                                    background: isSelected ? 'rgba(249,115,22,0.08)' : 'white',
+                                    color: isSelected ? '#f97316' : '#64748b',
+                                    fontWeight: isSelected ? 700 : 500, transition: 'all 0.2s ease'
+                                }}>
+                                {isSelected && <Check size={12} style={{ marginRight: '4px', verticalAlign: 'middle' }} />}
+                                {tag}
+                            </button>
+                        );
+                    })}
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <input type="text" placeholder="Other allergen..." value={customAllergen}
+                        onChange={e => setCustomAllergen(e.target.value.replace(/[<>]/g, '').slice(0, 60))}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomHealthTag(selectedAllergens, setSelectedAllergens, customAllergen, setCustomAllergen); } }}
+                        aria-label="Add a custom allergen" maxLength={60}
+                        className="form-input" style={{ flex: 1, padding: '10px 14px' }} />
+                    <button type="button" title="Add custom allergen"
+                        onClick={() => addCustomHealthTag(selectedAllergens, setSelectedAllergens, customAllergen, setCustomAllergen)}
+                        style={{ padding: '0 16px', borderRadius: '10px', border: 'none', background: '#f97316', color: '#fff', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.2s' }}>
+                        <Plus size={16} />
+                    </button>
+                </div>
+                {selectedAllergens.filter(a => !PRESET_ALLERGENS.includes(a)).length > 0 && (
+                    <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {selectedAllergens.filter(a => !PRESET_ALLERGENS.includes(a)).map(a => (
+                            <span key={a} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 12px', borderRadius: '20px', fontSize: '0.8rem', background: 'rgba(249,115,22,0.08)', border: '1px solid #f97316', color: '#f97316' }}>
+                                {a}
+                                <button type="button" onClick={() => setSelectedAllergens(p => p.filter(x => x !== a))} aria-label={`Remove ${a}`}
+                                    style={{ background: 'none', border: 'none', color: '#f97316', cursor: 'pointer', padding: 0, lineHeight: 1, display: 'flex' }}>
+                                    <X size={14} />
+                                </button>
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* None of the above confirmation */}
+            {selectedConditions.length === 0 && selectedAllergens.length === 0 && (
+                <div style={{ margin: '0 0 16px', padding: '14px 20px', background: '#f0fdf4', border: `1.5px solid ${healthNoneConfirmed ? '#16a34a' : '#bbf7d0'}`, borderRadius: '12px', transition: 'all 0.2s' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', fontSize: '0.88rem', color: '#1e293b' }}>
+                        <input type="checkbox" checked={healthNoneConfirmed}
+                            onChange={(e) => setHealthNoneConfirmed(e.target.checked)}
+                            style={{ width: '20px', height: '20px', accentColor: '#16a34a', flexShrink: 0 }} />
+                        <span>I confirm that I have <strong>no known health conditions or allergens</strong> to disclose.</span>
+                    </label>
+                </div>
+            )}
+
+            {/* Selection summary */}
+            {(selectedConditions.length > 0 || selectedAllergens.length > 0) && (
+                <div style={{ padding: '14px 18px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', marginBottom: '16px' }}>
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#92400e', lineHeight: 1.6 }}>
+                        <Info size={14} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
+                        <strong>Disclosed:</strong>{' '}
+                        {selectedConditions.length > 0 && <span>{selectedConditions.join(', ')}</span>}
+                        {selectedConditions.length > 0 && selectedAllergens.length > 0 && <span> | </span>}
+                        {selectedAllergens.length > 0 && <span style={{ color: '#c2410c' }}>Allergens: {selectedAllergens.join(', ')}</span>}
+                    </p>
+                </div>
+            )}
+
+            {errors.health && <small style={{color: '#ef4444', display: 'block', marginBottom: '12px', fontSize: '0.85rem', textAlign: 'center'}}>{errors.health}</small>}
+
+            {/* Waiver Consent Toggle — Moved here from Contact step */}
+            <div style={{ margin: '8px 0 8px', padding: '16px 20px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px' }}>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', fontSize: '0.88rem', color: '#1e293b', lineHeight: 1.6, textAlign: 'left' }}>
+                    <input type="checkbox" checked={waiverAccepted}
+                        onChange={(e) => {
+                            const checked = e.target.checked;
+                            setWaiverAccepted(checked);
+                            if (checked) { setShowWaiverModal(true); }
+                            else { setWaiverAcceptedAt(null); }
+                        }}
+                        style={{ width: '20px', height: '20px', marginTop: '2px', accentColor: '#be9055', flexShrink: 0 }} />
+                    <span>
+                        I have read and agree to the{' '}
+                        <button type="button" onClick={() => setShowWaiverModal(true)}
+                            style={{ background: 'none', border: 'none', color: '#be9055', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: 'inherit' }}>
+                            Service Waiver & Release of Liability
+                        </button>
+                        <span style={{ color: '#ef4444' }}> *</span>
+                    </span>
+                </label>
+                {errors.waiver && <small style={{ color: '#ef4444', display: 'block', marginTop: '8px', fontSize: '0.8rem', paddingLeft: '32px' }}>{errors.waiver}</small>}
+            </div>
+
+            {/* Waiver Modal */}
+            <WaiverFormModal
+                isOpen={showWaiverModal}
+                onClose={() => setShowWaiverModal(false)}
+                onAccept={() => {
+                    setWaiverAccepted(true);
+                    setWaiverAcceptedAt(new Date().toISOString());
+                    setShowWaiverModal(false);
+                    if (errors.waiver) setErrors(prev => ({ ...prev, waiver: '' }));
+                }}
+                clientName={`${formData.firstName} ${formData.lastName}`.trim() || undefined}
+                photoConsent={photoMarketingConsent}
+                onPhotoConsentChange={setPhotoMarketingConsent}
+            />
+
+            <p style={{ marginTop: '12px', color: '#94a3b8', fontSize: '0.78rem', textAlign: 'center' }}>
+                <Info size={12} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                Your health data is confidential and only shared with your assigned artist for safety purposes.
+            </p>
+        </div>
+    );
+
     const renderStepContact = () => (
         <div className="fade-in">
             <h3 style={{fontSize: '1.4rem', fontWeight: '800', color: '#1e293b', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px'}}>
-                <User className="text-bronze" size={22} /> 4. Contact Details
+                <User className="text-bronze" size={22} /> 5. Contact Details
             </h3>
             <p style={{color: '#64748b', marginBottom: '20px', fontSize: '0.95rem'}}>How should we reach out regarding your request?</p>
 
@@ -1043,53 +1256,6 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                 <CheckCircle size={12} style={{ marginRight: '4px' }} />
                 Your data is secure and will only be used to contact you about this booking.
             </p>
-
-            {/* Waiver Consent Toggle */}
-            <div style={{ margin: '20px 0 8px', padding: '16px 20px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px' }}>
-                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer', fontSize: '0.88rem', color: '#1e293b', lineHeight: 1.6, textAlign: 'left' }}>
-                    <input
-                        type="checkbox"
-                        checked={waiverAccepted}
-                        onChange={(e) => {
-                            const checked = e.target.checked;
-                            setWaiverAccepted(checked);
-                            if (checked) {
-                                setShowWaiverModal(true);
-                            } else {
-                                setWaiverAcceptedAt(null);
-                            }
-                        }}
-                        style={{ width: '20px', height: '20px', marginTop: '2px', accentColor: '#be9055', flexShrink: 0 }}
-                    />
-                    <span>
-                        I have read and agree to the{' '}
-                        <button
-                            type="button"
-                            onClick={() => setShowWaiverModal(true)}
-                            style={{ background: 'none', border: 'none', color: '#be9055', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: 'inherit' }}
-                        >
-                            Service Waiver & Release of Liability
-                        </button>
-                        <span style={{ color: '#ef4444' }}> *</span>
-                    </span>
-                </label>
-                {errors.waiver && <small style={{ color: '#ef4444', display: 'block', marginTop: '8px', fontSize: '0.8rem', paddingLeft: '32px' }}>{errors.waiver}</small>}
-            </div>
-
-            {/* Waiver Modal */}
-            <WaiverFormModal
-                isOpen={showWaiverModal}
-                onClose={() => setShowWaiverModal(false)}
-                onAccept={() => {
-                    setWaiverAccepted(true);
-                    setWaiverAcceptedAt(new Date().toISOString());
-                    setShowWaiverModal(false);
-                    if (errors.waiver) setErrors(prev => ({ ...prev, waiver: '' }));
-                }}
-                clientName={`${formData.firstName} ${formData.lastName}`.trim() || undefined}
-                photoConsent={photoMarketingConsent}
-                onPhotoConsentChange={setPhotoMarketingConsent}
-            />
         </div>
     );
 
@@ -1455,7 +1621,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
         </div>
     );
 
-    if (step === 5) return renderConsultationCompletedPage();
+    if (step === 6) return renderConsultationCompletedPage();
 
     return (
         <div className="data-card wizard-card">
@@ -1463,7 +1629,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
             <div className="wizard-header">
                 <h2>Request Consultation</h2>
                 <div style={{display: 'flex', gap: '8px', flexShrink: 0}}>
-                    {[1, 2, 3, 4].map(s => (
+                    {[1, 2, 3, 4, 5].map(s => (
                         <div key={s} className="wizard-step-indicator" style={{
                             backgroundColor: step >= s ? '#be9055' : '#e2e8f0'
                         }} />
@@ -1475,7 +1641,8 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                 {step === 1 && renderStep1()}
                 {step === 2 && renderStepPlacement()} {/* Step 2: Placement */}
                 {step === 3 && renderStepScheduling()} {/* Step 3: Scheduling */}
-                {step === 4 && renderStepContact()} {/* Step 4: Contact Info */}
+                {step === 4 && renderStepHealth()} {/* Step 4: Health & Safety + Waiver */}
+                {step === 5 && renderStepContact()} {/* Step 5: Contact Info */}
             </div>
             
             <div className="wizard-footer">
@@ -1499,7 +1666,7 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                     <ChevronLeft size={20} /> Previous
                 </button>
                 
-                {step < 4 ? (
+                {step < 5 ? (
                     <button 
                         onClick={() => { 
                             const newErrors = {};
@@ -1519,6 +1686,13 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                                 }
                             }
                             if (step === 3 && (!formData.date || !formData.time)) newErrors.date = 'Please select a preferred date and time';
+                            // Step 4: Health & Safety — require waiver acceptance and health acknowledgment
+                            if (step === 4) {
+                                if (!waiverAccepted) newErrors.waiver = 'You must accept the Service Waiver to proceed';
+                                if (selectedConditions.length === 0 && selectedAllergens.length === 0 && !healthNoneConfirmed) {
+                                    newErrors.health = 'Please disclose any health conditions/allergens, or confirm you have none';
+                                }
+                            }
                             
                             if (Object.keys(newErrors).length > 0) {
                                 setErrors(newErrors);
@@ -1554,8 +1728,6 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                             
                             if (!formData.phone) newErrors.phone = 'Phone Number is required';
                             else if (!/^\+?\d{10,15}$/.test((formData.phoneCode || '+63') + formData.phone.replace(/^0+/, ''))) newErrors.phone = 'Please enter a valid phone number';
-                            
-                            if (!waiverAccepted) newErrors.waiver = 'You must accept the Service Waiver to proceed';
                             
                             if (Object.keys(newErrors).length > 0) {
                                 setErrors(newErrors);
