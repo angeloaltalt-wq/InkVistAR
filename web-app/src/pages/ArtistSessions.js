@@ -1286,7 +1286,6 @@ function ArtistSessions() {
                                             <div
                                                 key={item.id}
                                                 onClick={async () => {
-                                                    closeInventoryModal();
                                                     await handleQuickAdd(item.id, 1);
                                                 }}
                                                 style={{
