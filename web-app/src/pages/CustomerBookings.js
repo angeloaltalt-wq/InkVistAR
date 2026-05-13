@@ -518,7 +518,6 @@ function CustomerBookings(){
         setIsBookingModalOpen(false);
         setBookingStep(1);
         setBookingData({ artistId: null, bookingType: '', selectedServices: [], followupAppointmentId: null, date: '', startTime: '', designTitle: '', placement: [], piercingPlacement: [], consultationFor: [], placementNotes: '', notes: '', referenceImage: null });
-        setAvailableTimeSlots([]);
     };
 
     const handleRequestNextSession = (appt) => {
