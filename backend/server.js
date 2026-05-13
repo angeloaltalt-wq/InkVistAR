@@ -7193,7 +7193,7 @@ app.put('/api/appointments/:id/status', (req, res) => {
 
           // PAYMENT RESOLUTION CHECK: Fire urgent admin alert if outstanding balance exists
           const paymentCheckQuery = `
-            SELECT ap.price,
+            SELECT ap.price, ap.project_id, ap.session_number, ap.payment_status,
               ((SELECT COALESCE(SUM(amount), 0) FROM payments WHERE appointment_id = ap.id AND status = 'paid') / 100) + COALESCE(ap.manual_paid_amount, 0) as total_paid
             FROM appointments ap WHERE ap.id = ?
           `;
@@ -7202,11 +7202,12 @@ app.put('/api/appointments/:id/status', (req, res) => {
               const apptPrice = Number(pRes[0].price) || 0;
               const apptTotalPaid = Number(pRes[0].total_paid) || 0;
               const isProjectFollowup = pRes[0].project_id !== null && pRes[0].session_number > 1;
-              const hasOutstandingBalance = apptPrice > 0 && apptTotalPaid < apptPrice;
-              const isUnquoted = apptPrice <= 0 && !isProjectFollowup;
+              const isAlreadyPaid = pRes[0].payment_status === 'paid';
+              const hasOutstandingBalance = apptPrice > 0 && apptTotalPaid < apptPrice && !isAlreadyPaid;
+              const isUnquoted = apptPrice <= 0 && !isProjectFollowup && !isAlreadyPaid;
               const isConsultation = (appointment.service_type || '').toLowerCase() === 'consultation';
 
-              // Skip payment alerts for consultations — they are always free
+              // Skip payment alerts for consultations (always free), already-paid sessions, and project follow-ups with no additional charge
               if (!isConsultation && (hasOutstandingBalance || isUnquoted)) {
                 const alertMsg = isUnquoted
                   ? `Appointment #${id} for "${designTitle}" has been completed but has NO PRICE SET. The artist cannot be compensated until a quote is finalized and payment is collected.`
@@ -7365,6 +7366,7 @@ app.get('/api/admin/pending-payment-alerts', (req, res) => {
     WHERE ap.status = 'completed'
       AND ap.is_deleted = 0
       AND (ap.service_type IS NULL OR ap.service_type != 'Consultation')
+      AND (ap.payment_status IS NULL OR ap.payment_status != 'paid')
       AND (
         (ap.price > 0 AND ((SELECT COALESCE(SUM(amount), 0) FROM payments WHERE appointment_id = ap.id AND status = 'paid') / 100) + COALESCE(ap.manual_paid_amount, 0) < ap.price)
         OR ((ap.price IS NULL OR ap.price <= 0) AND (ap.project_id IS NULL OR ap.session_number <= 1))

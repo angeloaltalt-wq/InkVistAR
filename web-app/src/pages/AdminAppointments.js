@@ -2127,12 +2127,24 @@ function AdminAppointments() {
                                             <button
                                                 className={`modal-tab-btn ${modalTab === 'pricing' ? 'active' : ''}`}
                                                 onClick={() => {
-                                                    const fullyPaid = selectedAppointment && selectedAppointment.price > 0 && (selectedAppointment.paymentStatus === 'paid' || Number(selectedAppointment.totalPaid) >= Number(selectedAppointment.price));
+                                                    const fullyPaid = selectedAppointment && (
+                                                        selectedAppointment.paymentStatus === 'paid'
+                                                        || (selectedAppointment.price > 0 && Number(selectedAppointment.totalPaid) >= Number(selectedAppointment.price))
+                                                    );
                                                     if (!fullyPaid) setModalTab('pricing');
                                                 }}
-                                                disabled={selectedAppointment && selectedAppointment.price > 0 && (selectedAppointment.paymentStatus === 'paid' || Number(selectedAppointment.totalPaid) >= Number(selectedAppointment.price))}
-                                                title={selectedAppointment && selectedAppointment.price > 0 && (selectedAppointment.paymentStatus === 'paid' || Number(selectedAppointment.totalPaid) >= Number(selectedAppointment.price)) ? "Pricing is locked \u2014 this appointment is fully paid" : ""}
-                                                style={selectedAppointment && selectedAppointment.price > 0 && (selectedAppointment.paymentStatus === 'paid' || Number(selectedAppointment.totalPaid) >= Number(selectedAppointment.price)) ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                                                disabled={selectedAppointment && (
+                                                    selectedAppointment.paymentStatus === 'paid'
+                                                    || (selectedAppointment.price > 0 && Number(selectedAppointment.totalPaid) >= Number(selectedAppointment.price))
+                                                )}
+                                                title={selectedAppointment && (
+                                                    selectedAppointment.paymentStatus === 'paid'
+                                                    || (selectedAppointment.price > 0 && Number(selectedAppointment.totalPaid) >= Number(selectedAppointment.price))
+                                                ) ? "Pricing is locked \u2014 this appointment is fully paid" : ""}
+                                                style={selectedAppointment && (
+                                                    selectedAppointment.paymentStatus === 'paid'
+                                                    || (selectedAppointment.price > 0 && Number(selectedAppointment.totalPaid) >= Number(selectedAppointment.price))
+                                                ) ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                                             >
                                                 <PhilippinePeso size={16} /> Pricing
                                             </button>
@@ -2732,10 +2744,28 @@ function AdminAppointments() {
 
 
 
-                                {modalTab === 'pricing' && (
+                                {modalTab === 'pricing' && (() => {
+                                    const isPricingLocked = selectedAppointment && (
+                                        selectedAppointment.paymentStatus === 'paid'
+                                        || (selectedAppointment.price > 0 && Number(selectedAppointment.totalPaid) >= Number(selectedAppointment.price))
+                                    );
+                                    return (
                                     /* Pricing Tab View */
                                     <div className="fade-in admin-st-9628d1ce">
-                                        <div className="admin-st-dd4f6313">
+                                        {isPricingLocked && (
+                                            <div style={{
+                                                display: 'flex', alignItems: 'center', gap: '10px',
+                                                padding: '12px 16px', marginBottom: '16px',
+                                                borderRadius: '10px',
+                                                background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.04))',
+                                                border: '1px solid rgba(16,185,129,0.25)',
+                                                color: '#065f46', fontSize: '0.88rem', fontWeight: 600
+                                            }}>
+                                                <CheckCircle size={18} style={{ color: '#10b981', flexShrink: 0 }} />
+                                                Pricing is locked — this appointment has been fully paid. No further changes are permitted.
+                                            </div>
+                                        )}
+                                        <div className="admin-st-dd4f6313" style={isPricingLocked ? { opacity: 0.55, pointerEvents: 'none' } : {}}>
                                             <div className="admin-st-e5b0a825">
                                                 {/* Dual-service: show split price inputs */}
                                                 {formData.serviceType === 'Tattoo + Piercing' ? (
@@ -2855,7 +2885,8 @@ function AdminAppointments() {
                                             </div>
                                         </div>
                                     </div>
-                                )}
+                                    );
+                                })()}
 
                                 {modalTab === 'notes' && (
                                     /* Session Log Tab View */
