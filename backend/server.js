@@ -4887,7 +4887,7 @@ app.get('/api/admin/appointments/:id', (req, res) => {
 
 // POST create a new appointment (Admin)
 app.post('/api/admin/appointments', async (req, res) => {
-  let { customerId, artistId, secondaryArtistId, commissionSplit, serviceType, designTitle, date, startTime, status, notes, price, manualPaidAmount, referenceImage, isFromWizard, customerName, captchaToken, deviceId, consultationMethod, guestEmail, guestPhone, tattooPrice, piercingPrice, waiverAcceptedAt, photoMarketingConsent, piercingJewelry, totalSessions, sessionNumber, projectId } = req.body;
+  let { customerId, clientEmail, artistId, secondaryArtistId, commissionSplit, serviceType, designTitle, date, startTime, status, notes, price, manualPaidAmount, referenceImage, isFromWizard, customerName, captchaToken, deviceId, consultationMethod, guestEmail, guestPhone, tattooPrice, piercingPrice, waiverAcceptedAt, photoMarketingConsent, piercingJewelry, totalSessions, sessionNumber, projectId } = req.body;
 
   // Verify reCAPTCHA for public wizard submissions only
   if (isFromWizard) {
@@ -4896,6 +4896,23 @@ app.post('/api/admin/appointments', async (req, res) => {
       return res.status(400).json({ success: false, message: 'CAPTCHA verification failed. Please try again.' });
     }
   }
+
+  // Helper to resolve clientEmail to customerId if mobile app sends email instead of ID
+  const resolveCustomerId = async () => {
+    if (customerId) return customerId;
+    if (!clientEmail) return null;
+    return new Promise((resolve) => {
+      db.query("SELECT id FROM users WHERE email = ? LIMIT 1", [clientEmail], (err, results) => {
+        if (!err && results && results.length > 0) {
+          resolve(results[0].id);
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  };
+
+  customerId = await resolveCustomerId();
 
   if (!customerId || !artistId || !date) {
     return res.status(400).json({ success: false, message: 'customerId, artistId, and date are required.' });
