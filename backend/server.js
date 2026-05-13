@@ -9176,6 +9176,58 @@ app.get('/api/admin/audit-logs', (req, res) => {
   });
 });
 
+// Auto-create studio_expenses table if it doesn't exist
+db.query(`
+  CREATE TABLE IF NOT EXISTS studio_expenses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    category VARCHAR(100) NOT NULL,
+    description TEXT,
+    amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`, (err) => { if (err) console.error('studio_expenses table check error:', err.message); });
+
+// Admin: Get Overhead Expenses
+app.get('/api/admin/overhead', (req, res) => {
+  db.query(
+    'SELECT se.*, COALESCE(u.name, "System Admin") as created_by_name FROM studio_expenses se LEFT JOIN users u ON se.created_by = u.id ORDER BY se.created_at DESC LIMIT 100',
+    (err, results) => {
+      if (err) return res.status(500).json({ success: false, message: err.message });
+      res.json({ success: true, data: results });
+    }
+  );
+});
+
+// Admin: Add Overhead Expense
+app.post('/api/admin/overhead', (req, res) => {
+  const { category, description, amount } = req.body;
+  if (!category || !amount) return res.status(400).json({ success: false, message: 'Category and amount are required.' });
+  const parsedAmount = parseFloat(amount);
+  if (isNaN(parsedAmount) || parsedAmount <= 0) return res.status(400).json({ success: false, message: 'Amount must be greater than 0.' });
+  const adminId = getAdminId(req);
+  db.query(
+    'INSERT INTO studio_expenses (category, description, amount, created_by) VALUES (?, ?, ?, ?)',
+    [category.trim(), (description || '').trim(), parsedAmount, adminId || null],
+    (err, result) => {
+      if (err) return res.status(500).json({ success: false, message: err.message });
+      logAction(adminId, 'ADD_OVERHEAD', `Added overhead: ${category} - ₱${parsedAmount}`, req.ip);
+      res.json({ success: true, message: 'Overhead expense recorded.', id: result.insertId });
+    }
+  );
+});
+
+// Admin: Delete Overhead Expense
+app.delete('/api/admin/overhead/:id', (req, res) => {
+  const { id } = req.params;
+  const adminId = getAdminId(req);
+  db.query('DELETE FROM studio_expenses WHERE id = ?', [id], (err) => {
+    if (err) return res.status(500).json({ success: false, message: err.message });
+    logAction(adminId, 'DELETE_OVERHEAD', `Deleted overhead expense ID ${id}`, req.ip);
+    res.json({ success: true, message: 'Overhead expense deleted.' });
+  });
+});
+
 // Admin: Get Branches
 app.get('/api/admin/branches', (req, res) => {
   const { status } = req.query;
@@ -10148,17 +10200,74 @@ app.get('/api/admin/settings', (req, res) => {
   });
 });
 
-// Admin: Save Settings (Upsert)
+// Admin: Save Settings (Upsert) — supports both {section, data} and flat key-value pairs
 app.post('/api/admin/settings', (req, res) => {
-  const { section, data } = req.body;
-  const jsonData = JSON.stringify(data);
+  const body = req.body;
+  const adminId = getAdminId(req);
 
+  // Flat key-value mode (mobile): map known keys to their app_settings sections
+  if (!body.section) {
+    const tasks = [];
+
+    // gallery_categories → gallery section
+    if (body.gallery_categories !== undefined) {
+      const galleryData = JSON.stringify({ categories: body.gallery_categories });
+      tasks.push(new Promise((resolve, reject) => {
+        db.query('INSERT INTO app_settings (section, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = ?',
+          ['gallery', galleryData, galleryData], (err) => err ? reject(err) : resolve());
+      }));
+    }
+
+    // General toggles → general section (merge with existing)
+    const generalKeys = ['allowGuests', 'maintenance_mode', 'push_notifications', 'studio_name'];
+    const generalUpdates = {};
+    generalKeys.forEach(k => { if (body[k] !== undefined) generalUpdates[k] = body[k]; });
+
+    if (Object.keys(generalUpdates).length > 0) {
+      tasks.push(new Promise((resolve, reject) => {
+        db.query('SELECT data FROM app_settings WHERE section = ?', ['general'], (err, rows) => {
+          if (err) return reject(err);
+          let existing = {};
+          try { existing = rows.length ? JSON.parse(rows[0].data) : {}; } catch (e) {}
+          const merged = { ...existing, ...generalUpdates };
+          const jsonData = JSON.stringify(merged);
+          db.query('INSERT INTO app_settings (section, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = ?',
+            ['general', jsonData, jsonData], (e2) => e2 ? reject(e2) : resolve());
+        });
+      }));
+    }
+
+    // business_hours / policies / templates → direct section saves
+    ['business_hours', 'terms_of_service', 'cancellation_policy', 'reminder_template'].forEach(key => {
+      if (body[key] !== undefined) {
+        const sectionName = key;
+        const jsonData = JSON.stringify(body[key]);
+        tasks.push(new Promise((resolve, reject) => {
+          db.query('INSERT INTO app_settings (section, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = ?',
+            [sectionName, jsonData, jsonData], (err) => err ? reject(err) : resolve());
+        }));
+      }
+    });
+
+    Promise.all(tasks)
+      .then(() => {
+        logAction(adminId, 'UPDATE_SETTINGS', 'Settings updated via mobile', req.ip);
+        res.json({ success: true, message: 'Settings saved' });
+      })
+      .catch(err => res.status(500).json({ success: false, message: err.message }));
+    return;
+  }
+
+  // Legacy {section, data} format (web portal)
+  const { section, data } = body;
+  const jsonData = JSON.stringify(data);
   const query = 'INSERT INTO app_settings (section, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = ?';
   db.query(query, [section, jsonData, jsonData], (err) => {
     if (err) return res.status(500).json({ success: false, message: err.message });
     res.json({ success: true, message: 'Settings saved' });
   });
 });
+
 
 // Manager: Dashboard Stats
 app.get('/api/manager/dashboard', (req, res) => {

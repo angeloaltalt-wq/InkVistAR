@@ -13,7 +13,7 @@ import * as ImagePicker from 'expo-image-picker';
 import {
   Search, Plus, Pencil, Trash2, X, Package, AlertTriangle,
   TrendingDown, TrendingUp, Archive, ChevronLeft, ChevronRight,
-  Printer, Download, History, Layers, Filter, Camera
+  Printer, Download, History, Layers, Filter, Camera, ArrowUpDown, RotateCcw, SortAsc
 } from 'lucide-react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../src/context/ThemeContext';
@@ -56,7 +56,14 @@ export const AdminInventory = ({ navigation }) => {
   const [txNotes, setTxNotes] = useState('');
 
   // Delete
-  const [deleteModal, setDeleteModal] = useState({ visible: false, itemId: null, itemName: '' });
+  const [deleteModal, setDeleteModal] = useState({ visible: false, itemId: null, itemName: '', isArchived: false });
+
+  // Sort
+  const [sortBy, setSortBy] = useState('name'); // name | stock_asc | stock_desc | cost
+  const [sortDropdown, setSortDropdown] = useState(false);
+
+  // Show archived toggle
+  const [showArchived, setShowArchived] = useState(false);
 
   // Autocomplete & Filters
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -145,12 +152,25 @@ export const AdminInventory = ({ navigation }) => {
   };
 
   const handleDelete = async () => {
-    const result = await deleteAdminInventory(deleteModal.itemId);
-    setDeleteModal({ visible: false, itemId: null, itemName: '' });
-    if (result.success) {
-      loadData();
+    if (deleteModal.isArchived) {
+      // Restore
+      const result = await updateAdminInventory(deleteModal.itemId, { is_deleted: 0 });
+      setDeleteModal({ visible: false, itemId: null, itemName: '', isArchived: false });
+      if (result.success) {
+        Alert.alert('Restored', 'Item restored to active inventory.');
+        loadData();
+      } else {
+        Alert.alert('Error', result.message || 'Failed to restore');
+      }
     } else {
-      Alert.alert('Error', result.message || 'Failed to delete');
+      // Soft archive
+      const result = await deleteAdminInventory(deleteModal.itemId);
+      setDeleteModal({ visible: false, itemId: null, itemName: '', isArchived: false });
+      if (result.success) {
+        loadData();
+      } else {
+        Alert.alert('Error', result.message || 'Failed to archive');
+      }
     }
   };
 
@@ -196,25 +216,34 @@ export const AdminInventory = ({ navigation }) => {
     ...items.map(i => (i.category || '').trim())
   ])).filter(Boolean);
 
-  const filtered = items.filter(item => {
-    const matchSearch = (item.name || '').toLowerCase().includes(search.toLowerCase()) || (item.category || '').toLowerCase().includes(search.toLowerCase());
-    
-    let matchCategory = true;
-    if (categoryFilter.length > 0) {
-      matchCategory = categoryFilter.includes((item.category || '').toLowerCase());
-    }
-    
-    let matchStock = true;
-    if (stockStatusFilter.length > 0) {
-      matchStock = false;
-      if (stockStatusFilter.includes('out') && item.current_stock <= 0) matchStock = true;
-      if (stockStatusFilter.includes('low') && item.current_stock > 0 && item.current_stock <= item.min_stock) matchStock = true;
-      if (stockStatusFilter.includes('optimal') && item.current_stock > item.min_stock && item.current_stock <= item.max_stock) matchStock = true;
-      if (stockStatusFilter.includes('overstock') && item.current_stock > item.max_stock) matchStock = true;
-    }
+  const filtered = items
+    .filter(item => {
+      if (!showArchived && item.is_deleted) return false; // hide archived by default
+      const matchSearch = (item.name || '').toLowerCase().includes(search.toLowerCase()) || (item.category || '').toLowerCase().includes(search.toLowerCase());
+      
+      let matchCategory = true;
+      if (categoryFilter.length > 0) {
+        matchCategory = categoryFilter.includes((item.category || '').toLowerCase());
+      }
+      
+      let matchStock = true;
+      if (stockStatusFilter.length > 0) {
+        matchStock = false;
+        if (stockStatusFilter.includes('out') && item.current_stock <= 0) matchStock = true;
+        if (stockStatusFilter.includes('low') && item.current_stock > 0 && item.current_stock <= item.min_stock) matchStock = true;
+        if (stockStatusFilter.includes('optimal') && item.current_stock > item.min_stock && item.current_stock <= item.max_stock) matchStock = true;
+        if (stockStatusFilter.includes('overstock') && item.current_stock > item.max_stock) matchStock = true;
+      }
 
-    return matchSearch && matchCategory && matchStock;
-  });
+      return matchSearch && matchCategory && matchStock;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
+      if (sortBy === 'stock_asc') return (a.current_stock || 0) - (b.current_stock || 0);
+      if (sortBy === 'stock_desc') return (b.current_stock || 0) - (a.current_stock || 0);
+      if (sortBy === 'cost') return (b.cost_per_unit || 0) - (a.cost_per_unit || 0);
+      return 0;
+    });
 
   const toggleCategory = (cat) => {
     if (categoryFilter.includes(cat)) {
@@ -282,16 +311,24 @@ export const AdminInventory = ({ navigation }) => {
           </View>
 
           <View style={styles.itemActions}>
-            <AnimatedTouchable style={styles.txBtn} onPress={() => openTxModal(item)}>
-              <TrendingUp size={14} color={theme.success} />
-              <Text style={[styles.txBtnText, { color: theme.success }]}>Stock In/Out</Text>
-            </AnimatedTouchable>
-            <View style={styles.iconActions}>
-              <AnimatedTouchable style={[styles.iconBtn, styles.editBtn]} onPress={() => openForm(item)}>
-                <Pencil size={14} color={theme.warning} />
+            {!item.is_deleted && (
+              <AnimatedTouchable style={styles.txBtn} onPress={() => openTxModal(item)}>
+                <TrendingUp size={14} color={theme.success} />
+                <Text style={[styles.txBtnText, { color: theme.success }]}>Stock In/Out</Text>
               </AnimatedTouchable>
-              <AnimatedTouchable style={[styles.iconBtn, styles.delBtn]} onPress={() => setDeleteModal({ visible: true, itemId: item.id, itemName: item.name })}>
-                <Trash2 size={14} color={theme.error} />
+            )}
+            <View style={styles.iconActions}>
+              {!item.is_deleted && (
+                <AnimatedTouchable style={[styles.iconBtn, styles.editBtn]} onPress={() => openForm(item)} title="Edit item">
+                  <Pencil size={14} color={theme.warning} />
+                </AnimatedTouchable>
+              )}
+              <AnimatedTouchable
+                style={[styles.iconBtn, item.is_deleted ? styles.editBtn : styles.delBtn]}
+                onPress={() => setDeleteModal({ visible: true, itemId: item.id, itemName: item.name, isArchived: !!item.is_deleted })}
+                title={item.is_deleted ? 'Restore item' : 'Archive item'}
+              >
+                {item.is_deleted ? <RotateCcw size={14} color={theme.success} /> : <Archive size={14} color={theme.error} />}
               </AnimatedTouchable>
             </View>
           </View>
@@ -330,6 +367,38 @@ export const AdminInventory = ({ navigation }) => {
         </View>
 
         <View style={styles.actionGroup}>
+          {/* Sort Dropdown */}
+          <View style={{ position: 'relative' }}>
+            <AnimatedTouchable style={[styles.iconBtnHeader, { flexDirection: 'row', gap: 4, paddingHorizontal: 10, width: 'auto' }]} onPress={() => setSortDropdown(!sortDropdown)} title="Sort items">
+              <ArrowUpDown size={14} color={theme.textPrimary} />
+              <Text style={{ ...typography.bodyXSmall, color: theme.textPrimary, fontWeight: '700' }}>Sort</Text>
+            </AnimatedTouchable>
+            {sortDropdown && (
+              <View style={styles.sortDropdown}>
+                {[
+                  { key: 'name', label: 'By Name' },
+                  { key: 'stock_asc', label: 'Stock: Low to High' },
+                  { key: 'stock_desc', label: 'Stock: High to Low' },
+                  { key: 'cost', label: 'Cost: High to Low' },
+                ].map(opt => (
+                  <AnimatedTouchable key={opt.key}
+                    style={[styles.sortOption, sortBy === opt.key && styles.sortOptionActive]}
+                    onPress={() => { setSortBy(opt.key); setSortDropdown(false); }}
+                  >
+                    <Text style={[{ ...typography.bodyXSmall, color: theme.textSecondary }, sortBy === opt.key && { color: theme.gold }]}>{opt.label}</Text>
+                  </AnimatedTouchable>
+                ))}
+              </View>
+            )}
+          </View>
+          <AnimatedTouchable
+            style={[styles.iconBtnHeader, { flexDirection: 'row', gap: 4, paddingHorizontal: 10, width: 'auto', backgroundColor: showArchived ? 'rgba(239,68,68,0.12)' : theme.surfaceLight }]}
+            onPress={() => setShowArchived(!showArchived)}
+            title="Toggle archived items"
+          >
+            <Archive size={14} color={showArchived ? theme.error : theme.textPrimary} />
+            <Text style={{ ...typography.bodyXSmall, color: showArchived ? theme.error : theme.textPrimary, fontWeight: '700' }}>Archived</Text>
+          </AnimatedTouchable>
           <AnimatedTouchable style={[styles.iconBtnHeader, { backgroundColor: theme.surfaceLight }]} onPress={fetchHistory}>
             <History size={16} color={theme.textPrimary} />
             <Text style={styles.iconBtnText}>History</Text>
@@ -589,15 +658,18 @@ export const AdminInventory = ({ navigation }) => {
         </SafeAreaView>
       </Modal>
 
-      {/* Delete Confirm */}
+      {/* Delete / Archive Confirm */}
       <ConfirmModal
         visible={deleteModal.visible}
-        title="Delete Item"
-        message={`Delete "${deleteModal.itemName}" from inventory?`}
-        confirmText="Delete"
-        destructive
+        title={deleteModal.isArchived ? 'Restore Item' : 'Archive Item'}
+        message={deleteModal.isArchived
+          ? `Restore "${deleteModal.itemName}" to active inventory?`
+          : `Archive "${deleteModal.itemName}" from inventory? It can be restored later.`
+        }
+        confirmText={deleteModal.isArchived ? 'Restore' : 'Archive'}
+        destructive={!deleteModal.isArchived}
         onConfirm={handleDelete}
-        onCancel={() => setDeleteModal({ visible: false, itemId: null, itemName: '' })}
+        onCancel={() => setDeleteModal({ visible: false, itemId: null, itemName: '', isArchived: false })}
       />
     </SafeAreaView>
   );
@@ -720,4 +792,10 @@ const getStyles = (theme, insets) => StyleSheet.create({
   kitCard: { backgroundColor: theme.surfaceLight, padding: 12, borderRadius: borderRadius.md, marginBottom: 8, borderWidth: 1, borderColor: theme.borderLight },
   kitTitle: { ...typography.body, color: theme.textPrimary, fontWeight: '700', marginBottom: 4 },
   kitMeta: { ...typography.bodyXSmall, color: theme.textSecondary },
+  sortDropdown: {
+    position: 'absolute', top: 44, right: 0, backgroundColor: theme.surface, borderRadius: borderRadius.lg,
+    borderWidth: 1, borderColor: theme.border, ...shadows.cardStrong, zIndex: 100, minWidth: 170,
+  },
+  sortOption: { paddingHorizontal: 14, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: theme.borderLight },
+  sortOptionActive: { backgroundColor: theme.surfaceLight },
 });

@@ -6,7 +6,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
-  RefreshControl, SafeAreaView, Platform, Share, Alert, ActivityIndicator, ActionSheetIOS,
+  RefreshControl, SafeAreaView, Platform, Share, Alert, ActivityIndicator, ActionSheetIOS, Modal
 } from 'react-native';
 import {
   ChevronLeft, TrendingUp, Package, DollarSign, Activity, Tag,
@@ -65,6 +65,9 @@ export const AdminSalesReports = ({ navigation }) => {
   const [preset, setPreset] = useState('month');
   const [startDate, setStartDate] = useState(() => getPresetDates('month').start);
   const [endDate, setEndDate] = useState(() => getPresetDates('month').end);
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [customDateModalVisible, setCustomDateModalVisible] = useState(false);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [invoices, setInvoices] = useState([]);
@@ -97,12 +100,14 @@ export const AdminSalesReports = ({ navigation }) => {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handlePreset = (key) => {
-    setPreset(key);
-    if (key !== 'custom') {
-      const { start, end } = getPresetDates(key);
-      setStartDate(start);
-      setEndDate(end);
+    if (key === 'custom') {
+      setCustomDateModalVisible(true);
+      return;
     }
+    setPreset(key);
+    const { start, end } = getPresetDates(key);
+    setStartDate(start);
+    setEndDate(end);
   };
 
   /* ═══ SALES AGGREGATION ═══ */
@@ -464,6 +469,52 @@ export const AdminSalesReports = ({ navigation }) => {
           <Text style={s.footerText}>InkVistAR Studio</Text>
         </View>
       </ScrollView>
+
+      {/* Custom Date Modal */}
+      <Modal visible={customDateModalVisible} animationType="fade" transparent>
+        <View style={s.modalOverlay}>
+          <View style={s.modalContent}>
+            <Text style={s.modalTitle}>Custom Date Range</Text>
+            <Text style={s.modalText}>Enter dates in YYYY-MM-DD format.</Text>
+            
+            <Text style={s.inputLabel}>Start Date</Text>
+            <TextInput
+              style={s.dateInput}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={theme.textTertiary}
+              value={customStartDate}
+              onChangeText={setCustomStartDate}
+            />
+            
+            <Text style={s.inputLabel}>End Date</Text>
+            <TextInput
+              style={s.dateInput}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={theme.textTertiary}
+              value={customEndDate}
+              onChangeText={setCustomEndDate}
+            />
+            
+            <View style={s.modalActions}>
+              <TouchableOpacity style={[s.modalBtn, { backgroundColor: theme.surfaceLight, borderWidth: 1, borderColor: theme.border }]} onPress={() => setCustomDateModalVisible(false)}>
+                <Text style={[s.modalBtnText, { color: theme.textPrimary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.modalBtn} onPress={() => { 
+                if (customStartDate && customEndDate) {
+                  setPreset('custom'); 
+                  setStartDate(customStartDate); 
+                  setEndDate(customEndDate); 
+                  setCustomDateModalVisible(false); 
+                } else {
+                  Alert.alert('Error', 'Please enter valid start and end dates.');
+                }
+              }}>
+                <Text style={s.modalBtnText}>Apply Filter</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -526,4 +577,15 @@ const getStyles = (theme, insets) => StyleSheet.create({
   // Footer
   footer: { alignItems: 'center', paddingVertical: 24, gap: 4 },
   footerText: { ...typography.bodyXSmall, color: theme.textTertiary },
+
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: { width: '100%', backgroundColor: theme.surface, borderRadius: 24, padding: 24, borderWidth: 1, borderColor: theme.border },
+  modalTitle: { ...typography.h3, color: theme.textPrimary, marginBottom: 8 },
+  modalText: { ...typography.body, color: theme.textSecondary, marginBottom: 20 },
+  inputLabel: { ...typography.bodySmall, color: theme.textSecondary, fontWeight: '600', marginBottom: 6 },
+  dateInput: { backgroundColor: theme.surfaceLight, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: theme.border, ...typography.body, color: theme.textPrimary, marginBottom: 16 },
+  modalActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  modalBtn: { flex: 1, backgroundColor: theme.gold, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  modalBtnText: { ...typography.button, color: '#fff' },
 });

@@ -38,12 +38,24 @@ export const AdminBilling = ({ navigation }) => {
   const [search, setSearch] = useState('');
 
   const [invoiceDetail, setInvoiceDetail] = useState(null);
-  const [periodFilter, setPeriodFilter] = useState('all'); // all | weekly | monthly | yearly
+  const [periodFilter, setPeriodFilter] = useState('all'); // all | weekly | monthly | yearly | custom
   const [statusFilter, setStatusFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all'); // all | session | pos
   const [payoutModalVisible, setPayoutModalVisible] = useState(false);
   const [payoutForm, setPayoutForm] = useState({ artistId: '', amount: '', method: 'Cash', reference: '' });
   const [isEditingInvoice, setIsEditingInvoice] = useState(false);
   const [payoutDetail, setPayoutDetail] = useState(null);
+
+  // Create Invoice
+  const [createInvoiceModal, setCreateInvoiceModal] = useState(false);
+  const [invoiceForm, setInvoiceForm] = useState({ clientName: '', serviceType: 'Tattoo Session', amount: '', reference: '', notes: '' });
+
+  // Custom Date Range
+  const [customDateModal, setCustomDateModal] = useState(false);
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+  const [pendingCustomStart, setPendingCustomStart] = useState('');
+  const [pendingCustomEnd, setPendingCustomEnd] = useState('');
 
   const matchesPeriod = (dateStr) => {
     if (periodFilter === 'all') return true;
@@ -59,6 +71,13 @@ export const AdminBilling = ({ navigation }) => {
     }
     if (periodFilter === 'monthly') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     if (periodFilter === 'yearly') return d.getFullYear() === now.getFullYear();
+    if (periodFilter === 'custom' && customStart && customEnd) {
+      const start = new Date(customStart);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(customEnd);
+      end.setHours(23, 59, 59, 999);
+      return d >= start && d <= end;
+    }
     return true;
   };
 
@@ -115,7 +134,11 @@ export const AdminBilling = ({ navigation }) => {
       Alert.alert('Validation Error', 'Please select an artist and enter an amount.');
       return;
     }
-    
+    const parsedAmount = parseFloat(payoutForm.amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      Alert.alert('Validation Error', 'Amount must be a positive number.');
+      return;
+    }
     try {
       const token = await AsyncStorage.getItem('auth_token');
       const res = await fetch(`${API_BASE_URL}/api/admin/payouts`, {
@@ -123,7 +146,7 @@ export const AdminBilling = ({ navigation }) => {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           artistId: payoutForm.artistId,
-          amount: parseFloat(payoutForm.amount),
+          amount: parsedAmount,
           paymentMethod: payoutForm.method,
           referenceNumber: payoutForm.reference,
         })
@@ -136,6 +159,45 @@ export const AdminBilling = ({ navigation }) => {
         loadData();
       } else {
         Alert.alert('Error', data.message || 'Failed to record payout');
+      }
+    } catch (e) {
+      Alert.alert('Error', 'Network error.');
+    }
+  };
+
+  const handleCreateInvoice = async () => {
+    const { clientName, serviceType, amount, reference, notes } = invoiceForm;
+    if (!clientName.trim()) {
+      Alert.alert('Validation Error', 'Client name is required.');
+      return;
+    }
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      Alert.alert('Validation Error', 'Please enter a valid amount greater than 0.');
+      return;
+    }
+    try {
+      const token = await AsyncStorage.getItem('auth_token');
+      const res = await fetch(`${API_BASE_URL}/api/admin/invoices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          clientName: clientName.trim(),
+          serviceType,
+          amount: parsedAmount,
+          referenceNumber: reference.trim(),
+          notes: notes.trim(),
+          status: 'paid',
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        Alert.alert('Success', 'Invoice created successfully.');
+        setCreateInvoiceModal(false);
+        setInvoiceForm({ clientName: '', serviceType: 'Tattoo Session', amount: '', reference: '', notes: '' });
+        loadData();
+      } else {
+        Alert.alert('Error', data.message || 'Failed to create invoice');
       }
     } catch (e) {
       Alert.alert('Error', 'Network error.');
@@ -213,8 +275,13 @@ export const AdminBilling = ({ navigation }) => {
           <Text style={styles.headerTitle}>Billing & Payouts</Text>
           <Text style={styles.headerSub}>Financial Ledger</Text>
         </View>
+        {activeTab === 'invoices' && (
+          <AnimatedTouchable style={styles.addBtn} onPress={() => setCreateInvoiceModal(true)} title="Create new invoice">
+            <Plus size={20} color={theme.backgroundDeep} />
+          </AnimatedTouchable>
+        )}
         {activeTab === 'payouts' && (
-          <AnimatedTouchable style={styles.addBtn} onPress={() => setPayoutModalVisible(true)}>
+          <AnimatedTouchable style={styles.addBtn} onPress={() => setPayoutModalVisible(true)} title="Record payout">
             <Plus size={20} color={theme.backgroundDeep} />
           </AnimatedTouchable>
         )}
@@ -273,14 +340,22 @@ export const AdminBilling = ({ navigation }) => {
       {/* Period Filters */}
       <View style={styles.filtersRow}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingVertical: 8 }}>
-          {['all', 'weekly', 'monthly', 'yearly'].map(p => (
+          {['all', 'weekly', 'monthly', 'yearly', 'custom'].map(p => (
             <AnimatedTouchable
               key={p}
               style={[styles.filterPill, periodFilter === p && styles.filterPillActive]}
-              onPress={() => setPeriodFilter(p)}
+              onPress={() => {
+                if (p === 'custom') {
+                  setPendingCustomStart(customStart);
+                  setPendingCustomEnd(customEnd);
+                  setCustomDateModal(true);
+                } else {
+                  setPeriodFilter(p);
+                }
+              }}
             >
               <Text style={[styles.filterPillText, periodFilter === p && styles.filterPillTextActive]}>
-                {p === 'all' ? 'All Time' : p.charAt(0).toUpperCase() + p.slice(1)}
+                {p === 'all' ? 'All Time' : p === 'custom' && customStart && customEnd ? `${customStart} → ${customEnd}` : p.charAt(0).toUpperCase() + p.slice(1)}
               </Text>
             </AnimatedTouchable>
           ))}
@@ -302,6 +377,18 @@ export const AdminBilling = ({ navigation }) => {
                 </Text>
               </AnimatedTouchable>
             ))}
+            <View style={{ width: 1, backgroundColor: theme.border, marginVertical: 4, marginHorizontal: 4 }} />
+            {['all', 'session', 'pos'].map(src => (
+              <AnimatedTouchable
+                key={`src-${src}`}
+                style={[styles.filterPill, sourceFilter === src && { backgroundColor: 'rgba(190,144,85,0.15)', borderColor: theme.gold }]}
+                onPress={() => setSourceFilter(src)}
+              >
+                <Text style={[styles.filterPillText, sourceFilter === src && { color: theme.gold }]}>
+                  {src === 'all' ? 'All Sources' : src === 'pos' ? 'POS' : 'Session'}
+                </Text>
+              </AnimatedTouchable>
+            ))}
           </ScrollView>
         </View>
       )}
@@ -316,7 +403,8 @@ export const AdminBilling = ({ navigation }) => {
                 const matchesSearch = (i.client_name||'').toLowerCase().includes(q) || (i.invoice_number||'').toLowerCase().includes(q) || (i.service_type||'').toLowerCase().includes(q);
                 const matchesStatus = statusFilter === 'all' || (i.status||'').toLowerCase() === statusFilter;
                 const matchesPer = matchesPeriod(i.created_at || i.date);
-                return matchesSearch && matchesStatus && matchesPer;
+                const matchesSource = sourceFilter === 'all' || (sourceFilter === 'pos' ? (i.source||'').toLowerCase() === 'pos' : (i.source||'').toLowerCase() !== 'pos');
+                return matchesSearch && matchesStatus && matchesPer && matchesSource;
               })
             : payouts.filter(p => {
                 const q = search.toLowerCase();
@@ -534,6 +622,133 @@ export const AdminBilling = ({ navigation }) => {
               </AnimatedTouchable>
               <View style={{height: 20}} />
             </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Create Invoice Modal */}
+      <Modal visible={createInvoiceModal} transparent animationType="slide" onRequestClose={() => setCreateInvoiceModal(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Create Invoice</Text>
+              <AnimatedTouchable onPress={() => setCreateInvoiceModal(false)}>
+                <X size={22} color={theme.textSecondary} />
+              </AnimatedTouchable>
+            </View>
+            <ScrollView style={styles.modalBody}>
+              <Text style={styles.inputLabel}>Client Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. Juan Dela Cruz"
+                placeholderTextColor={theme.textTertiary}
+                value={invoiceForm.clientName}
+                onChangeText={t => setInvoiceForm({...invoiceForm, clientName: t})}
+              />
+
+              <Text style={styles.inputLabel}>Service Type</Text>
+              <View style={styles.statusRow}>
+                {['Tattoo Session', 'Consultation', 'Touch-up', 'Retail / POS', 'Other'].map(srv => (
+                  <AnimatedTouchable
+                    key={srv}
+                    style={[styles.statusBtn, invoiceForm.serviceType === srv && styles.statusBtnActive]}
+                    onPress={() => setInvoiceForm({...invoiceForm, serviceType: srv})}
+                  >
+                    <Text style={[styles.statusBtnText, invoiceForm.serviceType === srv && styles.statusBtnTextActive]}>{srv}</Text>
+                  </AnimatedTouchable>
+                ))}
+              </View>
+
+              <Text style={styles.inputLabel}>Amount (PHP)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. 3500"
+                placeholderTextColor={theme.textTertiary}
+                value={invoiceForm.amount}
+                onChangeText={t => setInvoiceForm({...invoiceForm, amount: t})}
+                keyboardType="numeric"
+              />
+
+              <Text style={styles.inputLabel}>Reference Number (Optional)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. TXN-001234"
+                placeholderTextColor={theme.textTertiary}
+                value={invoiceForm.reference}
+                onChangeText={t => setInvoiceForm({...invoiceForm, reference: t})}
+              />
+
+              <Text style={styles.inputLabel}>Notes (Optional)</Text>
+              <TextInput
+                style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+                placeholder="Additional remarks..."
+                placeholderTextColor={theme.textTertiary}
+                value={invoiceForm.notes}
+                onChangeText={t => setInvoiceForm({...invoiceForm, notes: t})}
+                multiline
+              />
+
+              <AnimatedTouchable style={styles.saveBtn} onPress={handleCreateInvoice}>
+                <Text style={styles.saveBtnText}>Create Invoice</Text>
+              </AnimatedTouchable>
+              <View style={{height: 20}} />
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Custom Date Range Modal */}
+      <Modal visible={customDateModal} transparent animationType="fade" onRequestClose={() => setCustomDateModal(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.modalOverlay, { justifyContent: 'center' }]}>
+          <View style={[styles.modalCard, { borderRadius: 24 }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Custom Date Range</Text>
+              <AnimatedTouchable onPress={() => setCustomDateModal(false)}>
+                <X size={22} color={theme.textSecondary} />
+              </AnimatedTouchable>
+            </View>
+            <View style={[styles.modalBody, { paddingBottom: 24 }]}>
+              <Text style={{ ...styles.inputLabel, marginBottom: 8 }}>Enter dates in YYYY-MM-DD format.</Text>
+              <Text style={styles.inputLabel}>Start Date</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="2025-01-01"
+                placeholderTextColor={theme.textTertiary}
+                value={pendingCustomStart}
+                onChangeText={setPendingCustomStart}
+              />
+              <Text style={styles.inputLabel}>End Date</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="2025-12-31"
+                placeholderTextColor={theme.textTertiary}
+                value={pendingCustomEnd}
+                onChangeText={setPendingCustomEnd}
+              />
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+                <AnimatedTouchable
+                  style={[styles.saveBtn, { flex: 1, backgroundColor: theme.surfaceLight, borderWidth: 1, borderColor: theme.border }]}
+                  onPress={() => setCustomDateModal(false)}
+                >
+                  <Text style={[styles.saveBtnText, { color: theme.textSecondary }]}>Cancel</Text>
+                </AnimatedTouchable>
+                <AnimatedTouchable
+                  style={[styles.saveBtn, { flex: 1 }]}
+                  onPress={() => {
+                    if (!pendingCustomStart || !pendingCustomEnd) {
+                      Alert.alert('Incomplete', 'Please enter both start and end dates.');
+                      return;
+                    }
+                    setCustomStart(pendingCustomStart);
+                    setCustomEnd(pendingCustomEnd);
+                    setPeriodFilter('custom');
+                    setCustomDateModal(false);
+                  }}
+                >
+                  <Text style={styles.saveBtnText}>Apply</Text>
+                </AnimatedTouchable>
+              </View>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>

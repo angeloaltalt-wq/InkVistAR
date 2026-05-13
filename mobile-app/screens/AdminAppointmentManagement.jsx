@@ -13,7 +13,8 @@ import {
 import {
   Search, Calendar, User, Palette, Clock, X, Plus,
   CheckCircle, AlertTriangle, FileText, Trash2, Save,
-  ChevronLeft, ChevronRight, Filter, ChevronDown
+  ChevronLeft, ChevronRight, Filter, ChevronDown,
+  ShieldCheck, List, Archive, LayoutGrid,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../src/context/ThemeContext';
@@ -27,7 +28,7 @@ import { ConfirmModal } from '../src/components/shared/ConfirmModal';
 import { formatCurrency, formatDate, formatTime, getDisplayCode } from '../src/utils/formatters';
 import {
   getAdminAppointments, updateAppointmentByAdmin, deleteAppointmentByAdmin,
-  createAppointmentByAdmin, API_BASE_URL, getAllUsersForAdmin
+  createAppointmentByAdmin, API_BASE_URL, getAllUsersForAdmin, fetchAPI,
 } from '../src/utils/api';
 import { sanitizeNumeric, sanitizeEmail, isValidEmail, sanitizeText } from '../src/utils/validators';
 
@@ -50,6 +51,8 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
   const [editTime, setEditTime] = useState('');
   const [editStatus, setEditStatus] = useState('');
   const [editPrice, setEditPrice] = useState('');
+  const [editDiscountType, setEditDiscountType] = useState('flat');
+  const [editDiscountAmount, setEditDiscountAmount] = useState('');
   const [editClientEmail, setEditClientEmail] = useState('');
   const [editDesignTitle, setEditDesignTitle] = useState('');
   const [editServiceType, setEditServiceType] = useState('Tattoo Session');
@@ -74,6 +77,54 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
 
   useEffect(() => { loadArtists(); }, []);
 
+  // ── P2-7: Fetch session materials for archive view ────────────────────────
+  const fetchSessionMaterials = async (id) => {
+    try {
+      const res = await fetchAPI(`/appointments/${id}/materials`);
+      if (res.success) return { materials: res.materials || [], totalCost: res.totalCost || 0 };
+    } catch (e) { /* silent */ }
+    return { materials: [], totalCost: 0 };
+  };
+
+  // ── P2-7: Fetch any pending reschedule request for an appointment ─────────
+  const fetchRescheduleRequest = async (apptId) => {
+    try {
+      const res = await fetchAPI(`/admin/appointments/${apptId}/reschedule-request`);
+      if (res.success && res.request) setPendingReschedule(res.request);
+      else setPendingReschedule(null);
+    } catch (e) { setPendingReschedule(null); }
+  };
+
+  // ── P2-7: Admin approve/reject reschedule request ─────────────────────────
+  const handleRescheduleDecision = async (decision) => {
+    if (!pendingReschedule) return;
+    setRescheduleDeciding(true);
+    try {
+      const res = await fetchAPI(`/admin/reschedule-requests/${pendingReschedule.id}/decide`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          decision: decision === 'approve' ? 'approved' : 'rejected',
+          adminNotes: rescheduleNotes.trim() || null,
+        }),
+      });
+      if (res.success) {
+        Alert.alert(
+          decision === 'approve' ? 'Request Approved' : 'Request Rejected',
+          res.message || 'Decision recorded.',
+        );
+        setPendingReschedule(null);
+        setRescheduleNotes('');
+        loadData();
+      } else {
+        Alert.alert('Error', res.message || 'Failed to process request.');
+      }
+    } catch (e) {
+      Alert.alert('Error', 'Network error processing request.');
+    } finally {
+      setRescheduleDeciding(false);
+    }
+  };
+
   useEffect(() => {
     if (route?.params?.filter) {
       setFilter(route.params.filter);
@@ -83,6 +134,21 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
 
   // Delete confirm
   const [deleteModal, setDeleteModal] = useState({ visible: false });
+
+  // ── P2-7: View mode (list / calendar) ────────────────────────────────────
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'calendar'
+  const [calViewMonth, setCalViewMonth] = useState(new Date());
+  const [calSelectedDay, setCalSelectedDay] = useState(null);
+
+  // ── P2-7: Archive mode (read-only view for completed sessions) ────────────
+  const [archiveMode, setArchiveMode] = useState(false);
+  const [archiveMaterials, setArchiveMaterials] = useState({ materials: [], totalCost: 0 });
+  const [archiveLoading, setArchiveLoading] = useState(false);
+
+  // ── P2-7: Reschedule Request decision panel ───────────────────────────────
+  const [pendingReschedule, setPendingReschedule] = useState(null);
+  const [rescheduleNotes, setRescheduleNotes] = useState('');
+  const [rescheduleDeciding, setRescheduleDeciding] = useState(false);
 
   // ── Validation state ──────────────────────────────────────────────────────
   const [fieldErrors, setFieldErrors] = useState({});
@@ -173,12 +239,30 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
 
   useEffect(() => { loadData(); }, []);
 
-  const openModal = (appt) => {
+  const openModal = async (appt) => {
+    // P2-7: Completed appointments open in read-only Archive mode
+    if (appt && appt.status === 'completed') {
+      setSelectedAppt(appt);
+      setArchiveMode(true);
+      setArchiveLoading(true);
+      setModalVisible(true);
+      const mats = await fetchSessionMaterials(appt.id);
+      setArchiveMaterials(mats);
+      setArchiveLoading(false);
+      return;
+    }
+    // Standard editable modal
+    setArchiveMode(false);
+    setArchiveMaterials({ materials: [], totalCost: 0 });
+    setPendingReschedule(null);
+    setRescheduleNotes('');
     setSelectedAppt(appt);
     setEditDate(appt ? (appt.appointment_date ? appt.appointment_date.split('T')[0] : '') : '');
     setEditTime(appt ? appt.start_time || '' : '');
     setEditStatus(appt ? appt.status || 'pending' : 'pending');
     setEditPrice(appt ? String(appt.price || appt.total_price || '') : '');
+    setEditDiscountType(appt ? (appt.discount_type || 'flat') : 'flat');
+    setEditDiscountAmount(appt ? (appt.discount_amount ? String(appt.discount_amount) : '') : '');
     setEditClientEmail(appt ? appt.client_email || '' : '');
     setEditDesignTitle(appt ? appt.design_title || '' : '');
     setEditServiceType(appt ? appt.service_type || 'Tattoo Session' : 'Tattoo Session');
@@ -187,6 +271,8 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
     setShowDatePicker(false);
     setFieldErrors({});
     setModalVisible(true);
+    // Fetch pending reschedule request
+    if (appt?.id) fetchRescheduleRequest(appt.id);
   };
 
   const handleSave = async () => {
@@ -223,6 +309,9 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
       return;
     }
 
+    const discountAmt = parseFloat(editDiscountAmount) || 0;
+    const discountTypeVal = discountAmt > 0 ? (editDiscountType || 'flat') : null;
+
     const result = await updateAppointmentByAdmin(selectedAppt.id, {
       status: editStatus,
       date: editDate.trim(),
@@ -231,6 +320,8 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
       serviceType: editServiceType,
       designTitle: sanitizeText(editDesignTitle),
       artistId: editArtistId || null,
+      discountAmount: discountAmt,
+      discountType: discountTypeVal,
     });
     if (result.success) {
       Alert.alert('Success', 'Appointment updated');
@@ -255,17 +346,39 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
     }
   };
 
-  // Filter & paginate
+  // Filter & paginate (P2-7: calendar day filter when calSelectedDay is set)
   const filteredData = appointments.filter(a => {
     const matchFilter = filter === 'all' || a.status === filter;
     const matchSearch = search === '' ||
       (a.client_name || '').toLowerCase().includes(search.toLowerCase()) ||
       (a.artist_name || '').toLowerCase().includes(search.toLowerCase()) ||
       (a.design_title || '').toLowerCase().includes(search.toLowerCase());
-    return matchFilter && matchSearch;
+    // Calendar grid day filter
+    let matchDay = true;
+    if (calSelectedDay && viewMode === 'calendar') {
+      const aptDate = (a.appointment_date || '').split('T')[0];
+      const y = calViewMonth.getFullYear();
+      const m = String(calViewMonth.getMonth() + 1).padStart(2, '0');
+      const d = String(calSelectedDay).padStart(2, '0');
+      matchDay = aptDate === `${y}-${m}-${d}`;
+    }
+    return matchFilter && matchSearch && matchDay;
   });
   const totalPages = Math.ceil(filteredData.length / perPage);
   const displayed = filteredData.slice((page - 1) * perPage, page * perPage);
+
+  // P2-7: Calendar grid helpers
+  const calYear = calViewMonth.getFullYear();
+  const calMonth = calViewMonth.getMonth();
+  const calFirstDay = new Date(calYear, calMonth, 1).getDay();
+  const calDaysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const CAL_MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const CAL_DAY_LABELS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  const getApptDotsForDay = (d) => {
+    const y = calYear; const m = String(calMonth + 1).padStart(2, '0');
+    const ds = String(d).padStart(2, '0');
+    return appointments.filter(a => (a.appointment_date || '').split('T')[0] === `${y}-${m}-${ds}`);
+  };
 
   // Swipeable Card Wrapper
   const SwipeableCard = ({ item, index }) => {
@@ -328,6 +441,13 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
               {item.price || item.total_price ? (
                 <Text style={styles.cardPrice}>P{formatCurrency(item.price || item.total_price)}</Text>
               ) : null}
+              {/* P2-7: Waiver badge */}
+              {item.waiver_accepted_at ? (
+                <View style={styles.waiverBadge}>
+                  <ShieldCheck size={11} color="#047857" />
+                  <Text style={styles.waiverBadgeText}>Waiver Signed</Text>
+                </View>
+              ) : null}
             </AnimatedTouchable>
           </Animated.View>
         </View>
@@ -345,7 +465,24 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
           <Text style={styles.headerTitle}>Queue Engine</Text>
           <Text style={styles.headerCount}>{filteredData.length} total sessions</Text>
         </View>
-        <AnimatedTouchable style={styles.addBtn} onPress={() => openModal(null)}>
+        {/* P2-7: View-mode toggle */}
+        <View style={styles.viewModeToggle}>
+          <AnimatedTouchable
+            style={[styles.viewModeBtn, viewMode === 'list' && styles.viewModeBtnActive]}
+            onPress={() => { setViewMode('list'); setCalSelectedDay(null); setPage(1); }}
+            title="List view"
+          >
+            <List size={16} color={viewMode === 'list' ? theme.backgroundDeep : theme.textSecondary} />
+          </AnimatedTouchable>
+          <AnimatedTouchable
+            style={[styles.viewModeBtn, viewMode === 'calendar' && styles.viewModeBtnActive]}
+            onPress={() => { setViewMode('calendar'); setPage(1); }}
+            title="Calendar view"
+          >
+            <LayoutGrid size={16} color={viewMode === 'calendar' ? theme.backgroundDeep : theme.textSecondary} />
+          </AnimatedTouchable>
+        </View>
+        <AnimatedTouchable style={styles.addBtn} onPress={() => openModal(null)} title="New appointment">
           <Plus size={20} color={theme.backgroundDeep} />
         </AnimatedTouchable>
       </View>
@@ -377,6 +514,61 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
           ))}
         </ScrollView>
       </View>
+
+      {/* P2-7: Calendar Grid View */}
+      {viewMode === 'calendar' && (
+        <View style={styles.calGrid}>
+          {/* Month navigation */}
+          <View style={styles.calGridHeader}>
+            <AnimatedTouchable onPress={() => setCalViewMonth(m => { const n = new Date(m); n.setMonth(n.getMonth()-1); return n; })} style={styles.calMonthBtn}>
+              <ChevronLeft size={18} color={theme.textPrimary} />
+            </AnimatedTouchable>
+            <Text style={styles.calGridMonthText}>{CAL_MONTH_NAMES[calMonth]} {calYear}</Text>
+            <AnimatedTouchable onPress={() => setCalViewMonth(m => { const n = new Date(m); n.setMonth(n.getMonth()+1); return n; })} style={styles.calMonthBtn}>
+              <ChevronRight size={18} color={theme.textPrimary} />
+            </AnimatedTouchable>
+          </View>
+          {/* Day labels */}
+          <View style={styles.calDayLabelRow}>
+            {CAL_DAY_LABELS.map(l => <Text key={l} style={styles.calDayLabel}>{l}</Text>)}
+          </View>
+          {/* Day cells */}
+          <View style={styles.calDayCells}>
+            {Array.from({ length: calFirstDay }).map((_, i) => <View key={`e${i}`} style={styles.calDayCell} />)}
+            {Array.from({ length: calDaysInMonth }, (_, i) => i + 1).map(d => {
+              const dots = getApptDotsForDay(d);
+              const isSelected = calSelectedDay === d;
+              const isToday = new Date().getDate() === d && new Date().getMonth() === calMonth && new Date().getFullYear() === calYear;
+              return (
+                <AnimatedTouchable
+                  key={d}
+                  style={[styles.calDayCell, isSelected && styles.calDayCellSelected, isToday && !isSelected && styles.calDayCellToday]}
+                  onPress={() => { setCalSelectedDay(calSelectedDay === d ? null : d); setPage(1); }}
+                >
+                  <Text style={[styles.calDayCellText, isSelected && styles.calDayCellTextSelected, isToday && !isSelected && { color: theme.gold }]}>{d}</Text>
+                  {dots.length > 0 && (
+                    <View style={styles.calDotRow}>
+                      {dots.slice(0, 3).map((apt, idx) => (
+                        <View key={idx} style={[styles.calDot, { backgroundColor: apt.status === 'completed' ? theme.success : apt.status === 'cancelled' ? theme.error : theme.gold }]} />
+                      ))}
+                    </View>
+                  )}
+                </AnimatedTouchable>
+              );
+            })}
+          </View>
+          {calSelectedDay && (
+            <View style={styles.calSelectedBanner}>
+              <Text style={styles.calSelectedText}>
+                {CAL_MONTH_NAMES[calMonth]} {calSelectedDay} — {getApptDotsForDay(calSelectedDay).length} session{getApptDotsForDay(calSelectedDay).length !== 1 ? 's' : ''}
+              </Text>
+              <AnimatedTouchable onPress={() => { setCalSelectedDay(null); setPage(1); }}>
+                <X size={14} color={theme.textTertiary} />
+              </AnimatedTouchable>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* List */}
       {loading ? (
@@ -410,15 +602,126 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{selectedAppt ? 'Manage Session' : 'New Session'}</Text>
-              <AnimatedTouchable onPress={() => setModalVisible(false)} style={styles.closeBtn}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTitle}>
+                  {archiveMode ? 'Archive Record' : selectedAppt ? 'Manage Session' : 'New Session'}
+                </Text>
+                {/* P2-7: Waiver badge in modal header */}
+                {selectedAppt?.waiver_accepted_at ? (
+                  <View style={[styles.waiverBadge, { marginTop: 4 }]}>
+                    <ShieldCheck size={11} color="#047857" />
+                    <Text style={styles.waiverBadgeText}>Waiver signed {new Date(selectedAppt.waiver_accepted_at).toLocaleDateString()}</Text>
+                  </View>
+                ) : null}
+              </View>
+              <AnimatedTouchable
+                onPress={() => { setModalVisible(false); setArchiveMode(false); }}
+                style={styles.closeBtn}
+                aria-label="Close modal"
+                title="Close"
+              >
                 <X size={20} color={theme.textSecondary} />
               </AnimatedTouchable>
             </View>
 
             {/* Modal Scroll View */}
             <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-              {/* Info Section */}
+
+              {/* P2-7: ARCHIVE MODE — read-only completed session view */}
+              {archiveMode && selectedAppt ? (
+                <View style={styles.archiveView}>
+                  <View style={styles.archiveBanner}>
+                    <Archive size={16} color="#6d28d9" />
+                    <Text style={styles.archiveBannerText}>Completed Session — Read Only</Text>
+                  </View>
+                  <View style={styles.infoSection}>
+                    <InfoRow theme={theme} label="Booking" value={getDisplayCode(selectedAppt.booking_code, selectedAppt.id)} />
+                    <InfoRow theme={theme} label="Client" value={selectedAppt.client_name || 'N/A'} />
+                    <InfoRow theme={theme} label="Artist" value={selectedAppt.artist_name || 'Unassigned'} />
+                    <InfoRow theme={theme} label="Service" value={selectedAppt.service_type || 'N/A'} />
+                    <InfoRow theme={theme} label="Date" value={formatDate(selectedAppt.appointment_date)} />
+                    <InfoRow theme={theme} label="Price" value={`₱${formatCurrency(selectedAppt.price || 0)}`} />
+                    <InfoRow theme={theme} label="Payment" value={(selectedAppt.payment_status || 'unpaid').toUpperCase()} />
+                    {selectedAppt.session_duration ? (
+                      <InfoRow theme={theme} label="Duration" value={`${Math.floor(selectedAppt.session_duration / 3600)}h ${Math.floor((selectedAppt.session_duration % 3600) / 60)}m`} />
+                    ) : null}
+                    {selectedAppt.notes ? <InfoRow theme={theme} label="Notes" value={selectedAppt.notes} /> : null}
+                  </View>
+                  {/* Material cost table */}
+                  <Text style={styles.archiveSectionTitle}>Logistics & Consumables</Text>
+                  {archiveLoading ? (
+                    <PremiumLoader message="Loading materials..." />
+                  ) : archiveMaterials.materials.length === 0 ? (
+                    <Text style={styles.archiveEmptyText}>No materials logged for this session.</Text>
+                  ) : (
+                    <View style={styles.archiveMaterialTable}>
+                      <View style={styles.archiveMaterialHeader}>
+                        <Text style={[styles.archiveMaterialCell, { flex: 2 }]}>Item</Text>
+                        <Text style={styles.archiveMaterialCell}>Qty</Text>
+                        <Text style={styles.archiveMaterialCell}>Cost</Text>
+                      </View>
+                      {archiveMaterials.materials.map((m, i) => (
+                        <View key={i} style={[styles.archiveMaterialRow, i % 2 === 1 && styles.archiveMaterialRowAlt]}>
+                          <Text style={[styles.archiveMaterialCellText, { flex: 2 }]} numberOfLines={1}>{m.item_name || m.name || 'Item'}</Text>
+                          <Text style={styles.archiveMaterialCellText}>{m.quantity_used || m.qty || 1}</Text>
+                          <Text style={styles.archiveMaterialCellText}>₱{formatCurrency((m.unit_cost || m.cost_per_unit || 0) * (m.quantity_used || m.qty || 1))}</Text>
+                        </View>
+                      ))}
+                      <View style={styles.archiveMaterialTotal}>
+                        <Text style={styles.archiveMaterialTotalLabel}>Total Material Cost</Text>
+                        <Text style={styles.archiveMaterialTotalValue}>₱{formatCurrency(archiveMaterials.totalCost)}</Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              ) : (
+                <>{/* ─── Standard editable modal content below ─────────────────── */}
+
+                {/* P2-7: Reschedule Request Decision Panel */}
+                {pendingReschedule && (
+                  <View style={styles.reschedulePanel}>
+                    <View style={styles.reschedulePanelHeader}>
+                      <AlertTriangle size={16} color="#b45309" />
+                      <Text style={styles.reschedulePanelTitle}>Pending Reschedule Request</Text>
+                    </View>
+                    <Text style={styles.reschedulePanelDetail}>
+                      Requested: {pendingReschedule.requested_date || 'N/A'}{pendingReschedule.requested_time ? ` at ${pendingReschedule.requested_time}` : ''}
+                    </Text>
+                    {pendingReschedule.reason ? (
+                      <Text style={styles.reschedulePanelReason}>"{pendingReschedule.reason}"</Text>
+                    ) : null}
+                    <TextInput
+                      style={styles.rescheduleNotesInput}
+                      value={rescheduleNotes}
+                      onChangeText={setRescheduleNotes}
+                      placeholder="Admin notes (optional)"
+                      placeholderTextColor={theme.textTertiary}
+                      multiline
+                      numberOfLines={2}
+                    />
+                    <View style={styles.rescheduleBtnRow}>
+                      <AnimatedTouchable
+                        style={[styles.rescheduleBtn, styles.rescheduleBtnApprove]}
+                        onPress={() => handleRescheduleDecision('approve')}
+                        disabled={rescheduleDeciding}
+                        title="Approve reschedule request"
+                      >
+                        <CheckCircle size={14} color="#fff" />
+                        <Text style={styles.rescheduleBtnText}>{rescheduleDeciding ? 'Saving...' : 'Approve'}</Text>
+                      </AnimatedTouchable>
+                      <AnimatedTouchable
+                        style={[styles.rescheduleBtn, styles.rescheduleBtnReject]}
+                        onPress={() => handleRescheduleDecision('reject')}
+                        disabled={rescheduleDeciding}
+                        title="Reject reschedule request"
+                      >
+                        <X size={14} color="#fff" />
+                        <Text style={styles.rescheduleBtnText}>Reject</Text>
+                      </AnimatedTouchable>
+                    </View>
+                  </View>
+                )}
+
               {selectedAppt && selectedAppt.id ? (
                 <View style={styles.infoSection}>
                   <InfoRow theme={theme} label="Booking Code" value={getDisplayCode(selectedAppt.booking_code, selectedAppt.id)} />
@@ -576,6 +879,91 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
               />
               {fieldErrors.price ? <Text style={styles.errorText}>{fieldErrors.price}</Text> : null}
 
+              {/* P2-15: Special Discount Section */}
+              <View style={styles.discountSection}>
+                <Text style={styles.discountTitle}>Special Discount</Text>
+                {/* Preset quick-apply buttons */}
+                <View style={styles.discountPresets}>
+                  {[
+                    { label: 'PWD 20%', type: 'percent', value: '20' },
+                    { label: 'Senior 20%', type: 'percent', value: '20' },
+                    { label: 'Promo 10%', type: 'percent', value: '10' },
+                    { label: 'Clear', type: 'flat', value: '' },
+                  ].map(preset => (
+                    <AnimatedTouchable
+                      key={preset.label}
+                      style={[
+                        styles.discountPreset,
+                        editDiscountAmount === preset.value && editDiscountType === preset.type && preset.value !== ''
+                          ? styles.discountPresetActive
+                          : (preset.label === 'Clear' ? styles.discountPresetClear : {}),
+                      ]}
+                      onPress={() => {
+                        setEditDiscountType(preset.type);
+                        setEditDiscountAmount(preset.value);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.discountPresetText,
+                          editDiscountAmount === preset.value && editDiscountType === preset.type && preset.value !== ''
+                            ? styles.discountPresetTextActive
+                            : (preset.label === 'Clear' ? styles.discountPresetClearText : {}),
+                        ]}
+                      >{preset.label}</Text>
+                    </AnimatedTouchable>
+                  ))}
+                </View>
+                {/* Type toggle + amount input row */}
+                <View style={styles.discountRow}>
+                  <View style={styles.discountTypeToggle}>
+                    {['flat', 'percent'].map(t => (
+                      <AnimatedTouchable
+                        key={t}
+                        style={[styles.discountTypeBtn, editDiscountType === t && styles.discountTypeBtnActive]}
+                        onPress={() => setEditDiscountType(t)}
+                      >
+                        <Text style={[styles.discountTypeBtnText, editDiscountType === t && styles.discountTypeBtnTextActive]}>
+                          {t === 'flat' ? '₱ Flat' : '% Pct'}
+                        </Text>
+                      </AnimatedTouchable>
+                    ))}
+                  </View>
+                  <TextInput
+                    style={[styles.input, styles.discountAmountInput]}
+                    value={editDiscountAmount}
+                    onChangeText={t => {
+                      const raw = t.replace(/[^0-9.]/g, '');
+                      const num = parseFloat(raw) || 0;
+                      if (editDiscountType === 'percent' && num > 100) return;
+                      const priceNum = parseFloat(editPrice) || 0;
+                      if (editDiscountType === 'flat' && priceNum > 0 && num > priceNum) return;
+                      setEditDiscountAmount(raw);
+                    }}
+                    keyboardType="decimal-pad"
+                    placeholder={editDiscountType === 'percent' ? '0 – 100%' : '0'}
+                    placeholderTextColor={theme.textTertiary}
+                  />
+                </View>
+                {/* Effective price preview */}
+                {parseFloat(editDiscountAmount) > 0 && parseFloat(editPrice) > 0 && (
+                  <View style={styles.discountPreview}>
+                    <Text style={styles.discountPreviewLabel}>Effective Price:</Text>
+                    <Text style={styles.discountPreviewValue}>
+                      ₱{(() => {
+                        const p = parseFloat(editPrice) || 0;
+                        const d = parseFloat(editDiscountAmount) || 0;
+                        const eff = editDiscountType === 'percent'
+                          ? p * (1 - d / 100)
+                          : Math.max(0, p - d);
+                        return eff.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      })()}
+                      <Text style={styles.discountPreviewWas}>{` (was ₱${parseFloat(editPrice).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`}</Text>
+                    </Text>
+                  </View>
+                )}
+              </View>
+
               <Text style={styles.inputLabel}>Status</Text>
               <View style={styles.statusRow}>
                 {['pending', 'confirmed', 'in_progress', 'completed', 'cancelled'].map(s => (
@@ -605,6 +993,8 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
               </View>
 
               <View style={{ height: 30 }} />
+              </>
+              )}
             </ScrollView>
           </View>
         </View>
@@ -896,4 +1286,139 @@ const getStyles = (theme, insets) => StyleSheet.create({
   artistChipText: { ...typography.bodySmall, color: theme.textSecondary, fontWeight: '600' },
   artistChipTextActive: { color: theme.backgroundDeep },
   noArtistHint: { ...typography.bodySmall, color: theme.textTertiary, fontStyle: 'italic', paddingVertical: 8 },
+
+  // P2-15: Discount Section
+  discountSection: {
+    marginTop: 20, padding: 16,
+    backgroundColor: 'rgba(245, 158, 11, 0.05)',
+    borderRadius: borderRadius.lg,
+    borderWidth: 1, borderColor: 'rgba(245, 158, 11, 0.2)',
+    marginBottom: 8,
+  },
+  discountTitle: {
+    ...typography.bodySmall, fontWeight: '800', color: '#b45309',
+    letterSpacing: 0.4, marginBottom: 12,
+  },
+  discountPresets: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
+  discountPreset: {
+    paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: borderRadius.round,
+    backgroundColor: theme.surfaceLight,
+    borderWidth: 1, borderColor: theme.borderLight,
+  },
+  discountPresetActive: { backgroundColor: '#f59e0b', borderColor: '#f59e0b' },
+  discountPresetClear: { borderColor: theme.border },
+  discountPresetText: { ...typography.bodyXSmall, color: theme.textSecondary, fontWeight: '700' },
+  discountPresetTextActive: { color: '#1c1917' },
+  discountPresetClearText: { color: theme.textTertiary },
+  discountRow: { flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 10 },
+  discountTypeToggle: { flexDirection: 'row', backgroundColor: theme.surfaceLight, borderRadius: borderRadius.md, padding: 3, borderWidth: 1, borderColor: theme.border },
+  discountTypeBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: borderRadius.sm - 2 },
+  discountTypeBtnActive: { backgroundColor: '#f59e0b' },
+  discountTypeBtnText: { ...typography.bodyXSmall, color: theme.textSecondary, fontWeight: '700' },
+  discountTypeBtnTextActive: { color: '#1c1917' },
+  discountAmountInput: { flex: 1, marginBottom: 0 },
+  discountPreview: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: 10, backgroundColor: '#fefce8', borderRadius: borderRadius.md,
+    borderWidth: 1, borderColor: '#fde68a',
+  },
+  discountPreviewLabel: { ...typography.bodySmall, color: '#92400e' },
+  discountPreviewValue: { ...typography.body, fontWeight: '700', color: '#b45309' },
+  discountPreviewWas: { ...typography.bodyXSmall, color: '#d97706', fontWeight: '400' },
+
+  // ── P2-7: Waiver Badge ──────────────────────────────────────────────────
+  waiverBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8,
+    backgroundColor: '#ecfdf5', paddingHorizontal: 8, paddingVertical: 4,
+    borderRadius: borderRadius.sm, alignSelf: 'flex-start',
+    borderWidth: 1, borderColor: '#a7f3d0'
+  },
+  waiverBadgeText: { ...typography.bodyXSmall, color: '#047857', fontWeight: '700' },
+
+  // ── P2-7: View Mode Toggle ──────────────────────────────────────────────
+  viewModeToggle: {
+    flexDirection: 'row', backgroundColor: theme.surfaceLight,
+    borderRadius: borderRadius.md, padding: 3, borderWidth: 1, borderColor: theme.border,
+    marginRight: 10
+  },
+  viewModeBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: borderRadius.sm - 2 },
+  viewModeBtnActive: { backgroundColor: theme.gold },
+
+  // ── P2-7: Full Calendar Grid View ───────────────────────────────────────
+  calGrid: {
+    backgroundColor: theme.surface, padding: 16, borderBottomWidth: 1, borderBottomColor: theme.border,
+  },
+  calGridHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12,
+  },
+  calGridMonthText: { ...typography.body, fontWeight: '700', color: theme.textPrimary },
+  calDayLabelRow: { flexDirection: 'row', marginBottom: 8 },
+  calDayCells: { flexDirection: 'row', flexWrap: 'wrap' },
+  calDayCell: {
+    width: '14.28%', aspectRatio: 1, padding: 2, alignItems: 'center',
+    borderWidth: 1, borderColor: 'transparent', borderRadius: borderRadius.sm,
+  },
+  calDayCellSelected: { backgroundColor: theme.surfaceLight, borderColor: theme.border },
+  calDayCellToday: { borderColor: theme.gold },
+  calDayCellText: { ...typography.bodySmall, color: theme.textSecondary, marginTop: 2 },
+  calDayCellTextSelected: { fontWeight: '700', color: theme.textPrimary },
+  calDotRow: { flexDirection: 'row', gap: 2, marginTop: 4 },
+  calDot: { width: 4, height: 4, borderRadius: 2 },
+  calSelectedBanner: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginTop: 12, padding: 12, backgroundColor: theme.surfaceLight, borderRadius: borderRadius.md,
+  },
+  calSelectedText: { ...typography.bodySmall, color: theme.textSecondary, fontWeight: '600' },
+
+  // ── P2-7: Archive Mode (Read-Only) ──────────────────────────────────────
+  archiveView: { paddingBottom: 24 },
+  archiveBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#f3e8ff',
+    padding: 12, borderRadius: borderRadius.md, marginBottom: 16,
+    borderWidth: 1, borderColor: '#d8b4fe',
+  },
+  archiveBannerText: { ...typography.bodySmall, color: '#6d28d9', fontWeight: '700' },
+  archiveSectionTitle: { ...typography.h4, color: theme.textPrimary, marginBottom: 12, marginTop: 8 },
+  archiveEmptyText: { ...typography.bodySmall, color: theme.textTertiary, fontStyle: 'italic' },
+  archiveMaterialTable: {
+    borderWidth: 1, borderColor: theme.border, borderRadius: borderRadius.md, overflow: 'hidden',
+  },
+  archiveMaterialHeader: {
+    flexDirection: 'row', backgroundColor: theme.surfaceLight, padding: 12,
+    borderBottomWidth: 1, borderBottomColor: theme.border,
+  },
+  archiveMaterialCell: { ...typography.bodyXSmall, color: theme.textSecondary, fontWeight: '700', flex: 1 },
+  archiveMaterialRow: { flexDirection: 'row', padding: 12, borderBottomWidth: 1, borderBottomColor: theme.borderLight },
+  archiveMaterialRowAlt: { backgroundColor: theme.surfaceLight },
+  archiveMaterialCellText: { ...typography.bodySmall, color: theme.textPrimary, flex: 1 },
+  archiveMaterialTotal: {
+    flexDirection: 'row', justifyContent: 'space-between', padding: 12,
+    backgroundColor: '#fffbeb', borderTopWidth: 1, borderTopColor: '#fde68a',
+  },
+  archiveMaterialTotalLabel: { ...typography.bodySmall, color: '#b45309', fontWeight: '700' },
+  archiveMaterialTotalValue: { ...typography.body, color: '#b45309', fontWeight: '800' },
+
+  // ── P2-7: Reschedule Request Decision Panel ─────────────────────────────
+  reschedulePanel: {
+    backgroundColor: '#fffbeb', borderRadius: borderRadius.lg, padding: 16, marginBottom: 16,
+    borderWidth: 1, borderColor: '#fde68a',
+  },
+  reschedulePanelHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  reschedulePanelTitle: { ...typography.bodySmall, color: '#b45309', fontWeight: '700' },
+  reschedulePanelDetail: { ...typography.bodySmall, color: '#92400e', marginBottom: 4 },
+  reschedulePanelReason: { ...typography.bodySmall, color: '#78350f', fontStyle: 'italic', marginBottom: 12 },
+  rescheduleNotesInput: {
+    backgroundColor: '#fff', borderRadius: borderRadius.md, padding: 12,
+    borderWidth: 1, borderColor: '#fcd34d', ...typography.bodySmall, color: '#1c1917',
+    marginBottom: 12, minHeight: 60, textAlignVertical: 'top'
+  },
+  rescheduleBtnRow: { flexDirection: 'row', gap: 10 },
+  rescheduleBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 10, borderRadius: borderRadius.md, ...shadows.button
+  },
+  rescheduleBtnApprove: { backgroundColor: '#059669' },
+  rescheduleBtnReject: { backgroundColor: '#dc2626' },
+  rescheduleBtnText: { ...typography.button, color: '#fff', fontSize: 13 },
 });

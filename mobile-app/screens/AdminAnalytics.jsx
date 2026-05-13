@@ -7,11 +7,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Dimensions, RefreshControl,
-  SafeAreaView, Modal, TouchableOpacity,
+  SafeAreaView, Modal, TouchableOpacity, Alert, TextInput,
 } from 'react-native';
 import {
   ArrowLeft, Calendar, Package, DollarSign, TrendingUp, Users,
-  X, ChevronRight, BarChart2, CheckCircle, XCircle, Clock, Filter, Home, Palette
+  X, ChevronRight, BarChart2, CheckCircle, XCircle, Clock, Filter, Home, Palette, Plus, Trash2, Edit2,
 } from 'lucide-react-native';
 import { BarChart, PieChart } from 'react-native-chart-kit';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,7 +22,7 @@ import { StaggerItem } from '../src/components/shared/StaggerItem';
 import { PremiumLoader } from '../src/components/shared/PremiumLoader';
 import { EmptyState } from '../src/components/shared/EmptyState';
 import { formatCurrency, formatDate } from '../src/utils/formatters';
-import { getAdminAnalytics } from '../src/utils/api';
+import { fetchAPI } from '../src/utils/api';
 
 const SCREEN_W = Dimensions.get('window').width;
 const CHART_W = SCREEN_W - 64;
@@ -32,6 +32,7 @@ const PERIODS = [
   { key: 'weekly', label: 'This Week' },
   { key: 'monthly', label: 'This Month' },
   { key: 'yearly', label: 'This Year' },
+  { key: 'custom', label: 'Custom' },
 ];
 
 const getChartConfig = (theme) => ({
@@ -46,7 +47,7 @@ const getChartConfig = (theme) => ({
 });
 
 // Helper: match a date string against a period
-const matchesPeriod = (dateStr, period) => {
+const matchesPeriod = (dateStr, period, customStart, customEnd) => {
   if (!dateStr || period === 'all') return true;
   const d = new Date(dateStr);
   const now = new Date();
@@ -60,6 +61,13 @@ const matchesPeriod = (dateStr, period) => {
   }
   if (period === 'monthly') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   if (period === 'yearly') return d.getFullYear() === now.getFullYear();
+  if (period === 'custom' && customStart && customEnd) {
+    const start = new Date(customStart);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(customEnd);
+    end.setHours(23, 59, 59, 999);
+    return d >= start && d <= end;
+  }
   return true;
 };
 
@@ -73,17 +81,41 @@ export const AdminAnalytics = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState('monthly');
 
+  // Custom date range
+  const [customDateModal, setCustomDateModal] = useState(false);
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+  const [pendingStart, setPendingStart] = useState('');
+  const [pendingEnd, setPendingEnd] = useState('');
+
   // Breakdown modal state
-  const [breakdown, setBreakdown] = useState(null); // { title, content: JSX }
+  const [breakdown, setBreakdown] = useState(null);
+
+  // Overhead CRUD state
+  const [overheadModal, setOverheadModal] = useState(false);
+  const [overheadForm, setOverheadForm] = useState({ category: '', description: '', amount: '' });
+  const [overheadSaving, setOverheadSaving] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
-    const res = await getAdminAnalytics();
+    // Pass timeframe and custom date params directly to the backend
+    let endpoint = '/admin/analytics';
+    const params = new URLSearchParams();
+    if (period === 'custom' && customStart && customEnd) {
+      params.append('timeframe', 'custom');
+      params.append('startDate', customStart);
+      params.append('endDate', customEnd);
+    } else if (period !== 'all') {
+      params.append('timeframe', period);
+    }
+    const qs = params.toString();
+    if (qs) endpoint += `?${qs}`;
+    const res = await fetchAPI(endpoint);
     if (res.success && res.data) setData(res.data);
     setLoading(false);
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); }, [period, customStart, customEnd]);
 
   // Derived, period-filtered values
   const appointments = useMemo(() => {
@@ -222,6 +254,49 @@ export const AdminAnalytics = ({ navigation }) => {
     }))
   });
 
+  const handleAddOverhead = async () => {
+    const { category, description, amount } = overheadForm;
+    if (!category.trim()) {
+      Alert.alert('Validation', 'Category is required.');
+      return;
+    }
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      Alert.alert('Validation', 'Please enter a valid amount greater than 0.');
+      return;
+    }
+    setOverheadSaving(true);
+    const res = await fetchAPI('/admin/overhead', {
+      method: 'POST',
+      body: JSON.stringify({
+        category: category.trim(),
+        description: description.trim(),
+        amount: parsedAmount,
+      }),
+    });
+    setOverheadSaving(false);
+    if (res.success) {
+      setOverheadForm({ category: '', description: '', amount: '' });
+      loadData();
+      Alert.alert('Added', 'Overhead expense recorded.');
+    } else {
+      Alert.alert('Error', res.message || 'Failed to add expense.');
+    }
+  };
+
+  const handleDeleteOverhead = async (id) => {
+    Alert.alert('Delete Expense', 'Remove this overhead entry?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive', onPress: async () => {
+          const res = await fetchAPI(`/admin/overhead/${id}`, { method: 'DELETE' });
+          if (res.success) loadData();
+          else Alert.alert('Error', res.message || 'Failed to delete.');
+        }
+      }
+    ]);
+  };
+
   const openUsersBreakdown = () => setBreakdown({
     title: 'User Base',
     rows: [
@@ -277,11 +352,21 @@ export const AdminAnalytics = ({ navigation }) => {
             <AnimatedTouchable
               key={p.key}
               style={[styles.periodPill, period === p.key && styles.periodPillActive]}
-              onPress={() => setPeriod(p.key)}
+              onPress={() => {
+                if (p.key === 'custom') {
+                  setPendingStart(customStart);
+                  setPendingEnd(customEnd);
+                  setCustomDateModal(true);
+                } else {
+                  setPeriod(p.key);
+                }
+              }}
             >
-              {period === p.key && <Filter size={12} color={theme.backgroundDeep} style={{ marginRight: 4 }} />}
+              {period === p.key && p.key !== 'custom' && <Filter size={12} color={theme.backgroundDeep} style={{ marginRight: 4 }} />}
               <Text style={[styles.periodPillText, period === p.key && styles.periodPillTextActive]}>
-                {p.label}
+                {p.key === 'custom' && customStart && customEnd
+                  ? `${customStart} → ${customEnd}`
+                  : p.label}
               </Text>
             </AnimatedTouchable>
           ))}
@@ -317,6 +402,14 @@ export const AdminAnalytics = ({ navigation }) => {
               </View>
               <Text style={styles.statLabel}>Overhead</Text>
               <Text style={styles.statValue}>P{formatCurrency(data?.overhead?.total || 0)}</Text>
+              <AnimatedTouchable
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}
+                onPress={() => { setOverheadForm({ category: '', description: '', amount: '' }); setOverheadModal(true); }}
+                title="Manage overhead expenses"
+              >
+                <Plus size={12} color={theme.gold} />
+                <Text style={{ ...typography.bodyXSmall, color: theme.gold, fontWeight: '700' }}>Add Expense</Text>
+              </AnimatedTouchable>
             </AnimatedTouchable>
 
             <AnimatedTouchable style={styles.statCardHalf} onPress={openAppointmentsBreakdown}>
@@ -553,6 +646,138 @@ export const AdminAnalytics = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+
+      {/* Custom Date Range Modal */}
+      <Modal visible={customDateModal} transparent animationType="fade" onRequestClose={() => setCustomDateModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Custom Date Range</Text>
+              <AnimatedTouchable onPress={() => setCustomDateModal(false)} style={styles.modalCloseBtn}>
+                <X size={20} color={theme.textSecondary} />
+              </AnimatedTouchable>
+            </View>
+            <View style={styles.modalBody}>
+              <Text style={{ ...typography.bodySmall, color: theme.textSecondary, marginBottom: 16 }}>Enter dates in YYYY-MM-DD format.</Text>
+              <Text style={styles.bdLabel}>Start Date</Text>
+              <TextInput
+                style={[styles.dateInput]}
+                placeholder="2025-01-01"
+                placeholderTextColor={theme.textTertiary}
+                value={pendingStart}
+                onChangeText={setPendingStart}
+              />
+              <Text style={[styles.bdLabel, { marginTop: 12 }]}>End Date</Text>
+              <TextInput
+                style={[styles.dateInput]}
+                placeholder="2025-12-31"
+                placeholderTextColor={theme.textTertiary}
+                value={pendingEnd}
+                onChangeText={setPendingEnd}
+              />
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
+                <AnimatedTouchable
+                  style={[styles.modalCloseBtn, { flex: 1, height: 48, borderRadius: 12, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surfaceLight }]}
+                  onPress={() => setCustomDateModal(false)}
+                >
+                  <Text style={{ ...typography.button, color: theme.textSecondary }}>Cancel</Text>
+                </AnimatedTouchable>
+                <AnimatedTouchable
+                  style={[styles.modalCloseBtn, { flex: 1, height: 48, borderRadius: 12, backgroundColor: theme.gold }]}
+                  onPress={() => {
+                    if (!pendingStart || !pendingEnd) {
+                      Alert.alert('Incomplete', 'Please enter both start and end dates.');
+                      return;
+                    }
+                    setCustomStart(pendingStart);
+                    setCustomEnd(pendingEnd);
+                    setPeriod('custom');
+                    setCustomDateModal(false);
+                  }}
+                >
+                  <Text style={{ ...typography.button, color: theme.backgroundDeep }}>Apply</Text>
+                </AnimatedTouchable>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Overhead Expense Management Modal */}
+      <Modal visible={overheadModal} transparent animationType="slide" onRequestClose={() => setOverheadModal(false)}>
+        <View style={[styles.modalOverlay, { justifyContent: 'flex-end', paddingHorizontal: 0 }]}>
+          <View style={[styles.modalCard, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0, maxHeight: '85%' }]}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Overhead Expenses</Text>
+                <Text style={{ ...typography.bodyXSmall, color: theme.textTertiary }}>Studio operating costs</Text>
+              </View>
+              <AnimatedTouchable onPress={() => setOverheadModal(false)} style={styles.modalCloseBtn}>
+                <X size={20} color={theme.textSecondary} />
+              </AnimatedTouchable>
+            </View>
+            <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
+              {/* Add Expense Form */}
+              <Text style={{ ...typography.label, color: theme.gold, marginBottom: 10 }}>Add New Expense</Text>
+              <TextInput
+                style={[styles.dateInput, { marginBottom: 10 }]}
+                placeholder="Category (e.g. Electricity, Rent)"
+                placeholderTextColor={theme.textTertiary}
+                value={overheadForm.category}
+                onChangeText={t => setOverheadForm(f => ({ ...f, category: t }))}
+              />
+              <TextInput
+                style={[styles.dateInput, { marginBottom: 10 }]}
+                placeholder="Description (optional)"
+                placeholderTextColor={theme.textTertiary}
+                value={overheadForm.description}
+                onChangeText={t => setOverheadForm(f => ({ ...f, description: t }))}
+              />
+              <TextInput
+                style={[styles.dateInput, { marginBottom: 12 }]}
+                placeholder="Amount (PHP)"
+                placeholderTextColor={theme.textTertiary}
+                value={overheadForm.amount}
+                onChangeText={t => setOverheadForm(f => ({ ...f, amount: t }))}
+                keyboardType="numeric"
+              />
+              <AnimatedTouchable
+                style={[styles.modalCloseBtn, { height: 48, borderRadius: 12, backgroundColor: theme.gold, width: '100%', marginBottom: 20 }]}
+                onPress={handleAddOverhead}
+                disabled={overheadSaving}
+                title="Save overhead expense"
+              >
+                <Text style={{ ...typography.button, color: theme.backgroundDeep }}>{overheadSaving ? 'Saving...' : 'Add Expense'}</Text>
+              </AnimatedTouchable>
+
+              {/* Recent Overhead Entries */}
+              <Text style={{ ...typography.label, color: theme.textSecondary, marginBottom: 10 }}>Recent Entries</Text>
+              {(data?.overhead?.audit || []).length === 0 ? (
+                <Text style={{ ...typography.bodySmall, color: theme.textTertiary, textAlign: 'center', paddingVertical: 16 }}>No overhead expenses logged yet.</Text>
+              ) : (
+                (data?.overhead?.audit || []).slice(0, 20).map((item, i) => (
+                  <View key={item.id || i} style={[styles.bdRow, { gap: 8 }]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.bdLabel, { fontWeight: '700', color: theme.textPrimary }]}>{item.category}</Text>
+                      {item.description ? <Text style={{ ...typography.bodyXSmall, color: theme.textTertiary }}>{item.description}</Text> : null}
+                      <Text style={{ ...typography.bodyXSmall, color: theme.textTertiary }}>{formatDate(item.created_at)}</Text>
+                    </View>
+                    <Text style={[styles.bdValue, { color: theme.warning }]}>P{formatCurrency(item.amount)}</Text>
+                    <AnimatedTouchable
+                      onPress={() => handleDeleteOverhead(item.id)}
+                      style={{ padding: 8, borderRadius: 8, backgroundColor: 'rgba(239,68,68,0.1)' }}
+                      title="Delete this expense"
+                    >
+                      <Trash2 size={14} color={theme.error} />
+                    </AnimatedTouchable>
+                  </View>
+                ))
+              )}
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -642,4 +867,9 @@ const getStyles = (theme, insets) => StyleSheet.create({
   },
   bdLabel: { ...typography.bodySmall, color: theme.textSecondary, fontWeight: '600', flex: 1 },
   bdValue: { ...typography.body, color: theme.textPrimary, fontWeight: '700' },
+  dateInput: {
+    backgroundColor: theme.surfaceLight, borderRadius: borderRadius.md,
+    padding: 14, borderWidth: 1, borderColor: theme.border,
+    ...typography.body, color: theme.textPrimary, marginTop: 6,
+  },
 });

@@ -2,7 +2,7 @@ import './CustomerStyles.css';
 import React, { useState, useEffect, lazy, Suspense, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Axios from 'axios';
-import { Search, ChevronLeft, ChevronRight, Filter, CreditCard, Eye, CheckCircle, Info, X, Calendar, Inbox, Plus, Upload, Camera, Image as ImageIcon, User, Scissors, Heart, Sparkles, Check, ArrowRight, ArrowLeft, MapPin, Receipt, CalendarDays, Clock, AlertTriangle, RotateCcw, PlusCircle, History, MessageSquare, Paintbrush, Gem, Video, Users, ShieldCheck, RefreshCw, Syringe, Wrench } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Filter, CreditCard, Eye, CheckCircle, Info, X, Calendar, Inbox, Plus, Upload, Camera, Image as ImageIcon, User, Scissors, Heart, Sparkles, Check, ArrowRight, ArrowLeft, MapPin, Receipt, CalendarDays, Clock, AlertTriangle, RotateCcw, PlusCircle, History, MessageSquare, Paintbrush, Gem, Video, Users, ShieldCheck, RefreshCw, Syringe, Wrench, Layers, Circle } from 'lucide-react';
 import './PortalStyles.css';
 import { API_URL } from '../config';
 import CustomerSideNav from '../components/CustomerSideNav';
@@ -111,6 +111,11 @@ function CustomerBookings(){
         isAlert: false 
     });
     const [lightboxSrc, setLightboxSrc] = useState(null);
+
+    // Project Timeline
+    const [projectTimeline, setProjectTimeline] = useState(null);
+    const [projectTimelineLoading, setProjectTimelineLoading] = useState(false);
+    const [timelineCollapsed, setTimelineCollapsed] = useState(false);
 
     // Reschedule states
     const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
@@ -333,6 +338,23 @@ function CustomerBookings(){
         setIsModalOpen(true);
         setModalLoading(true);
         setPendingRescheduleRequest(null);
+        if (appt.project_id) {
+            setProjectTimelineLoading(true);
+            try {
+                const timelineRes = await Axios.get(`${API_URL}/api/projects/${appt.project_id}`);
+                if (timelineRes.data.success) {
+                    setProjectTimeline(timelineRes.data.project || null);
+                }
+            } catch (e) {
+                console.error("Error fetching timeline:", e);
+                setProjectTimeline(null);
+            } finally {
+                setProjectTimelineLoading(false);
+            }
+        } else {
+            setProjectTimeline(null);
+        }
+
         try {
             const res = await Axios.get(`${API_URL}/api/appointments/${appt.id}/transactions`);
             if (res.data.success) {
@@ -1235,6 +1257,116 @@ function CustomerBookings(){
                                                     {pendingRescheduleRequest.status === 'expired' && 'This request expired because no action was taken within 24 hours.'}
                                                 </div>
                                             </div>
+                                        </div>
+                                    )}
+
+                                    {/* B-M1: Project Timeline */}
+                                    {(projectTimeline || projectTimelineLoading) && (
+                                        <div style={{ marginBottom: '24px' }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setTimelineCollapsed(!timelineCollapsed)}
+                                                style={{
+                                                    width: '100%',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                    padding: '12px 16px',
+                                                    backgroundColor: 'rgba(15,23,42,0.03)',
+                                                    border: '1px solid rgba(190,144,85,0.3)',
+                                                    borderRadius: timelineCollapsed ? '12px' : '12px 12px 0 0',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s ease',
+                                                    outline: 'none'
+                                                }}
+                                                aria-label={timelineCollapsed ? 'Expand project timeline' : 'Collapse project timeline'}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <Layers size={16} color="#be9055" />
+                                                    <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#be9055', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Project Timeline</span>
+                                                    {projectTimeline?.design_title && (
+                                                        <span style={{ fontSize: '0.85rem', color: '#64748b', fontStyle: 'italic', marginLeft: '4px' }}>{projectTimeline.design_title}</span>
+                                                    )}
+                                                    <div style={{
+                                                        padding: '2px 8px', borderRadius: '20px', marginLeft: '6px',
+                                                        backgroundColor: projectTimeline?.status === 'active' ? 'rgba(190,144,85,0.15)' : 'rgba(20,163,74,0.15)'
+                                                    }}>
+                                                        <span style={{ fontSize: '0.7rem', fontWeight: '700', color: projectTimeline?.status === 'active' ? '#be9055' : '#16a34a' }}>
+                                                            {projectTimeline?.status === 'completed_early' ? 'Done Early' : projectTimeline?.status === 'completed' ? 'Completed' : 'Active'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <span style={{ color: '#be9055', fontSize: '1.2rem', fontWeight: 'bold' }}>{timelineCollapsed ? '+' : '−'}</span>
+                                            </button>
+
+                                            {!timelineCollapsed && (
+                                                <div style={{
+                                                    backgroundColor: '#ffffff',
+                                                    border: '1px solid rgba(190,144,85,0.2)',
+                                                    borderTop: 'none',
+                                                    borderRadius: '0 0 12px 12px',
+                                                    padding: '20px 16px'
+                                                }}>
+                                                    {projectTimelineLoading ? (
+                                                        <div style={{ textAlign: 'center', padding: '10px', color: '#be9055' }}>Loading timeline...</div>
+                                                    ) : (() => {
+                                                        if (!projectTimeline) return null;
+                                                        const sessions = projectTimeline.sessions || [];
+                                                        const planned = Math.max(projectTimeline.total_sessions_planned || 1, sessions.reduce((m, s) => Math.max(m, s.session_number || 0), 0));
+                                                        const nodes = Array.from({ length: planned }, (_, i) => ({
+                                                            num: i + 1,
+                                                            session: sessions.find(s => (s.session_number || 0) === i + 1)
+                                                        }));
+                                                        const completedCount = sessions.filter(s => s.status === 'completed').length;
+                                                        return (
+                                                            <>
+                                                                <div style={{ display: 'flex', alignItems: 'center', overflowX: 'auto', paddingBottom: '8px', paddingLeft: '8px', paddingRight: '8px' }} className="hide-scrollbar">
+                                                                    {nodes.map((node, idx) => {
+                                                                        const isCompleted = node.session?.status === 'completed';
+                                                                        const isCurrent = node.session?.id === selectedApt?.id;
+                                                                        const isPlanned = !node.session;
+                                                                        const isLast = idx === nodes.length - 1;
+                                                                        const dotBg = isCompleted ? 'rgba(190,144,85,0.1)' : isCurrent ? 'rgba(245,158,11,0.15)' : '#f1f5f9';
+                                                                        const dotBorder = isCompleted ? '#be9055' : isCurrent ? '#f59e0b' : '#cbd5e1';
+                                                                        const labelColor = isCompleted ? '#be9055' : isCurrent ? '#d97706' : '#64748b';
+                                                                        
+                                                                        return (
+                                                                            <div key={node.num} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                                                                                {idx > 0 && (
+                                                                                    <div style={{ width: '32px', height: '2px', borderRadius: '2px', backgroundColor: isCompleted ? '#be9055' : '#e2e8f0' }} />
+                                                                                )}
+                                                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '0 4px' }}>
+                                                                                    <div style={{
+                                                                                        width: '36px', height: '36px', borderRadius: '18px',
+                                                                                        display: 'flex', justifyContent: 'center', alignItems: 'center',
+                                                                                        border: `${isCompleted ? '2px' : isCurrent ? '2.5px' : '1.5px'} solid ${dotBorder}`,
+                                                                                        backgroundColor: dotBg,
+                                                                                        boxShadow: isCurrent ? '0 4px 10px rgba(245,158,11,0.25)' : 'none',
+                                                                                        transition: 'all 0.3s'
+                                                                                    }}>
+                                                                                        {isCompleted ? <CheckCircle size={16} color="#be9055" /> : isPlanned ? <Circle size={12} color="#94a3b8" /> : <span style={{ fontSize: '0.8rem', fontWeight: '700', color: isCurrent ? '#d97706' : '#475569' }}>{node.num}</span>}
+                                                                                    </div>
+                                                                                    <span style={{ fontSize: '0.75rem', fontWeight: '700', color: labelColor, marginTop: '6px' }}>S{node.num}</span>
+                                                                                    {node.session?.appointment_date && (
+                                                                                        <span style={{ fontSize: '0.65rem', color: '#64748b', marginTop: '2px', whiteSpace: 'nowrap' }}>
+                                                                                            {new Date(node.session.appointment_date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                                {!isLast && (
+                                                                                    <div style={{ width: '32px', height: '2px', borderRadius: '2px', backgroundColor: nodes[idx+1]?.session ? '#be9055' : '#e2e8f0' }} />
+                                                                                )}
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '16px', paddingTop: '12px', borderTop: '1px dashed #e2e8f0' }}>
+                                                                    <Clock size={14} color="#64748b" />
+                                                                    <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: '500' }}>{completedCount} of {planned} sessions completed</span>
+                                                                </div>
+                                                            </>
+                                                        );
+                                                    })()}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
 

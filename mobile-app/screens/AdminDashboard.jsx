@@ -9,7 +9,7 @@ import {
   Users, Calendar, Palette, Package, BarChart3,
   Bell, AlertTriangle, CheckCircle, Search, ChevronLeft,
   ChevronRight, ShoppingCart, Settings, MessageSquare,
-  DollarSign, X, Activity, FileText
+  DollarSign, X, Activity, FileText, Banknote,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { typography, borderRadius, shadows } from '../src/theme';
@@ -22,7 +22,8 @@ import { AnimatedTouchable } from '../src/components/shared/AnimatedTouchable';
 import { formatCurrency, formatDate, formatTime, getDisplayCode } from '../src/utils/formatters';
 import {
   getAdminDashboard, getAdminAppointments, getAdminAnalytics,
-  updateAppointmentStatus, getAdminInventory, getNotifications
+  updateAppointmentStatus, getAdminInventory, getNotifications,
+  getAdminPayoutAlerts,
 } from '../src/utils/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -49,6 +50,7 @@ export const AdminDashboard = ({ onLogout, navigation }) => {
   const [artistStatus, setArtistStatus] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [inventoryAlerts, setInventoryAlerts] = useState({ outOfStock: [], lowStock: [] });
+  const [payoutAlert, setPayoutAlert] = useState(null); // { count: N } when payout day
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
@@ -65,11 +67,19 @@ export const AdminDashboard = ({ onLogout, navigation }) => {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [dashRes, apptRes, analyticsRes] = await Promise.all([
+      const [dashRes, apptRes, analyticsRes, payoutRes] = await Promise.all([
         getAdminDashboard(),
         getAdminAppointments(),
         getAdminAnalytics(),
+        getAdminPayoutAlerts(),
       ]);
+
+      // ─ P2-13: Payout Alert (15th / 30th of month)
+      if (payoutRes?.success && payoutRes?.alerts?.length > 0) {
+        setPayoutAlert({ count: payoutRes.alerts.length });
+      } else {
+        setPayoutAlert(null);
+      }
 
       if (dashRes.success && dashRes.data) {
         const d = dashRes.data;
@@ -306,6 +316,31 @@ export const AdminDashboard = ({ onLogout, navigation }) => {
               </View>
               <BarChart data={chartData} />
             </View>
+          </StaggerItem>
+        )}
+
+        {/* P2-13: Bi-Monthly Payout Reminder Banner */}
+        {payoutAlert && (
+          <StaggerItem index={2}>
+            <AnimatedTouchable
+              style={styles.payoutBanner}
+              onPress={() => navigation?.navigate?.('admin-analytics', { tab: 'payouts' })}
+              accessibilityLabel="View payout details"
+              title="View artist payouts for today"
+            >
+              <View style={styles.payoutBannerLeft}>
+                <View style={styles.payoutIconWrap}>
+                  <Banknote size={20} color="#92400e" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.payoutBannerTitle}>Payout Day</Text>
+                  <Text style={styles.payoutBannerMsg}>
+                    {payoutAlert.count} artist{payoutAlert.count > 1 ? 's have' : ' has'} unpaid commissions to settle today.
+                  </Text>
+                </View>
+              </View>
+              <ChevronRight size={18} color="#92400e" />
+            </AnimatedTouchable>
           </StaggerItem>
         )}
 
@@ -556,6 +591,21 @@ const getStyles = (theme, insets) => StyleSheet.create({
   pageText: { ...typography.bodySmall, color: theme.textSecondary, fontWeight: '700' },
   alertItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, paddingHorizontal: 12, borderRadius: borderRadius.md, marginBottom: 8, backgroundColor: `${theme.warning}15`, borderWidth: 1, borderColor: `${theme.warning}30` },
   alertText: { ...typography.bodySmall, color: theme.warning, fontWeight: '600' },
+  // P2-13: Payout Banner
+  payoutBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#fef3c7', borderRadius: borderRadius.xl,
+    padding: 16, marginBottom: 16,
+    borderWidth: 1.5, borderColor: '#fcd34d',
+    ...shadows.sm,
+  },
+  payoutBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, marginRight: 8 },
+  payoutIconWrap: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: '#fde68a', justifyContent: 'center', alignItems: 'center',
+  },
+  payoutBannerTitle: { fontSize: 13, fontWeight: '800', color: '#92400e', letterSpacing: 0.3 },
+  payoutBannerMsg: { fontSize: 12, color: '#b45309', marginTop: 2, lineHeight: 17 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(15,13,14,0.7)', justifyContent: 'flex-end' },
   modalCard: { backgroundColor: theme.surface, borderTopLeftRadius: borderRadius.xxl, borderTopRightRadius: borderRadius.xxl, maxHeight: '85%', borderWidth: 1, borderColor: theme.border },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: theme.border },

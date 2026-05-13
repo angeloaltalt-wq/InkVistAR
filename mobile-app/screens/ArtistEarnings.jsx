@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, SafeAreaView, RefreshControl, Animated, Platform, ActionSheetIOS, Alert,
+  View, Text, StyleSheet, ScrollView, SafeAreaView, RefreshControl, Animated, Platform, ActionSheetIOS, Alert, Modal, TextInput, TouchableOpacity, Dimensions
 } from 'react-native';
 import {
   ArrowLeft, Download, Clock, CheckCircle, Wallet, TrendingUp, DollarSign
@@ -19,6 +19,9 @@ import { AnimatedTouchable } from '../src/components/shared/AnimatedTouchable';
 import { formatCurrency } from '../src/utils/formatters';
 import { getArtistEarningsLedger } from '../src/utils/api';
 import { generateCSV, exportCSV, buildReportHTML, printOrSharePDF, sharePDF } from '../src/utils/exportHelpers';
+import { BarChart, PieChart } from 'react-native-chart-kit';
+
+const screenWidth = Dimensions.get('window').width;
 
 const StaggerItem = ({ index, children }) => {
   const anim = useRef(new Animated.Value(0)).current;
@@ -36,8 +39,11 @@ export function ArtistEarnings({ onBack, artistId }) {
   const { theme: colors, hapticsEnabled } = useTheme();
   const styles = getStyles(colors);
   
-  const [timeFilter, setTimeFilter] = useState('all'); // all, week, month, year
+  const [timeFilter, setTimeFilter] = useState('all'); // all, week, month, year, custom
   const [activeTab, setActiveTab] = useState('sessions'); // sessions, payouts
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [customDateModalVisible, setCustomDateModalVisible] = useState(false);
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -86,6 +92,13 @@ export function ArtistEarnings({ onBack, artistId }) {
     if (timeFilter === 'year') {
       return d.getFullYear() === now.getFullYear();
     }
+    if (timeFilter === 'custom' && customStartDate && customEndDate) {
+      const start = new Date(customStartDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(customEndDate);
+      end.setHours(23, 59, 59, 999);
+      return d >= start && d <= end;
+    }
     return true;
   };
 
@@ -112,7 +125,41 @@ export function ArtistEarnings({ onBack, artistId }) {
     return { totalEarned, pendingUnpaid, totalPaidOut, balanceDue };
   }, [filteredSessions, filteredPayouts]);
 
-  const periodLabel = timeFilter === 'week' ? 'This Week' : timeFilter === 'month' ? 'This Month' : timeFilter === 'year' ? 'This Year' : 'All Time';
+  // ── Chart Data ──
+  const chartData = useMemo(() => {
+    // Bar Chart: Last 6 Months Earnings
+    const months = [];
+    const totals = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push(d.toLocaleString('default', { month: 'short' }));
+        const monthEarned = sessionEarnings
+            .filter(s => {
+                const sd = new Date(s.appointment_date);
+                return sd.getMonth() === d.getMonth() && sd.getFullYear() === d.getFullYear() && (s.effectivePaymentStatus || s.payment_status) === 'paid';
+            })
+            .reduce((sum, s) => sum + (s.artistShare || 0), 0);
+        totals.push(monthEarned);
+    }
+    
+    // Pie Chart: Paid vs Unpaid
+    const paidCount = filteredSessions.filter(s => (s.effectivePaymentStatus || s.payment_status) === 'paid').length;
+    const unpaidCount = filteredSessions.length - paidCount;
+
+    return {
+        barData: {
+            labels: months,
+            datasets: [{ data: totals }]
+        },
+        pieData: [
+            { name: 'Paid', population: paidCount, color: colors.success, legendFontColor: colors.textSecondary, legendFontSize: 12 },
+            { name: 'Unpaid', population: unpaidCount, color: colors.warning, legendFontColor: colors.textSecondary, legendFontSize: 12 }
+        ]
+    };
+  }, [sessionEarnings, filteredSessions, colors]);
+
+  const periodLabel = timeFilter === 'week' ? 'This Week' : timeFilter === 'month' ? 'This Month' : timeFilter === 'year' ? 'This Year' : timeFilter === 'custom' ? 'Custom' : 'All Time';
 
   // ── Export Handler ──
   const handleExport = () => {
@@ -215,19 +262,26 @@ export function ArtistEarnings({ onBack, artistId }) {
 
         {/* Filter Pills */}
         <StaggerItem index={0}>
-          <View style={styles.filters}>
-            {['all', 'week', 'month', 'year'].map(f => (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+            {['all', 'week', 'month', 'year', 'custom'].map(f => (
               <AnimatedTouchable
                 key={f}
                 style={[styles.filterBtn, timeFilter === f && styles.filterBtnActive]}
-                onPress={() => { if (hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setTimeFilter(f); }}
+                onPress={() => { 
+                    if (hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); 
+                    if (f === 'custom') {
+                        setCustomDateModalVisible(true);
+                    } else {
+                        setTimeFilter(f); 
+                    }
+                }}
               >
                 <Text style={[styles.filterText, timeFilter === f && styles.filterTextActive]}>
-                  {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
+                  {f === 'all' ? 'All' : f === 'custom' ? 'Custom' : f.charAt(0).toUpperCase() + f.slice(1)}
                 </Text>
               </AnimatedTouchable>
             ))}
-          </View>
+          </ScrollView>
         </StaggerItem>
 
         {loading && !refreshing ? (
@@ -265,12 +319,61 @@ export function ArtistEarnings({ onBack, artistId }) {
                         </View>
                         <Text style={[styles.metricValue, { color: colors.gold }]}>P{formatCurrency(metrics.balanceDue)}</Text>
                     </View>
+                        <Text style={[styles.metricValue, { color: colors.gold }]}>P{formatCurrency(metrics.balanceDue)}</Text>
+                    </View>
                 </ScrollView>
+            </StaggerItem>
+
+            {/* Charts */}
+            <StaggerItem index={2}>
+              <View style={styles.chartsContainer}>
+                <View style={styles.chartCard}>
+                  <Text style={styles.chartTitle}>6-Month Trend</Text>
+                  <BarChart
+                    data={chartData.barData}
+                    width={screenWidth - 72}
+                    height={220}
+                    yAxisLabel="P"
+                    yAxisSuffix=""
+                    chartConfig={{
+                      backgroundColor: colors.surface,
+                      backgroundGradientFrom: colors.surface,
+                      backgroundGradientTo: colors.surface,
+                      decimalPlaces: 0,
+                      color: (opacity = 1) => `rgba(190, 144, 85, ${opacity})`,
+                      labelColor: (opacity = 1) => colors.textSecondary,
+                      style: { borderRadius: 16 },
+                      barPercentage: 0.5,
+                      propsForBackgroundLines: { strokeDasharray: '', stroke: colors.border, strokeWidth: 1 }
+                    }}
+                    style={{ marginVertical: 8, borderRadius: 16, marginLeft: -16 }}
+                    showValuesOnTopOfBars={true}
+                    fromZero={true}
+                  />
+                </View>
+
+                {filteredSessions.length > 0 && (
+                <View style={[styles.chartCard, { marginTop: 16 }]}>
+                  <Text style={styles.chartTitle}>Payment Status</Text>
+                  <PieChart
+                    data={chartData.pieData}
+                    width={screenWidth - 72}
+                    height={150}
+                    chartConfig={{ color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})` }}
+                    accessor={"population"}
+                    backgroundColor={"transparent"}
+                    paddingLeft={"15"}
+                    center={[10, 0]}
+                    absolute
+                  />
+                </View>
+                )}
+              </View>
             </StaggerItem>
 
             <View style={styles.content}>
                 {/* Modern View Toggles */}
-                <StaggerItem index={2}>
+                <StaggerItem index={3}>
                     <View style={styles.modernViewToggle}>
                         <AnimatedTouchable 
                             style={[styles.toggleBtn, activeTab === 'sessions' && styles.toggleBtnActive]}
@@ -360,6 +463,43 @@ export function ArtistEarnings({ onBack, artistId }) {
           </>
         )}
       </ScrollView>
+
+      {/* Custom Date Modal */}
+      <Modal visible={customDateModalVisible} animationType="fade" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Custom Date Range</Text>
+            <Text style={styles.modalText}>Enter dates in YYYY-MM-DD format.</Text>
+            
+            <Text style={styles.inputLabel}>Start Date</Text>
+            <TextInput
+              style={styles.dateInput}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={colors.textTertiary}
+              value={customStartDate}
+              onChangeText={setCustomStartDate}
+            />
+            
+            <Text style={styles.inputLabel}>End Date</Text>
+            <TextInput
+              style={styles.dateInput}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={colors.textTertiary}
+              value={customEndDate}
+              onChangeText={setCustomEndDate}
+            />
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: colors.surfaceLight, borderWidth: 1, borderColor: colors.border }]} onPress={() => setCustomDateModalVisible(false)}>
+                <Text style={[styles.modalBtnText, { color: colors.textPrimary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalBtn} onPress={() => { setTimeFilter('custom'); setCustomDateModalVisible(false); }}>
+                <Text style={styles.modalBtnText}>Apply Filter</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -375,9 +515,9 @@ const getStyles = (colors) => StyleSheet.create({
     justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border,
   },
   headerTitle: { ...typography.h2, color: colors.textPrimary },
-  filters: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginBottom: 20 },
+  filters: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginBottom: 20, paddingRight: 40 },
   filterBtn: {
-    flex: 1, paddingVertical: 10, backgroundColor: colors.surface,
+    paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.surface,
     borderRadius: 20, borderWidth: 1, borderColor: colors.border, alignItems: 'center',
   },
   filterBtnActive: { backgroundColor: colors.gold, borderColor: colors.gold },
@@ -415,4 +555,18 @@ const getStyles = (colors) => StyleSheet.create({
   txDate: { ...typography.bodyXSmall, color: colors.textTertiary },
   txAmountWrap: { alignItems: 'flex-end', gap: 4 },
   txAmount: { ...typography.h4, color: colors.success, fontWeight: '700' },
+  
+  chartsContainer: { paddingHorizontal: 20, marginBottom: 24 },
+  chartCard: { backgroundColor: colors.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border },
+  chartTitle: { ...typography.h4, color: colors.textPrimary, marginBottom: 12 },
+  
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: { width: '100%', backgroundColor: colors.surface, borderRadius: 24, padding: 24, borderWidth: 1, borderColor: colors.border },
+  modalTitle: { ...typography.h3, color: colors.textPrimary, marginBottom: 8 },
+  modalText: { ...typography.body, color: colors.textSecondary, marginBottom: 20 },
+  inputLabel: { ...typography.bodySmall, color: colors.textSecondary, fontWeight: '600', marginBottom: 6 },
+  dateInput: { backgroundColor: colors.surfaceLight, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: colors.border, ...typography.body, color: colors.textPrimary, marginBottom: 16 },
+  modalActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  modalBtn: { flex: 1, backgroundColor: colors.gold, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  modalBtnText: { ...typography.button, color: '#fff' },
 });

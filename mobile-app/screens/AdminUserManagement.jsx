@@ -11,7 +11,7 @@ import {
   RefreshControl, ScrollView, Image,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { Search, Plus, Pencil, Trash2, X, UserPlus, Shield, ChevronDown, ChevronLeft, Users, Camera } from 'lucide-react-native';
+import { Search, Plus, Pencil, Trash2, X, UserPlus, Shield, ChevronDown, ChevronLeft, Users, Camera, ArrowUpDown, ShieldCheck, ShieldOff, RotateCcw, Ban } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../src/context/ThemeContext';
 import { typography, spacing, borderRadius, shadows } from '../src/theme';
@@ -61,8 +61,18 @@ export const AdminUserManagement = ({ navigation }) => {
   const [formData, setFormData] = useState({ name: '', email: '', type: 'customer', password: '', confirmPassword: '', phone: '', status: 'active' });
   const [profileImage, setProfileImage] = useState(null); // base64 uri
 
-  // Delete confirm
-  const [deleteModal, setDeleteModal] = useState({ visible: false, userId: null, userName: '' });
+  // Sort
+  const [sortBy, setSortBy] = useState('name'); // name | role | status | newest
+  const [sortDropdown, setSortDropdown] = useState(false);
+
+  // Manage Status Modal
+  const [statusModal, setStatusModal] = useState({ visible: false, user: null, selectedStatus: 'active', reason: '' });
+  const [statusSaving, setStatusSaving] = useState(false);
+
+  // Delete confirm (with countdown)
+  const [deleteModal, setDeleteModal] = useState({ visible: false, userId: null, userName: '', isDeleted: false });
+  const [deleteCountdown, setDeleteCountdown] = useState(3);
+  const [deleteReady, setDeleteReady] = useState(false);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -79,6 +89,24 @@ export const AdminUserManagement = ({ navigation }) => {
     // Reset page when filters change
     setPage(1);
   }, [roleFilter, statusFilter, search]);
+
+  // Countdown timer for destructive delete
+  useEffect(() => {
+    if (!deleteModal.visible || deleteModal.isDeleted) return;
+    setDeleteCountdown(3);
+    setDeleteReady(false);
+    const interval = setInterval(() => {
+      setDeleteCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setDeleteReady(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [deleteModal.visible]);
 
   const handleOpenModal = (user = null) => {
     if (user) {
@@ -143,28 +171,77 @@ export const AdminUserManagement = ({ navigation }) => {
     }
   };
 
-  const confirmDelete = (userId, userName) => {
-    setDeleteModal({ visible: true, userId, userName });
+  const confirmDelete = (userId, userName, isDeleted = false) => {
+    setDeleteModal({ visible: true, userId, userName, isDeleted });
   };
 
   const performDelete = async () => {
-    const result = await deleteUserByAdmin(deleteModal.userId);
-    setDeleteModal({ visible: false, userId: null, userName: '' });
-    if (result.success) {
-      Alert.alert('Success', 'User deleted');
-      loadUsers();
+    if (deleteModal.isDeleted) {
+      // Restore (un-soft-delete)
+      const result = await updateUserByAdmin(deleteModal.userId, { status: 'active' });
+      setDeleteModal({ visible: false, userId: null, userName: '', isDeleted: false });
+      if (result.success) {
+        Alert.alert('Success', 'User restored successfully.');
+        loadUsers();
+      } else {
+        Alert.alert('Error', result.message || 'Failed to restore user');
+      }
     } else {
-      Alert.alert('Error', result.message || 'Failed to delete user');
+      // Soft delete
+      const result = await deleteUserByAdmin(deleteModal.userId);
+      setDeleteModal({ visible: false, userId: null, userName: '', isDeleted: false });
+      if (result.success) {
+        Alert.alert('Success', 'User removed from active roster.');
+        loadUsers();
+      } else {
+        Alert.alert('Error', result.message || 'Failed to delete user');
+      }
     }
   };
 
-  // Filter
-  const filteredUsers = users.filter(u => {
-    if (roleFilter !== 'all' && u.user_type !== roleFilter) return false;
-    if (statusFilter === 'active' && u.is_deleted === 1) return false;
-    if (statusFilter === 'suspended' && u.is_deleted !== 1) return false;
-    return true;
-  });
+  const openStatusModal = (user) => {
+    setStatusModal({
+      visible: true,
+      user,
+      selectedStatus: user.is_deleted ? 'deactivated' : user.status || 'active',
+      reason: ''
+    });
+  };
+
+  const handleStatusUpdate = async () => {
+    if (!statusModal.user) return;
+    const { selectedStatus, reason, user } = statusModal;
+    if ((selectedStatus === 'deactivated' || selectedStatus === 'banned') && reason.trim().length < 5) {
+      Alert.alert('Reason Required', 'Please provide at least 5 characters explaining this status change.');
+      return;
+    }
+    setStatusSaving(true);
+    const result = await updateUserByAdmin(user.id, { status: selectedStatus, statusReason: reason });
+    setStatusSaving(false);
+    if (result.success) {
+      setStatusModal({ visible: false, user: null, selectedStatus: 'active', reason: '' });
+      Alert.alert('Status Updated', `${user.name} has been set to ${selectedStatus}.`);
+      loadUsers();
+    } else {
+      Alert.alert('Error', result.message || 'Failed to update status');
+    }
+  };
+
+  // Filter + Sort
+  const filteredUsers = users
+    .filter(u => {
+      if (roleFilter !== 'all' && u.user_type !== roleFilter) return false;
+      if (statusFilter === 'active' && u.is_deleted === 1) return false;
+      if (statusFilter === 'suspended' && u.is_deleted !== 1) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
+      if (sortBy === 'role') return (a.user_type || '').localeCompare(b.user_type || '');
+      if (sortBy === 'status') return (a.is_deleted || 0) - (b.is_deleted || 0);
+      if (sortBy === 'newest') return (b.id || 0) - (a.id || 0);
+      return 0;
+    });
 
   const paginatedUsers = filteredUsers.slice(0, page * itemsPerPage);
 
@@ -197,9 +274,10 @@ export const AdminUserManagement = ({ navigation }) => {
 
   const renderUser = ({ item, index }) => {
     const roleColor = ROLE_COLORS[item.user_type] || ROLE_COLORS.customer;
+    const isDeactivated = item.is_deleted === 1;
     return (
       <StaggerItem key={item.id || index} index={index}>
-        <View style={styles.userCard}>
+        <View style={[styles.userCard, isDeactivated && { opacity: 0.65, borderLeftWidth: 3, borderLeftColor: theme.error }]}>
           <View style={styles.userLeft}>
             <View style={[styles.avatar, { backgroundColor: roleColor.bg }]}>
               <Text style={[styles.avatarText, { color: roleColor.text }]}>{getInitials(item.name)}</Text>
@@ -207,19 +285,27 @@ export const AdminUserManagement = ({ navigation }) => {
             <View style={styles.userInfo}>
               <Text style={styles.userName} numberOfLines={1}>{item.name}</Text>
               <Text style={styles.userEmail} numberOfLines={1}>{item.email}</Text>
-              <View style={[styles.roleBadge, { backgroundColor: roleColor.bg }]}>
-                <Text style={[styles.roleText, { color: roleColor.text }]}>
-                  {(item.user_type || 'customer').toUpperCase()}
-                </Text>
+              <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center', marginTop: 6 }}>
+                <View style={[styles.roleBadge, { backgroundColor: roleColor.bg }]}>
+                  <Text style={[styles.roleText, { color: roleColor.text }]}>{(item.user_type || 'customer').toUpperCase()}</Text>
+                </View>
+                {isDeactivated && (
+                  <View style={[styles.roleBadge, { backgroundColor: 'rgba(239,68,68,0.12)' }]}>
+                    <Text style={[styles.roleText, { color: theme.error }]}>INACTIVE</Text>
+                  </View>
+                )}
               </View>
             </View>
           </View>
           <View style={styles.userActions}>
-            <AnimatedTouchable style={[styles.iconBtn, styles.editBtn]} onPress={() => handleOpenModal(item)}>
+            <AnimatedTouchable style={[styles.iconBtn, styles.editBtn]} onPress={() => openStatusModal(item)} title="Manage status">
+              <Shield size={16} color={theme.info || '#3b82f6'} />
+            </AnimatedTouchable>
+            <AnimatedTouchable style={[styles.iconBtn, styles.editBtn]} onPress={() => handleOpenModal(item)} title="Edit user">
               <Pencil size={16} color={theme.warning} />
             </AnimatedTouchable>
-            <AnimatedTouchable style={[styles.iconBtn, styles.deleteBtn]} onPress={() => confirmDelete(item.id, item.name)}>
-              <Trash2 size={16} color={theme.error} />
+            <AnimatedTouchable style={[styles.iconBtn, styles.deleteBtn]} onPress={() => confirmDelete(item.id, item.name, isDeactivated)} title={isDeactivated ? 'Restore user' : 'Deactivate user'}>
+              {isDeactivated ? <RotateCcw size={16} color={theme.success} /> : <Trash2 size={16} color={theme.error} />}
             </AnimatedTouchable>
           </View>
         </View>
@@ -232,9 +318,39 @@ export const AdminUserManagement = ({ navigation }) => {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>User Roster</Text>
-        <AnimatedTouchable style={styles.addBtn} onPress={() => handleOpenModal(null)}>
-          <Plus size={20} color={theme.backgroundDeep} />
-        </AnimatedTouchable>
+        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+          {/* Sort Dropdown */}
+          <View style={{ position: 'relative' }}>
+            <AnimatedTouchable
+              style={[styles.iconBtnHeader]}
+              onPress={() => setSortDropdown(!sortDropdown)}
+              title="Sort users"
+            >
+              <ArrowUpDown size={16} color={theme.textPrimary} />
+            </AnimatedTouchable>
+            {sortDropdown && (
+              <View style={styles.sortDropdown}>
+                {[
+                  { key: 'name', label: 'By Name' },
+                  { key: 'role', label: 'By Role' },
+                  { key: 'status', label: 'By Status' },
+                  { key: 'newest', label: 'Newest First' },
+                ].map(opt => (
+                  <AnimatedTouchable
+                    key={opt.key}
+                    style={[styles.sortOption, sortBy === opt.key && styles.sortOptionActive]}
+                    onPress={() => { setSortBy(opt.key); setSortDropdown(false); }}
+                  >
+                    <Text style={[styles.sortOptionText, sortBy === opt.key && { color: theme.gold }]}>{opt.label}</Text>
+                  </AnimatedTouchable>
+                ))}
+              </View>
+            )}
+          </View>
+          <AnimatedTouchable style={styles.addBtn} onPress={() => handleOpenModal(null)} title="Add new user">
+            <Plus size={20} color={theme.backgroundDeep} />
+          </AnimatedTouchable>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={loading} onRefresh={loadUsers} tintColor={theme.gold} />}>
@@ -511,16 +627,122 @@ export const AdminUserManagement = ({ navigation }) => {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Delete Confirm */}
-      <ConfirmModal
-        visible={deleteModal.visible}
-        title="Delete User"
-        message={`Are you sure you want to delete ${deleteModal.userName}? This action cannot be undone.`}
-        confirmText="Delete"
-        destructive
-        onConfirm={performDelete}
-        onCancel={() => setDeleteModal({ visible: false, userId: null, userName: '' })}
-      />
+      {/* Delete / Restore Confirm */}
+      <Modal visible={deleteModal.visible} animationType="fade" transparent onRequestClose={() => setDeleteModal({ visible: false, userId: null, userName: '', isDeleted: false })}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { alignItems: 'center' }]}>
+            <View style={[styles.closeBtn, { width: 56, height: 56, borderRadius: 28, marginBottom: 16, backgroundColor: deleteModal.isDeleted ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)' }]}>
+              {deleteModal.isDeleted
+                ? <RotateCcw size={26} color={theme.success} />
+                : <Trash2 size={26} color={theme.error} />}
+            </View>
+            <Text style={[styles.modalTitle, { textAlign: 'center', color: deleteModal.isDeleted ? theme.success : theme.error }]}>
+              {deleteModal.isDeleted ? 'Restore User' : 'Remove User'}
+            </Text>
+            <Text style={{ ...typography.body, color: theme.textSecondary, textAlign: 'center', marginTop: 8, marginBottom: 24, lineHeight: 22 }}>
+              {deleteModal.isDeleted
+                ? `Restore "${deleteModal.userName}" to active status? They will regain access to their account.`
+                : `Remove "${deleteModal.userName}" from the active roster? Their data will be preserved.`}
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
+              <AnimatedTouchable
+                style={[styles.cancelBtn, { flex: 1 }]}
+                onPress={() => setDeleteModal({ visible: false, userId: null, userName: '', isDeleted: false })}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </AnimatedTouchable>
+              <AnimatedTouchable
+                style={[styles.saveBtn, { flex: 1, backgroundColor: deleteModal.isDeleted ? theme.success : (deleteReady ? theme.error : theme.surfaceLight) }]}
+                onPress={deleteReady ? performDelete : undefined}
+                disabled={!deleteReady}
+              >
+                <Text style={[styles.saveBtnText, !deleteReady && { color: theme.textSecondary }]}>
+                  {deleteModal.isDeleted ? 'Restore' : (deleteReady ? 'Confirm' : `Wait (${deleteCountdown}s)`)}
+                </Text>
+              </AnimatedTouchable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Manage Status Modal */}
+      <Modal visible={statusModal.visible} animationType="fade" transparent onRequestClose={() => setStatusModal({ visible: false, user: null, selectedStatus: 'active', reason: '' })}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Manage Account Status</Text>
+              <AnimatedTouchable onPress={() => setStatusModal({ visible: false, user: null, selectedStatus: 'active', reason: '' })} style={styles.closeBtn}>
+                <X size={20} color={theme.textSecondary} />
+              </AnimatedTouchable>
+            </View>
+            {statusModal.user && (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={{ ...typography.bodySmall, color: theme.textSecondary, marginBottom: 16 }}>
+                  Updating status for <Text style={{ fontWeight: '700', color: theme.textPrimary }}>{statusModal.user.name}</Text>
+                </Text>
+
+                <Text style={styles.inputLabel}>Account Status</Text>
+                <View style={{ flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                  {[
+                    { key: 'active', icon: ShieldCheck, label: 'Active', desc: 'Full account access', color: theme.success },
+                    { key: 'deactivated', icon: ShieldOff, label: 'Deactivated', desc: 'Temporarily suspended', color: theme.warning },
+                    { key: 'banned', icon: Ban, label: 'Banned', desc: 'Permanently restricted', color: theme.error },
+                  ].map(opt => (
+                    <AnimatedTouchable
+                      key={opt.key}
+                      style={[
+                        { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 12, borderWidth: 1.5, gap: 12,
+                          borderColor: statusModal.selectedStatus === opt.key ? opt.color : theme.border,
+                          backgroundColor: statusModal.selectedStatus === opt.key ? `${opt.color}12` : theme.surfaceLight
+                        }
+                      ]}
+                      onPress={() => setStatusModal(prev => ({ ...prev, selectedStatus: opt.key }))}
+                    >
+                      <opt.icon size={20} color={opt.color} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ ...typography.body, fontWeight: '700', color: statusModal.selectedStatus === opt.key ? opt.color : theme.textPrimary }}>{opt.label}</Text>
+                        <Text style={{ ...typography.bodyXSmall, color: theme.textTertiary }}>{opt.desc}</Text>
+                      </View>
+                      {statusModal.selectedStatus === opt.key && (
+                        <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: opt.color, justifyContent: 'center', alignItems: 'center' }}>
+                          <X size={10} color="#fff" />
+                        </View>
+                      )}
+                    </AnimatedTouchable>
+                  ))}
+                </View>
+
+                {(statusModal.selectedStatus === 'deactivated' || statusModal.selectedStatus === 'banned') && (
+                  <>
+                    <Text style={styles.inputLabel}>Reason (Required)</Text>
+                    <TextInput
+                      style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+                      placeholder="Explain the reason for this status change..."
+                      placeholderTextColor={theme.textTertiary}
+                      multiline
+                      value={statusModal.reason}
+                      onChangeText={t => setStatusModal(prev => ({ ...prev, reason: t }))}
+                    />
+                  </>
+                )}
+
+                <View style={styles.modalActions}>
+                  <AnimatedTouchable style={styles.cancelBtn} onPress={() => setStatusModal({ visible: false, user: null, selectedStatus: 'active', reason: '' })}>
+                    <Text style={styles.cancelBtnText}>Cancel</Text>
+                  </AnimatedTouchable>
+                  <AnimatedTouchable
+                    style={[styles.saveBtn, statusSaving && { opacity: 0.6 }]}
+                    onPress={handleStatusUpdate}
+                    disabled={statusSaving}
+                  >
+                    <Text style={styles.saveBtnText}>{statusSaving ? 'Saving...' : 'Apply Status'}</Text>
+                  </AnimatedTouchable>
+                </View>
+              </ScrollView>
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -662,4 +884,12 @@ const getStyles = (theme, insets) => StyleSheet.create({
   dropdownType: { ...typography.bodyXSmall, color: theme.gold },
   loadMoreBtn: { padding: 14, backgroundColor: theme.surfaceLight, borderRadius: borderRadius.md, alignItems: 'center', marginTop: 10, borderWidth: 1, borderColor: theme.borderLight },
   loadMoreText: { ...typography.bodySmall, color: theme.gold, fontWeight: '600' },
+  iconBtnHeader: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.surfaceLight, borderWidth: 1, borderColor: theme.borderLight, justifyContent: 'center', alignItems: 'center' },
+  sortDropdown: {
+    position: 'absolute', top: 44, right: 0, backgroundColor: theme.surface, borderRadius: borderRadius.lg,
+    borderWidth: 1, borderColor: theme.border, ...shadows.cardStrong, zIndex: 100, minWidth: 140,
+  },
+  sortOption: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.borderLight },
+  sortOptionActive: { backgroundColor: theme.surfaceLight },
+  sortOptionText: { ...typography.bodySmall, color: theme.textSecondary, fontWeight: '600' },
 });

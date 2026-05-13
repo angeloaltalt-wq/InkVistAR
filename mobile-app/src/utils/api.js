@@ -688,4 +688,68 @@ export const deleteAdminServiceKit = async (serviceType) => {
   return fetchAPI(`/admin/service-kits/${encodeURIComponent(serviceType)}`, {
     method: 'DELETE'
   });
-};
+};
+
+// Admin: Branches
+export const getAdminBranches = async (includeDeleted = false) => {
+  return fetchAPI(`/admin/branches${includeDeleted ? '?status=deleted' : ''}`);
+};
+
+export const createAdminBranch = async (data) => {
+  return fetchAPI('/admin/branches', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+export const updateAdminBranch = async (id, data) => {
+  return fetchAPI(`/admin/branches/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+};
+
+export const deleteAdminBranch = async (id) => {
+  return fetchAPI(`/admin/branches/${id}`, { method: 'DELETE' });
+};
+
+export const restoreAdminBranch = async (id) => {
+  return fetchAPI(`/admin/branches/${id}/restore`, { method: 'PUT' });
+};
+
+// Gallery Categories
+export const getGalleryCategories = async () => {
+  return fetchAPI('/gallery/categories');
+};
+
+export const createGalleryCategory = async (data) => {
+  return fetchAPI('/gallery/categories', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+export const deleteGalleryCategory = async (id) => {
+  return fetchAPI(`/gallery/categories/${id}`, { method: 'DELETE' });
+};
+
+// Overhead Expenses
+export const getAdminOverhead = async () => {
+  return fetchAPI('/admin/overhead');
+};
+
+export const createAdminOverhead = async (data) => {
+  return fetchAPI('/admin/overhead', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+export const deleteAdminOverhead = async (id) => {
+  return fetchAPI(`/admin/overhead/${id}`, { method: 'DELETE' });
+};
+
+// Admin: Payout Alerts (bi-monthly 15th/30th)
+export const getAdminPayoutAlerts = async () => {
+  return fetchAPI('/admin/payout-alerts').catch(() => ({ success: true, alerts: [] }));
+};
