@@ -5055,10 +5055,10 @@ app.post('/api/admin/appointments', async (req, res) => {
                 console.warn('[WARN] New columns not found, retrying INSERT without project/session fields...');
                 const fallbackQuery = `
                   INSERT INTO appointments 
-                    (customer_id, artist_id, secondary_artist_id, commission_split, appointment_date, start_time, design_title, service_type, status, notes, price, tattoo_price, piercing_price, manual_paid_amount, payment_status, is_deleted, before_photo, booking_code, device_id, consultation_method, guest_email, guest_phone, piercing_jewelry, is_guest_placeholder)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 0, ?, 'PENDING', ?, ?, ?, ?, ?, ?)
+                    (customer_id, artist_id, secondary_artist_id, commission_split, appointment_date, start_time, design_title, service_type, status, notes, price, tattoo_price, piercing_price, manual_paid_amount, payment_status, is_deleted, before_photo, booking_code, device_id, consultation_method, guest_email, guest_phone, piercing_jewelry, is_guest_placeholder, project_id, session_number, total_sessions)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 0, ?, 'PENDING', ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `;
-                return conn.query(fallbackQuery, [customerId, artistId, secondaryArtistId || null, commissionSplit || 50, date, startTime || null, combinedTitle, serviceType || 'General Session', finalStatus, notes || '', finalPrice, sanitizedTattooPrice, sanitizedPiercingPrice, manualPaidAmount || 0, referenceImage || null, deviceId || null, consultationMethod || null, guestEmail || null, guestPhone || null, sanitizedJewelry || null, isGuestPlaceholder ? 1 : 0], (fbErr, fbResult) => {
+                return conn.query(fallbackQuery, [customerId, artistId, secondaryArtistId || null, commissionSplit || 50, date, startTime || null, combinedTitle, serviceType || 'General Session', finalStatus, notes || '', finalPrice, sanitizedTattooPrice, sanitizedPiercingPrice, manualPaidAmount || 0, referenceImage || null, deviceId || null, consultationMethod || null, guestEmail || null, guestPhone || null, sanitizedJewelry || null, isGuestPlaceholder ? 1 : 0, resolvedProjectId, sanitizedSessionNumber, sanitizedTotalSessions], (fbErr, fbResult) => {
                   if (fbErr) {
                     console.error('[ERROR] Fallback INSERT also failed:', fbErr);
                     return conn.rollback(() => { conn.release(); res.status(500).json({ success: false, message: 'Database error: ' + fbErr.message }); });

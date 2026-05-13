@@ -516,9 +516,36 @@ function CustomerBookings(){
 
     const closeBookingModal = () => {
         setIsBookingModalOpen(false);
-        setBookingData({ artistId: null, bookingType: '', selectedServices: [], followupAppointmentId: null, date: '', startTime: '', designTitle: '', placement: [], piercingPlacement: [], consultationFor: [], placementNotes: '', notes: '', referenceImage: null });
-        setErrors({});
         setBookingStep(1);
+        setBookingData({ artistId: null, bookingType: '', selectedServices: [], followupAppointmentId: null, date: '', startTime: '', designTitle: '', placement: [], piercingPlacement: [], consultationFor: [], placementNotes: '', notes: '', referenceImage: null });
+        setAvailableTimeSlots([]);
+    };
+
+    const handleRequestNextSession = (appt) => {
+        setIsModalOpen(false);
+        let services = [];
+        if (appt.service_type === 'Tattoo + Piercing') services = ['Tattoo Session', 'Piercing'];
+        else if (appt.service_type) services = [appt.service_type];
+        
+        setBookingData({ 
+            artistId: appt.artist_id || null, 
+            bookingType: 'followup', 
+            selectedServices: services, 
+            followupAppointmentId: appt.id, 
+            date: '', 
+            startTime: '', 
+            designTitle: appt.design_title || '', 
+            placement: [], 
+            piercingPlacement: [], 
+            consultationFor: [], 
+            consultationMethod: 'Face-to-Face',
+            onlinePlatform: '',
+            placementNotes: '', 
+            notes: '', 
+            referenceImage: appt.reference_image || null 
+        });
+        setBookingStep(2);
+        setIsBookingModalOpen(true);
     };
 
     const fetchCompletedAppointments = async () => {
@@ -1475,6 +1502,16 @@ function CustomerBookings(){
                                     onClick={() => window.open(`/customer/waiver/${selectedApt.id}`, '_blank')}
                                 >
                                     <ShieldCheck size={16} /> View Waiver
+                                </button>
+                            )}
+
+                            {selectedApt.status.toLowerCase() === 'completed' && (
+                                <button 
+                                    className="btn btn-primary"
+                                    style={{ padding: '8px 16px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, #1e293b, #0f172a)', color: 'white', border: 'none', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}
+                                    onClick={() => handleRequestNextSession(selectedApt)}
+                                >
+                                    <Layers size={16}/> Request Next Session
                                 </button>
                             )}
                             

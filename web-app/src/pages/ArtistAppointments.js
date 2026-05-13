@@ -649,8 +649,7 @@ function ArtistAppointments() {
                                                                 {activeTab === 'pending' && (
                                                                     <td data-label="Actions">
                                                                         <div className="artist-action-group">
-                                                                            <button onClick={(e) => { e.stopPropagation(); setConfirmModal({ visible: true, title: 'Confirm Availability', message: 'Ready to take on this assignment? Confirming will notify the manager to generate a quote for the client.', type: 'success', onConfirm: () => handleAccept(a.id) }); }} className="artist-btn-accept">Confirm</button>
-                                                                            <button onClick={(e) => { e.stopPropagation(); setConfirmModal({ visible: true, title: 'Decline Assignment', message: 'Are you sure you want to decline this assignment? It will be reverted back to the Admin for reassignment.', type: 'danger', onConfirm: () => handleReject(a.id) }); }} className="artist-btn-decline">Decline</button>
+                                                                            <span style={{ fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' }}>Pending Admin Confirmation</span>
                                                                         </div>
                                                                     </td>
                                                                 )}
@@ -911,8 +910,7 @@ function ArtistAppointments() {
                                                 <div style={{ padding: '15px 24px', borderTop: '1px solid #e2e8f0', textAlign: 'right', background: '#f8fafc', borderBottomLeftRadius: '20px', borderBottomRightRadius: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                                                     {selectedAppointment.status === 'pending' && (
                                                         <>
-                                                            <button onClick={() => { setConfirmModal({ visible: true, title: 'Decline Assignment', message: 'Are you sure you want to decline this assignment? It will be reverted back to the Admin for reassignment.', type: 'danger', onConfirm: () => { handleReject(selectedAppointment.id); setSelectedAppointment(null); } }); }} className="btn btn-secondary" style={{ padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '500', color: '#ef4444', border: '1px solid #ef4444', backgroundColor: '#fef2f2' }}>Decline</button>
-                                                            <button onClick={() => { setConfirmModal({ visible: true, title: 'Confirm Availability', message: 'Ready to take on this assignment? Confirming will notify the manager to generate a quote for the client.', type: 'success', onConfirm: () => { handleAccept(selectedAppointment.id); setSelectedAppointment(null); } }); }} className="btn btn-primary" style={{ padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '500', backgroundColor: '#10b981', color: 'white', border: 'none' }}>Confirm Availability</button>
+                                                            <span style={{ fontSize: '0.85rem', color: '#64748b', fontStyle: 'italic', display: 'flex', alignItems: 'center', marginRight: 'auto' }}>Awaiting Admin confirmation...</span>
                                                         </>
                                                     )}
                                                     {['confirmed', 'in_progress'].includes(selectedAppointment.status) && (

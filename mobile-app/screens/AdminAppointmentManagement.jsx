@@ -8,13 +8,13 @@ import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   TextInput, Alert, Modal, ScrollView, SafeAreaView,
-  RefreshControl, Image, Animated, PanResponder,
+  RefreshControl, Image, Animated, PanResponder, ActivityIndicator,
 } from 'react-native';
 import {
   Search, Calendar, User, Palette, Clock, X, Plus,
   CheckCircle, AlertTriangle, FileText, Trash2, Save,
   ChevronLeft, ChevronRight, Filter, ChevronDown,
-  ShieldCheck, List, Archive, LayoutGrid, Layers,
+  ShieldCheck, List, Archive, LayoutGrid, Layers, Circle,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../src/context/ThemeContext';
@@ -152,6 +152,25 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
   const [archiveMaterials, setArchiveMaterials] = useState({ materials: [], totalCost: 0 });
   const [archiveLoading, setArchiveLoading] = useState(false);
 
+  // ── Feature B: Project Timeline ───────────────────────────────────────────
+  const [projectTimeline, setProjectTimeline] = useState(null);
+  const [projectTimelineLoading, setProjectTimelineLoading] = useState(false);
+
+  const fetchProjectTimeline = async (projectId) => {
+    if (!projectId) { setProjectTimeline(null); return; }
+    setProjectTimelineLoading(true);
+    try {
+      const res = await fetchAPI(`/projects/${projectId}`);
+      if (res.success) setProjectTimeline(res.project);
+      else setProjectTimeline(null);
+    } catch (e) {
+      console.error('Failed to load project timeline:', e);
+      setProjectTimeline(null);
+    } finally {
+      setProjectTimelineLoading(false);
+    }
+  };
+
   // ── P2-7: Reschedule Request decision panel ───────────────────────────────
   const [pendingReschedule, setPendingReschedule] = useState(null);
   const [rescheduleNotes, setRescheduleNotes] = useState('');
@@ -253,6 +272,9 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
       setArchiveMode(true);
       setArchiveLoading(true);
       setModalVisible(true);
+      // Feature B: Fetch project timeline if this session belongs to a project
+      if (appt.project_id) fetchProjectTimeline(appt.project_id);
+      else { setProjectTimeline(null); setProjectTimelineLoading(false); }
       const mats = await fetchSessionMaterials(appt.id);
       setArchiveMaterials(mats);
       setArchiveLoading(false);
@@ -285,6 +307,9 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
     setModalVisible(true);
     // Fetch pending reschedule request
     if (appt?.id) fetchRescheduleRequest(appt.id);
+    // Feature B: Fetch project timeline if session is linked to a project
+    if (appt?.project_id) fetchProjectTimeline(appt.project_id);
+    else { setProjectTimeline(null); setProjectTimelineLoading(false); }
   };
 
   const handleSave = async () => {
@@ -366,16 +391,39 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
     }
   };
 
-  const handleRebookNextSession = (appt) => {
+  const handleRebookNextSession = async (appt) => {
+    // Fetch the project's authoritative total_sessions_planned before opening
+    let resolvedTotalSessions = appt.total_sessions || 2;
+    let nextSessionNumber = (appt.session_number || 1) + 1;
+
+    if (appt.project_id) {
+      try {
+        const projRes = await fetchAPI(`/projects/${appt.project_id}`);
+        if (projRes.success && projRes.project) {
+          resolvedTotalSessions = projRes.project.total_sessions_planned || resolvedTotalSessions;
+          // Use the actual number of sessions in the project to prevent numbering bugs
+          if (projRes.sessions && projRes.sessions.length > 0) {
+            const realMax = projRes.sessions.reduce((max, s) => Math.max(max, s.session_number || 0), 0);
+            const countMax = projRes.sessions.length;
+            nextSessionNumber = Math.max(realMax, countMax) + 1;
+          }
+        }
+      } catch (e) {
+        console.warn('Could not fetch project for rebook:', e);
+      }
+    }
+
+    // Ensure totalSessions is never less than the next session number
+    resolvedTotalSessions = Math.max(nextSessionNumber, resolvedTotalSessions);
+
     Alert.alert(
       'Rebook Next Session',
-      'Are you sure you want to Rebook a next session for this project?',
+      `Book Session ${nextSessionNumber} of ${resolvedTotalSessions} for this project?`,
       [
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Rebook', 
           onPress: () => {
-            const nextSessionNumber = (appt.session_number || 1) + 1;
             const previousPrice = parseFloat(appt.price) || parseFloat(appt.total_price) || 0;
             const previousPaid = parseFloat(appt.total_paid) || parseFloat(appt.amount_paid) || 0;
             const remainingBalance = Math.max(0, previousPrice - previousPaid);
@@ -384,7 +432,7 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
             setArchiveMode(false);
             setEditDate(new Date().toISOString().split('T')[0]);
             setEditTime('13:00');
-            setEditStatus('pending');
+            setEditStatus('confirmed');
             setEditPrice(String(remainingBalance));
             setEditDiscountType('flat');
             setEditDiscountAmount('');
@@ -394,7 +442,7 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
             setEditArtistId(String(appt.artist_id || ''));
             
             setEditSessionNumber(nextSessionNumber);
-            setEditTotalSessions(appt.total_sessions || Math.max(nextSessionNumber, 2));
+            setEditTotalSessions(resolvedTotalSessions);
             setEditProjectId(appt.project_id || null);
             setEditOriginalSessionId(appt.id);
             setEditIsMultiSession(true);
@@ -702,6 +750,16 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
                     <Archive size={16} color="#6d28d9" />
                     <Text style={styles.archiveBannerText}>Completed Session — Read Only</Text>
                   </View>
+
+                  {/* Feature B: Project Timeline in Archive View */}
+                  {selectedAppt?.project_id && (
+                    <MobileSessionTimeline
+                      project={projectTimeline}
+                      currentSessionId={selectedAppt.id}
+                      loading={projectTimelineLoading}
+                      theme={theme}
+                    />
+                  )}
                   <View style={styles.infoSection}>
                     <InfoRow theme={theme} label="Booking" value={getDisplayCode(selectedAppt.booking_code, selectedAppt.id)} />
                     <InfoRow theme={theme} label="Client" value={selectedAppt.client_name || 'N/A'} />
@@ -759,6 +817,16 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
                       <Text style={styles.rebookBtnText}>Rebook Next Session</Text>
                     </AnimatedTouchable>
                   </View>
+
+                  {/* Feature B: Project Timeline in Standard Edit Modal */}
+                  {selectedAppt?.project_id && !archiveMode && (
+                    <MobileSessionTimeline
+                      project={projectTimeline}
+                      currentSessionId={selectedAppt.id}
+                      loading={projectTimelineLoading}
+                      theme={theme}
+                    />
+                  )}
                 </View>
               ) : (
                 <>{/* ─── Standard editable modal content below ─────────────────── */}
@@ -1203,6 +1271,266 @@ const InfoRow = ({ theme, label, value }) => {
     </View>
   );
 };
+
+const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+/**
+ * MobileSessionTimeline -- Feature B (Port of web SessionTimeline.js)
+ *
+ * Shows the full project node rail inside the appointment modal.
+ */
+const MobileSessionTimeline = ({ project, currentSessionId, loading, theme }) => {
+  if (loading) {
+    return (
+      <View style={tlStyles.wrapper}>
+        <View style={tlStyles.header}>
+          <Layers size={14} color="#be9055" />
+          <Text style={tlStyles.headerLabel}>Project Timeline</Text>
+        </View>
+        <View style={tlStyles.skeletonRail}>
+          {[1, 2, 3].map(i => (
+            <View key={i} style={tlStyles.skeletonNode} />
+          ))}
+        </View>
+      </View>
+    );
+  }
+
+  if (!project) return null;
+
+  const { sessions = [], status, total_sessions_planned, total_sessions_actual, design_title } = project;
+
+  // Build the full node list: real sessions + planned placeholders
+  const realMax = sessions.reduce((max, s) => Math.max(max, s.session_number || 0), 0);
+  const planned = Math.max(total_sessions_planned || 1, realMax);
+
+  const nodes = Array.from({ length: planned }, (_, i) => {
+    const num = i + 1;
+    const session = sessions.find(s => (s.session_number || 0) === num);
+    return { num, session };
+  });
+
+  const isCompleted = status === 'completed' || status === 'completed_early';
+  const completedSessions = sessions.filter(s => s.status === 'completed');
+
+  const getNodeState = (node) => {
+    if (!node.session) return 'planned';
+    if (node.session.status === 'completed') return 'completed';
+    if (node.session.id === currentSessionId) return 'current';
+    return 'active';
+  };
+
+  const statusPill = isCompleted
+    ? { label: status === 'completed_early' ? 'Completed Early' : 'Completed', bg: '#14532d', color: '#86efac' }
+    : { label: 'Active', bg: 'rgba(190,144,85,0.12)', color: '#be9055' };
+
+  const formatNodeDate = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    return `${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
+  };
+
+  return (
+    <View style={tlStyles.wrapper}>
+      {/* Header */}
+      <View style={tlStyles.header}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', flex: 1 }}>
+          <Layers size={14} color="#be9055" />
+          <Text style={tlStyles.headerLabel}>Project Timeline</Text>
+          {design_title ? <Text style={tlStyles.designTitle}>{design_title}</Text> : null}
+          <View style={[tlStyles.statusPill, { backgroundColor: statusPill.bg }]}>
+            <Text style={[tlStyles.statusPillText, { color: statusPill.color }]}>{statusPill.label}</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Horizontal Rail */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
+        <View style={tlStyles.rail}>
+          {nodes.map((node, idx) => {
+            const state = getNodeState(node);
+            return (
+              <React.Fragment key={node.num}>
+                {idx > 0 && (
+                  <View style={[tlStyles.connector, { backgroundColor: state === 'planned' ? '#cbd5e1' : '#be9055' }]} />
+                )}
+                <View style={tlStyles.nodeWrapper}>
+                  <View style={[
+                    tlStyles.nodeCircle,
+                    state === 'completed' && tlStyles.nodeCompleted,
+                    state === 'current' && tlStyles.nodeCurrent,
+                    state === 'active' && tlStyles.nodeActive,
+                    state === 'planned' && tlStyles.nodePlanned,
+                  ]}>
+                    {state === 'completed' && <CheckCircle size={15} color="#be9055" />}
+                    {(state === 'current' || state === 'active') && (
+                      <Text style={tlStyles.nodeNumber}>{node.num}</Text>
+                    )}
+                    {state === 'planned' && <Circle size={12} color="#94a3b8" />}
+                  </View>
+                  <View style={tlStyles.nodeLabel}>
+                    <Text style={[
+                      tlStyles.nodeLabelNum,
+                      { color: state === 'planned' ? '#64748b' : state === 'completed' ? '#92400e' : state === 'current' ? '#b45309' : '#4338ca' }
+                    ]}>S{node.num}</Text>
+                    {node.session?.appointment_date ? (
+                      <Text style={tlStyles.nodeLabelDate}>{formatNodeDate(node.session.appointment_date)}</Text>
+                    ) : null}
+                  </View>
+                </View>
+              </React.Fragment>
+            );
+          })}
+        </View>
+      </ScrollView>
+
+      {/* Summary Strip */}
+      {sessions.length > 0 && (
+        <View style={tlStyles.summaryStrip}>
+          <Clock size={11} color="#64748b" />
+          <Text style={tlStyles.muted}>
+            {completedSessions.length} of {planned} sessions completed
+            {total_sessions_actual ? ` (finished in ${total_sessions_actual})` : ''}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+};
+
+const tlStyles = StyleSheet.create({
+  wrapper: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    gap: 8,
+  },
+  headerLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#be9055',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  designTitle: {
+    fontSize: 13,
+    color: '#334155',
+    fontStyle: 'italic',
+    fontWeight: '600',
+  },
+  statusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 20,
+  },
+  statusPillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  rail: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  nodeWrapper: {
+    alignItems: 'center',
+  },
+  connector: {
+    width: 28,
+    height: 3,
+    borderRadius: 2,
+    marginTop: 16,
+  },
+  nodeCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nodeCompleted: {
+    backgroundColor: '#fffbeb',
+    borderWidth: 2,
+    borderColor: '#be9055',
+  },
+  nodeCurrent: {
+    backgroundColor: '#ffffff',
+    borderWidth: 2.5,
+    borderColor: '#f59e0b',
+    shadowColor: '#f59e0b',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  nodeActive: {
+    backgroundColor: '#e0e7ff',
+    borderWidth: 2,
+    borderColor: '#6366f1',
+  },
+  nodePlanned: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 2,
+    borderColor: '#cbd5e1',
+    borderStyle: 'dashed',
+  },
+  nodeNumber: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  nodeLabel: {
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 2,
+  },
+  nodeLabelNum: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  nodeLabelDate: {
+    fontSize: 9,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  summaryStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+  },
+  muted: {
+    fontSize: 11,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  skeletonRail: {
+    flexDirection: 'row',
+    gap: 16,
+    paddingBottom: 8,
+  },
+  skeletonNode: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#e2e8f0',
+  },
+});
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAY_LABELS = ['Su','Mo','Tu','We','Th','Fr','Sa'];

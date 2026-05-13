@@ -789,9 +789,31 @@ function AdminAppointments() {
         openModal();
     };
 
-    const handleRebookNextSession = (appointment) => {
-        showConfirm(`Are you sure you want to Rebook a next session for this project?`, () => {
-            const nextSessionNumber = (appointment.sessionNumber || appointment.session_number || 1) + 1;
+    const handleRebookNextSession = async (appointment) => {
+        showConfirm(`Are you sure you want to Rebook a next session for this project?`, async () => {
+            let resolvedTotalSessions = parseInt(appointment.totalSessions || appointment.total_sessions) || 2;
+            let nextSessionNumber = (appointment.sessionNumber || appointment.session_number || 1) + 1;
+            
+            const projectId = appointment.project_id || appointment.projectId;
+            if (projectId) {
+                try {
+                    const projRes = await Axios.get(`${API_URL}/api/projects/${projectId}`);
+                    if (projRes.data && projRes.data.success && projRes.data.project) {
+                        const project = projRes.data.project;
+                        resolvedTotalSessions = project.total_sessions_planned || resolvedTotalSessions;
+                        
+                        if (project.sessions && project.sessions.length > 0) {
+                            const realMax = project.sessions.reduce((max, s) => Math.max(max, s.session_number || 0), 0);
+                            const countMax = project.sessions.length;
+                            nextSessionNumber = Math.max(realMax, countMax) + 1;
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Failed to fetch project for rebook calculation', err);
+                }
+            }
+            
+            resolvedTotalSessions = Math.max(nextSessionNumber, resolvedTotalSessions);
 
             // Calculate remaining balance from previous session
             const previousPrice = parseFloat(appointment.price) || 0;
@@ -811,7 +833,7 @@ function AdminAppointments() {
                 designTitle: appointment.designTitle || appointment.design_title,
                 date: new Date().toISOString().split('T')[0],
                 time: '13:00',
-                status: 'pending',
+                status: 'confirmed',
                 paymentStatus: remainingBalance <= 0 ? 'paid' : 'unpaid',
                 notes: `Continuation of project: ${appointment.designTitle || appointment.design_title}`,
                 price: remainingBalance,
@@ -823,9 +845,9 @@ function AdminAppointments() {
                 manualPaymentMethod: 'Cash',
                 rejectionReason: '',
                 rescheduleReason: '',
-                projectId: appointment.project_id || appointment.projectId || null,
+                projectId: projectId || null,
                 sessionNumber: nextSessionNumber,
-                totalSessions: Math.max(nextSessionNumber, parseInt(appointment.totalSessions || appointment.total_sessions) || 2),
+                totalSessions: resolvedTotalSessions,
                 discountAmount: 0,
                 discountType: 'flat',
                 quotedPrice: appointment.quotedPrice || appointment.quoted_price || previousPrice,
