@@ -5975,7 +5975,9 @@ function processAdminPostUpdate(res, db, id, oldAppt, fields) {
         // 1. Check for Rescheduling
         if ((newDate && oldDate && newDate !== oldDate) || (startTime !== undefined && startTime !== oldAppt.start_time)) {
           const reasonText = rescheduleReason ? `\n\nReason: ${rescheduleReason}` : '';
-          createNotification(currentData.customer_id, 'Appointment Rescheduled', `Your appointment #${id} has been rescheduled to ${date} at ${startTime}.${reasonText}`, 'appointment_rescheduled', id);
+          if (isRegisteredUser) {
+            createNotification(currentData.customer_id, 'Appointment Rescheduled', `Your appointment #${id} has been rescheduled to ${date} at ${startTime}.${reasonText}`, 'appointment_rescheduled', id);
+          }
           notifyArtist('Session Rescheduled', `Your session #${id} has been rescheduled to ${date}${startTime ? ' at ' + startTime : ''}. Please update your schedule accordingly.`, 'appointment_rescheduled');
 
           // ── Guest Email + SMS: Rescheduled ──
@@ -6024,7 +6026,9 @@ function processAdminPostUpdate(res, db, id, oldAppt, fields) {
         if (status !== undefined && status !== oldAppt.status) {
           if (status === 'confirmed' && oldAppt.status === 'pending') {
             const priceMsg = price > 0 ? ` The quoted price is ₱${parseFloat(price).toLocaleString()}.` : '';
-            createNotification(currentData.customer_id, 'Booking Request Approved', `Great news! Your booking request #${id} has been approved.${priceMsg} We look forward to seeing you.`, 'appointment_confirmed', id);
+            if (isRegisteredUser) {
+              createNotification(currentData.customer_id, 'Booking Request Approved', `Great news! Your booking request #${id} has been approved.${priceMsg} We look forward to seeing you.`, 'appointment_confirmed', id);
+            }
             notifyArtist('Appointment Confirmed', `Appointment #${id} has been accepted and confirmed.`, 'appointment_confirmed');
             // SMS + Push
             db.query('SELECT u.phone, a.name as artist_name, ap.appointment_date FROM users u JOIN appointments ap ON ap.customer_id = u.id LEFT JOIN users a ON a.id = ap.artist_id WHERE ap.id = ?', [id], (e2, r2) => {
@@ -6033,7 +6037,9 @@ function processAdminPostUpdate(res, db, id, oldAppt, fields) {
                 if (phone) sendSMS(phone, appointmentConfirmedSMS(artist_name || 'your artist', appointment_date));
               }
             });
-            sendPushNotification(currentData.customer_id, 'Booking Approved!', `Your appointment #${id} has been confirmed.${priceMsg}`, { screen: 'customer-notifications' });
+            if (isRegisteredUser) {
+              sendPushNotification(currentData.customer_id, 'Booking Approved!', `Your appointment #${id} has been confirmed.${priceMsg}`, { screen: 'customer-notifications' });
+            }
 
             // ── Guest Email + SMS: Confirmed ──
             if (guestEmail) {
@@ -6079,9 +6085,13 @@ function processAdminPostUpdate(res, db, id, oldAppt, fields) {
             notificationsSent = true;
           } else if (status === 'rejected' && oldAppt.status === 'pending') {
             const reasonMsg = rejectionReason ? `\n\nReason: ${rejectionReason}` : ' Please contact the studio for alternatives.';
-            createNotification(currentData.customer_id, 'Booking Request Rejected', `Notice: Your booking request #${id} was unfortunately rejected.${reasonMsg}`, 'appointment_rejected', id);
+            if (isRegisteredUser) {
+              createNotification(currentData.customer_id, 'Booking Request Rejected', `Notice: Your booking request #${id} was unfortunately rejected.${reasonMsg}`, 'appointment_rejected', id);
+            }
             notifyArtist('Request Rejected', `Booking request #${id} has been rejected.`, 'appointment_rejected');
-            sendPushNotification(currentData.customer_id, 'Booking Rejected', `Your appointment #${id} could not be approved. ${rejectionReason || ''}`.trim(), { screen: 'customer-notifications' });
+            if (isRegisteredUser) {
+              sendPushNotification(currentData.customer_id, 'Booking Rejected', `Your appointment #${id} could not be approved. ${rejectionReason || ''}`.trim(), { screen: 'customer-notifications' });
+            }
 
             // ── Guest Email + SMS: Rejected ──
             if (guestEmail) {
@@ -6118,7 +6128,9 @@ function processAdminPostUpdate(res, db, id, oldAppt, fields) {
 
             notificationsSent = true;
           } else if (status === 'cancelled') {
-            createNotification(currentData.customer_id, 'Appointment Cancelled', `Notice: Your appointment #${id} has been cancelled.`, 'appointment_cancelled', id);
+            if (isRegisteredUser) {
+              createNotification(currentData.customer_id, 'Appointment Cancelled', `Notice: Your appointment #${id} has been cancelled.`, 'appointment_cancelled', id);
+            }
             notifyArtist('Session Cancelled', `Session #${id} was cancelled.`, 'appointment_cancelled');
             // SMS + Push
             db.query('SELECT u.phone, ap.appointment_date FROM users u JOIN appointments ap ON ap.customer_id = u.id WHERE ap.id = ?', [id], (e2, r2) => {
@@ -6126,7 +6138,9 @@ function processAdminPostUpdate(res, db, id, oldAppt, fields) {
                 sendSMS(r2[0].phone, appointmentCancelledSMS(r2[0].appointment_date, rejectionReason));
               }
             });
-            sendPushNotification(currentData.customer_id, 'Appointment Cancelled', `Your appointment #${id} has been cancelled.`, { screen: 'customer-notifications' });
+            if (isRegisteredUser) {
+              sendPushNotification(currentData.customer_id, 'Appointment Cancelled', `Your appointment #${id} has been cancelled.`, { screen: 'customer-notifications' });
+            }
 
             // ── Guest Email + SMS: Cancelled ──
             if (guestEmail) {
@@ -6168,9 +6182,13 @@ function processAdminPostUpdate(res, db, id, oldAppt, fields) {
 
             if (isConsultation) {
               // ── CONSULTATION COMPLETION → Send Consultation Summary ──
-              createNotification(currentData.customer_id, 'Consultation Complete!', `Your consultation #${id} has been completed. Check your email for a detailed summary.`, 'appointment_completed', id);
+              if (isRegisteredUser) {
+                createNotification(currentData.customer_id, 'Consultation Complete!', `Your consultation #${id} has been completed. Check your email for a detailed summary.`, 'appointment_completed', id);
+              }
               notifyArtist('Consultation Completed', `Consultation #${id} marked as completed.`, 'appointment_completed');
-              sendPushNotification(currentData.customer_id, 'Consultation Complete!', `Your InkVistAR consultation #${id} is done! Check your email for the summary and next steps.`, { screen: 'customer-notifications' });
+              if (isRegisteredUser) {
+                sendPushNotification(currentData.customer_id, 'Consultation Complete!', `Your InkVistAR consultation #${id} is done! Check your email for the summary and next steps.`, { screen: 'customer-notifications' });
+              }
 
               // Fetch fresh appointment data including the new consultation fields + artist name
               db.query(`
@@ -6214,9 +6232,13 @@ function processAdminPostUpdate(res, db, id, oldAppt, fields) {
 
             } else {
               // ── NON-CONSULTATION (Tattoo/Piercing) COMPLETION → Original flow ──
-              createNotification(currentData.customer_id, 'Tattoo Journey Complete!', `Your session #${id} is finished! We hope you love your new ink.`, 'appointment_completed', id);
+              if (isRegisteredUser) {
+                createNotification(currentData.customer_id, 'Tattoo Journey Complete!', `Your session #${id} is finished! We hope you love your new ink.`, 'appointment_completed', id);
+              }
               notifyArtist('Session Completed', `Appointment #${id} marked as completed.`, 'appointment_completed');
-              sendPushNotification(currentData.customer_id, 'Session Complete!', `Your InkVistAR session #${id} is done! We hope you love your new ink.`, { screen: 'customer-notifications' });
+              if (isRegisteredUser) {
+                sendPushNotification(currentData.customer_id, 'Session Complete!', `Your InkVistAR session #${id} is done! We hope you love your new ink.`, { screen: 'customer-notifications' });
+              }
 
               const completedServiceLabel = (oldAppt.service_type || 'Tattoo Session');
 
@@ -6276,7 +6298,9 @@ function processAdminPostUpdate(res, db, id, oldAppt, fields) {
 
             notificationsSent = true;
           } else {
-            createNotification(currentData.customer_id, 'Appointment Update', `Your appointment #${id} has been updated to ${status}.`, 'system', id);
+            if (isRegisteredUser) {
+              createNotification(currentData.customer_id, 'Appointment Update', `Your appointment #${id} has been updated to ${status}.`, 'system', id);
+            }
             notifyArtist('Appointment Update', `Appointment #${id} status changed to ${status}.`, 'system');
 
             // ── Guest Email + SMS: Generic status update ──
@@ -6315,7 +6339,9 @@ function processAdminPostUpdate(res, db, id, oldAppt, fields) {
 
         // 3. Independent Price Update
         if (price !== undefined && price > 0 && price !== oldAppt.price && !notificationsSent) {
-          createNotification(currentData.customer_id, 'Session Fee Update', `The total price for your session #${id} has been set to ₱${parseFloat(price).toLocaleString()}. Please pay the required reservation fee/down payment to successfully secure your booking.`, 'system', id);
+          if (isRegisteredUser) {
+            createNotification(currentData.customer_id, 'Session Fee Update', `The total price for your session #${id} has been set to ₱${parseFloat(price).toLocaleString()}. Please pay the required reservation fee/down payment to successfully secure your booking.`, 'system', id);
+          }
           notifyArtist('Session Price Set', `The price for session #${id} has been finalized at ₱${parseFloat(price).toLocaleString()}. Your 30% commission will be ₱${(parseFloat(price) * 0.30).toLocaleString()} upon completion.`, 'price_update');
 
           // ── Guest Email + SMS: Price Quote ──
@@ -7156,6 +7182,14 @@ app.put('/api/appointments/:id/status', (req, res) => {
                 const alertMsg = isUnquoted
                   ? `Appointment #${id} for "${designTitle}" has been completed but has NO PRICE SET. The artist cannot be compensated until a quote is finalized and payment is collected.`
                   : `Appointment #${id} for "${designTitle}" has been completed with an outstanding balance of ₱${(apptPrice - apptTotalPaid).toLocaleString()}. Immediate action is required to process artist compensation.`;
+
+                // Notify the customer to pay their balance!
+                if (appointment.customer_id && !appointment.guest_email) {
+                  const custMsg = isUnquoted
+                    ? `Your session for "${designTitle}" is complete! Please wait while the studio finalizes your total price.`
+                    : `Your session for "${designTitle}" is complete! You have an outstanding balance of ₱${(apptPrice - apptTotalPaid).toLocaleString()}. Please settle your balance through the app to finalize your booking.`;
+                  createNotification(appointment.customer_id, 'Payment Required', custMsg, 'payment_action_required', id);
+                }
 
                 db.query("SELECT id FROM users WHERE user_type IN ('admin', 'manager') AND is_deleted = 0", (aErr, aRes) => {
                   if (!aErr && aRes.length) {
