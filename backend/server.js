@@ -7105,8 +7105,9 @@ app.put('/api/appointments/:id/status', (req, res) => {
             if (!pErr && pRes.length) {
               const apptPrice = Number(pRes[0].price) || 0;
               const apptTotalPaid = Number(pRes[0].total_paid) || 0;
+              const isProjectFollowup = pRes[0].project_id !== null && pRes[0].session_number > 1;
               const hasOutstandingBalance = apptPrice > 0 && apptTotalPaid < apptPrice;
-              const isUnquoted = apptPrice <= 0;
+              const isUnquoted = apptPrice <= 0 && !isProjectFollowup;
               const isConsultation = (appointment.service_type || '').toLowerCase() === 'consultation';
 
               // Skip payment alerts for consultations — they are always free
@@ -7262,7 +7263,7 @@ app.get('/api/admin/pending-payment-alerts', (req, res) => {
       AND (ap.service_type IS NULL OR ap.service_type != 'Consultation')
       AND (
         (ap.price > 0 AND ((SELECT COALESCE(SUM(amount), 0) FROM payments WHERE appointment_id = ap.id AND status = 'paid') / 100) + COALESCE(ap.manual_paid_amount, 0) < ap.price)
-        OR (ap.price IS NULL OR ap.price <= 0)
+        OR ((ap.price IS NULL OR ap.price <= 0) AND (ap.project_id IS NULL OR ap.session_number <= 1))
       )
     ORDER BY ap.appointment_date DESC
     LIMIT 20

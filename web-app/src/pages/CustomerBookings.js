@@ -1083,6 +1083,8 @@ function CustomerBookings(){
                                                     <td data-label="Price">
                                                         {a.price > 0 ? (
                                                             <div className="customer-st-52ddb992" >₱{Number(a.price).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                                        ) : a.project_id && a.session_number > 1 ? (
+                                                            <span className="customer-st-b8eb7d87" style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0' }} >Included in Project</span>
                                                         ) : (
                                                             <span className="customer-st-b8eb7d87" >Pending Quote</span>
                                                         )}
@@ -1388,7 +1390,13 @@ function CustomerBookings(){
                                         )}
                                         <div className="customer-st-56da6dbd" >
                                             <span className="customer-st-504f25fa" >Total Service Price:</span>
-                                            <span className="customer-st-c6cdc897" >₱{selectedApt.price.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            {selectedApt.price > 0 ? (
+                                                <span className="customer-st-c6cdc897" >₱{selectedApt.price.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            ) : selectedApt.project_id && selectedApt.session_number > 1 ? (
+                                                <span className="customer-st-c6cdc897" style={{ color: '#64748b', fontSize: '0.9rem', fontStyle: 'italic' }}>Included in Project Price</span>
+                                            ) : (
+                                                <span className="customer-st-c6cdc897" style={{ color: '#f59e0b', fontSize: '0.9rem' }}>Pending Quote</span>
+                                            )}
                                         </div>
                                         <div className="customer-st-56da6dbd" >
                                             <span className="customer-st-504f25fa" >Amount Paid:</span>
