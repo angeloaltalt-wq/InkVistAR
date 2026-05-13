@@ -924,11 +924,7 @@ function ArtistSessions() {
                             <div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                                     <h2 style={{ margin: 0 }}>Active Session: {activeSession.client_name}</h2>
-                                    {activeSession.total_sessions > 1 && (
-                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 10px', borderRadius: '8px', background: 'linear-gradient(135deg, #6366f1, #818cf8)', color: '#fff', fontSize: '0.72rem', fontWeight: 700 }}>
-                                            Session {activeSession.session_number || 1} of {activeSession.total_sessions}
-                                        </span>
-                                    )}
+
                                     {roleBadge && (
                                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 14px', borderRadius: '20px', background: roleBadge.bg, color: roleBadge.color, fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.02em', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
                                             {roleBadge.icon} {roleBadge.label}
@@ -1318,18 +1314,24 @@ function ArtistSessions() {
                             <div style={{ display: 'flex', gap: '10px' }}>
                                 {activeSession.status === 'confirmed' && (() => {
                                     const payCheck = getSessionPaymentStatus(activeSession);
+                                    const isProjectClosed = projectTimeline && (projectTimeline.status === 'completed' || projectTimeline.status === 'completed_early');
+                                    
                                     return (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                         <button 
                                             className="btn btn-primary" 
                                             style={{ 
                                                 padding: '10px 24px',
-                                                opacity: (payCheck.canStart && !isStartingProcedure) ? 1 : 0.6,
-                                                cursor: (payCheck.canStart && !isStartingProcedure) ? 'pointer' : 'not-allowed'
+                                                opacity: (payCheck.canStart && !isStartingProcedure && !isProjectClosed) ? 1 : 0.6,
+                                                cursor: (payCheck.canStart && !isStartingProcedure && !isProjectClosed) ? 'pointer' : 'not-allowed'
                                             }} 
-                                            title={payCheck.canStart ? 'Start Session' : payCheck.reason}
-                                            disabled={isStartingProcedure}
+                                            title={isProjectClosed ? 'Project is completed' : (payCheck.canStart ? 'Start Session' : payCheck.reason)}
+                                            disabled={isStartingProcedure || isProjectClosed}
                                             onClick={() => {
+                                                if (isProjectClosed) {
+                                                    showAlert('Project Closed', 'This project has been marked as completed. Contact admin to reopen.', 'warning');
+                                                    return;
+                                                }
                                                 if (!payCheck.canStart || isStartingProcedure) {
                                                     if (!payCheck.canStart) {
                                                         showAlert(

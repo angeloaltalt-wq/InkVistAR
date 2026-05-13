@@ -2104,7 +2104,13 @@ function AdminAppointments() {
                                             </button>
                                             <button
                                                 className={`modal-tab-btn ${modalTab === 'pricing' ? 'active' : ''}`}
-                                                onClick={() => setModalTab('pricing')}
+                                                onClick={() => {
+                                                    const fullyPaid = selectedAppointment && selectedAppointment.price > 0 && (selectedAppointment.paymentStatus === 'paid' || Number(selectedAppointment.totalPaid) >= Number(selectedAppointment.price));
+                                                    if (!fullyPaid) setModalTab('pricing');
+                                                }}
+                                                disabled={selectedAppointment && selectedAppointment.price > 0 && (selectedAppointment.paymentStatus === 'paid' || Number(selectedAppointment.totalPaid) >= Number(selectedAppointment.price))}
+                                                title={selectedAppointment && selectedAppointment.price > 0 && (selectedAppointment.paymentStatus === 'paid' || Number(selectedAppointment.totalPaid) >= Number(selectedAppointment.price)) ? "Pricing is locked \u2014 this appointment is fully paid" : ""}
+                                                style={selectedAppointment && selectedAppointment.price > 0 && (selectedAppointment.paymentStatus === 'paid' || Number(selectedAppointment.totalPaid) >= Number(selectedAppointment.price)) ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                                             >
                                                 <PhilippinePeso size={16} /> Pricing
                                             </button>

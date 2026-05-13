@@ -63,10 +63,16 @@ export default function SessionTimeline({
     // "Complete Early" eligibility: admin only, project active, at least one session done
     const completedSessions = sessions.filter(s => s.status === 'completed');
     const lastCompletedNum = completedSessions.reduce((max, s) => Math.max(max, s.session_number || 0), 0);
+    const hasActiveUpcomingSessions = sessions.some(s => 
+        s.session_number > lastCompletedNum && 
+        ['pending', 'confirmed', 'in_progress'].includes(s.status)
+    );
+
     const canCompleteEarly = isAdmin
         && !isCompleted
         && lastCompletedNum > 0
-        && lastCompletedNum < planned;
+        && lastCompletedNum < planned
+        && !hasActiveUpcomingSessions;
 
     const handleCompleteEarly = async () => {
         setCompletingEarly(true);
