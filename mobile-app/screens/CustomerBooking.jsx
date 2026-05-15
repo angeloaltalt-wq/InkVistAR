@@ -10,6 +10,7 @@ import { Audio } from 'expo-av';
 import { typography, borderRadius, shadows } from '../src/theme';
 import { useTheme } from '../src/context/ThemeContext';
 import { API_URL } from '../src/utils/api';
+import { formatTime } from '../src/utils/formatters';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -592,7 +593,9 @@ export function CustomerBooking({ customerId, onBack, initialUser }) {
                   const isSelected = formData.time === t;
                   return (
                     <TouchableOpacity key={t} style={[styles.timePill, isSelected && styles.timePillActive]} onPress={() => { triggerFeedback(); handleInput('time', t); }}>
-                      <Text style={[styles.timeTxt, isSelected && styles.timeTxtActive]}>{t}</Text>
+                      <Text style={[styles.timeTxt, isSelected && styles.timeTxtActive]}>
+                        {formatTime(t)}
+                      </Text>
                     </TouchableOpacity>
                   );
                 })}

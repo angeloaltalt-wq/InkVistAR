@@ -9,6 +9,7 @@ const crypto = require('crypto');
 // Provide fetch for Node runtimes that lack the global (e.g., Node 16 on some hosts)
 const fetch = global.fetch || require('node-fetch');
 require('dotenv').config();
+process.env.TZ = 'Asia/Manila'; // Global Node.js timezone localization
 
 const app = express();
 const { sendResendEmail } = require('./utils/emailService');
@@ -170,9 +171,10 @@ const db = mysql.createPool({
   password: process.env.MYSQLPASSWORD || process.env.DB_PASS || 'banana',
   database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'inkvistar',
   port: process.env.MYSQLPORT ? Number(process.env.MYSQLPORT) : (process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306),
-  connectionLimit: 10,
+   connectionLimit: 10,
   waitForConnections: true,
   queueLimit: 0,
+  timezone: '+08:00', // Ensure SQL NOW() and CURRENT_TIMESTAMP use UTC+8
   dateStrings: true, // Force date columns to be returned as strings to prevent timezone shifts
   maxAllowedPacket: 50 * 1024 * 1024 // 50MB - allows large base64 image data in queries
 });
@@ -181,6 +183,13 @@ const db = mysql.createPool({
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
+
+// Helper to get local MySQL DATETIME string
+function getLocalDatetime(date = new Date()) {
+  const offset = 8 * 60; // Manila is UTC+8
+  const localDate = new Date(date.getTime() + (offset + date.getTimezoneOffset()) * 60000);
+  return localDate.toISOString().slice(0, 19).replace('T', ' ');
+}
 
 // Generate Kiosk-style Booking Code
 function generateBookingCode(origin, serviceType, insertId) {
@@ -1859,7 +1868,7 @@ function sendConsultationSummaryEmail(recipientEmail, recipientName, consultatio
 }
 
 function createNotification(userId, title, message, type, relatedId = null) {
-  const utcNow = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const utcNow = getLocalDatetime();
   const insertQuery = 'INSERT INTO notifications (user_id, title, message, type, related_id, created_at, is_read) VALUES (?, ?, ?, ?, ?, ?, 0)';
   db.query(insertQuery, [userId, title, message, type, relatedId, utcNow], (err, result) => {
     if (err) {
@@ -1900,8 +1909,8 @@ async function sendPushNotification(userId, title, body, data) {
 
 // Helper: Log Audit Action
 function logAction(userId, action, details, ip = '::1') {
-  const query = 'INSERT INTO audit_logs (user_id, action, details, ip_address, created_at) VALUES (?, ?, ?, ?, NOW())';
-  db.query(query, [userId, action, details, ip], (err) => {
+  const query = 'INSERT INTO audit_logs (user_id, action, details, ip_address, created_at) VALUES (?, ?, ?, ?, ?)';
+  db.query(query, [userId, action, details, ip, getLocalDatetime()], (err) => {
     if (err) console.error('[ERROR] Error logging action:', err.message);
   });
 }
@@ -2257,7 +2266,7 @@ app.post('/api/login', async (req, res) => {
           else if (failedAttempts >= 9) cooldownMin = 60;
 
           // Compute lockout time safely relative to current server time in UTC
-          const lockoutUntilStr = new Date(Date.now() + cooldownMin * 60000).toISOString().slice(0, 19).replace('T', ' ');
+          const lockoutUntilStr = getLocalDatetime(new Date(Date.now() + cooldownMin * 60000));
           updateQuery += ', lockout_until = ?';
           queryParams.push(lockoutUntilStr);
 
@@ -2782,8 +2791,8 @@ app.post('/api/push/register', (req, res) => {
   db.query(
     `INSERT INTO user_push_tokens (user_id, token, platform)
      VALUES (?, ?, ?)
-     ON DUPLICATE KEY UPDATE token = VALUES(token), updated_at = CURRENT_TIMESTAMP`,
-    [user_id, token, platform || 'android'],
+     ON DUPLICATE KEY UPDATE token = VALUES(token), updated_at = ?`,
+    [user_id, token, platform || 'android', getLocalDatetime()],
     (err) => {
       if (err) {
         console.error('[PUSH] Token registration error:', err.message);
@@ -3597,9 +3606,9 @@ app.post('/api/artist/portfolio', (req, res) => {
   }
 
   const parsedPrice = priceEstimate ? parseFloat(priceEstimate) : null;
-  const query = 'INSERT INTO portfolio_works (artist_id, image_url, title, description, category, is_public, price_estimate, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())';
+  const query = 'INSERT INTO portfolio_works (artist_id, image_url, title, description, category, is_public, price_estimate, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
 
-  db.query(query, [artistId, imageUrl, title, description, category, isPublic, parsedPrice], (err, result) => {
+  db.query(query, [artistId, imageUrl, title, description, category, isPublic, parsedPrice, getLocalDatetime()], (err, result) => {
     if (err) {
       console.error('Error adding work:', err);
       return res.status(500).json({ success: false, message: 'DB Error: ' + err.message });
@@ -4343,7 +4352,7 @@ app.post('/api/customer/appointments/:id/reschedule-request', (req, res) => {
           }
 
           // 8. Insert the reschedule request with 24-hour expiry
-          const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+          const expiresAt = getLocalDatetime(new Date(Date.now() + 24 * 60 * 60 * 1000));
 
           db.query(
             `INSERT INTO reschedule_requests (appointment_id, customer_id, requested_date, requested_time, reason, status, expires_at) VALUES (?, ?, ?, ?, ?, 'pending', ?)`,
@@ -4494,7 +4503,7 @@ app.put('/api/admin/reschedule-requests/:requestId/decide', (req, res) => {
 
       const bookingCode = request.booking_code || `#${request.appointment_id}`;
       const newDateStr = new Date(request.requested_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-      const decidedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const decidedAt = getLocalDatetime();
 
       if (decision === 'approved') {
         // === APPROVE: Perform the actual reschedule ===
@@ -4924,7 +4933,14 @@ app.post('/api/admin/appointments', async (req, res) => {
     try {
       const d = new Date(waiverAcceptedAt);
       if (!isNaN(d.getTime())) {
-        sanitizedWaiverAt = d.toISOString().slice(0, 19).replace('T', ' ');
+        // Since process.env.TZ is set, 'd' is already local (Asia/Manila)
+        // Format for MySQL DATETIME
+        sanitizedWaiverAt = d.getFullYear() + '-' + 
+          String(d.getMonth() + 1).padStart(2, '0') + '-' + 
+          String(d.getDate()).padStart(2, '0') + ' ' + 
+          String(d.getHours()).padStart(2, '0') + ':' + 
+          String(d.getMinutes()).padStart(2, '0') + ':' + 
+          String(d.getSeconds()).padStart(2, '0');
       }
     } catch (e) {
       console.warn('[WARN] Invalid waiver_accepted_at format:', waiverAcceptedAt);
@@ -6603,8 +6619,8 @@ app.post('/api/admin/appointments/:id/manual-payment', (req, res) => {
             const invoiceNumber = `INV-${String(nextNum).padStart(6, '0')}`;
 
             // Create invoice record
-            const invoiceQuery = `INSERT INTO invoices (invoice_number, customer_id, appointment_id, client_name, service_type, amount, payment_method, change_given, discount_amount, discount_type, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, 'Paid', NOW())`;
-            db.query(invoiceQuery, [invoiceNumber, apptData.customer_id, id, apptData.client_name, apptData.design_title || 'Session Payment', actualPayment, method || 'Cash', changeGiven], (invInsertErr, invInsertRes) => {
+            const invoiceQuery = `INSERT INTO invoices (invoice_number, customer_id, appointment_id, client_name, service_type, amount, payment_method, change_given, discount_amount, discount_type, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, 'Paid', ?)`;
+            db.query(invoiceQuery, [invoiceNumber, apptData.customer_id, id, apptData.client_name, apptData.design_title || 'Session Payment', actualPayment, method || 'Cash', changeGiven, getLocalDatetime()], (invInsertErr, invInsertRes) => {
               if (invInsertErr) console.error('[WARN] Invoice creation failed:', invInsertErr.message);
 
               // Send notification and email
@@ -6747,8 +6763,8 @@ app.post('/api/admin/billing/record-payment', (req, res) => {
             const serviceLabel = apptData.design_title || apptData.service_type || 'Session Payment';
 
             // Create invoice record
-            const invoiceQuery = `INSERT INTO invoices (invoice_number, customer_id, appointment_id, client_name, service_type, amount, payment_method, change_given, discount_amount, discount_type, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, NULL, 'Paid', NOW())`;
-            db.query(invoiceQuery, [invoiceNumber, customerId, appointmentId, apptData.client_name, serviceLabel, actualPayment, method], (invInsertErr, invInsertRes) => {
+            const invoiceQuery = `INSERT INTO invoices (invoice_number, customer_id, appointment_id, client_name, service_type, amount, payment_method, change_given, discount_amount, discount_type, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, NULL, 'Paid', ?)`;
+            db.query(invoiceQuery, [invoiceNumber, customerId, appointmentId, apptData.client_name, serviceLabel, actualPayment, method, getLocalDatetime()], (invInsertErr, invInsertRes) => {
               if (invInsertErr) console.error('Invoice creation failed:', invInsertErr.message);
 
               // Send notification to customer
@@ -7246,8 +7262,8 @@ app.put('/api/appointments/:id/status', (req, res) => {
             const nextNum = (invNumErr || !invNumRes[0]?.maxNum) ? 1 : invNumRes[0].maxNum + 1;
             const invoiceNumber = `INV-${String(nextNum).padStart(6, '0')}`;
 
-            const invoiceQuery = 'INSERT INTO invoices (invoice_number, customer_id, appointment_id, client_name, service_type, amount, status, created_at) VALUES (?, ?, ?, ?, ?, ?, "Paid", NOW())';
-            db.query(invoiceQuery, [invoiceNumber, appointment.customer_id, id, clientName, appointment.service_type || 'Tattoo Session', currentPrice], (invErr) => {
+            const invoiceQuery = 'INSERT INTO invoices (invoice_number, customer_id, appointment_id, client_name, service_type, amount, status, created_at) VALUES (?, ?, ?, ?, ?, ?, "Paid", ?)';
+            db.query(invoiceQuery, [invoiceNumber, appointment.customer_id, id, clientName, appointment.service_type || 'Tattoo Session', currentPrice, getLocalDatetime()], (invErr) => {
               if (invErr) console.error('[ERROR] Failed to auto-generate invoice:', invErr.message);
               else console.log(`[OK] Auto-generated invoice ${invoiceNumber} for Client: ${clientName}`);
             });
@@ -7255,8 +7271,8 @@ app.put('/api/appointments/:id/status', (req, res) => {
 
           if (appointment.artist_id && appointment.artist_id > 1) {
             const artistCommission = currentPrice * 0.30;
-            db.query('INSERT INTO payouts (artist_id, amount, payout_method, status, reference_no, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
-              [appointment.artist_id, artistCommission, 'System Default', 'Pending', `Commission Session #${id}`]);
+            db.query('INSERT INTO payouts (artist_id, amount, payout_method, status, reference_no, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+              [appointment.artist_id, artistCommission, 'System Default', 'Pending', `Commission Session #${id}`, getLocalDatetime()]);
           }
         });
 
@@ -7884,8 +7900,8 @@ app.post('/api/payments/create-checkout-session', async (req, res) => {
           // Log waiver acceptance if provided
           if (agreedToWaiver) {
             db.query(
-              `UPDATE appointments SET waiver_accepted_at = NOW() WHERE id = ? AND waiver_accepted_at IS NULL`,
-              [appointmentId],
+              `UPDATE appointments SET waiver_accepted_at = ? WHERE id = ? AND waiver_accepted_at IS NULL`,
+              [getLocalDatetime(), appointmentId],
               (waiverErr) => {
                 if (waiverErr) {
                   // Fallback for older schema if column missing
@@ -8130,8 +8146,8 @@ app.post('/api/payments/webhook', (req, res) => {
   db.query(
     `INSERT INTO payments (appointment_id, session_id, paymongo_payment_id, amount, currency, status, raw_event)
      VALUES (?, ?, ?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE status = VALUES(status), amount = VALUES(amount), currency = VALUES(currency), raw_event = VALUES(raw_event), updated_at = CURRENT_TIMESTAMP`,
-    [appointmentId || null, sessionId, paymongoPaymentId, amount, currency, status, JSON.stringify(event)],
+     ON DUPLICATE KEY UPDATE status = VALUES(status), amount = VALUES(amount), currency = VALUES(currency), raw_event = VALUES(raw_event), updated_at = ?`,
+    [appointmentId || null, sessionId, paymongoPaymentId, amount, currency, status, JSON.stringify(event), getLocalDatetime()],
     (err) => {
       if (err) console.error('[ERROR] Error saving payment record:', err.message);
     }
@@ -9436,8 +9452,8 @@ app.get('/api/admin/inventory', (req, res) => {
 // Admin: Add Inventory Item
 app.post('/api/admin/inventory', (req, res) => {
   const { name, category, currentStock, minStock, maxStock, unit, supplier, cost, retailPrice, image } = req.body;
-  const query = 'INSERT INTO inventory (name, category, current_stock, min_stock, max_stock, unit, supplier, cost, retail_price, image, last_restocked) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())';
-  db.query(query, [name, category, currentStock, minStock, maxStock, unit, supplier, cost, retailPrice || 0, image || null], (err, result) => {
+  const query = 'INSERT INTO inventory (name, category, current_stock, min_stock, max_stock, unit, supplier, cost, retail_price, image, last_restocked) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+  db.query(query, [name, category, currentStock, minStock, maxStock, unit, supplier, cost, retailPrice || 0, image || null, getLocalDatetime()], (err, result) => {
     if (err) return res.status(500).json({ success: false, message: err.message });
     logAction(getAdminId(req), 'CREATE_INVENTORY', `Added item: ${name}`, req.ip);
     res.json({ success: true, message: 'Item added', id: result.insertId });
@@ -9555,10 +9571,10 @@ app.post('/api/admin/inventory/:id/transaction', (req, res) => {
 
     // Update stock
     const updateQuery = type === 'in'
-      ? 'UPDATE inventory SET current_stock = current_stock + ?, last_restocked = NOW() WHERE id = ?'
+      ? 'UPDATE inventory SET current_stock = current_stock + ?, last_restocked = ? WHERE id = ?'
       : 'UPDATE inventory SET current_stock = GREATEST(0, current_stock - ?) WHERE id = ?';
 
-    db.query(updateQuery, [quantity, id], (err, result) => {
+    db.query(updateQuery, type === 'in' ? [quantity, getLocalDatetime(), id] : [quantity, id], (err, result) => {
       if (err) return res.status(500).json({ success: false, message: err.message });
 
       // Log transaction with item_price
@@ -10187,8 +10203,8 @@ app.get('/api/admin/expenses', (req, res) => {
 app.post('/api/admin/expenses', (req, res) => {
   const { category, description, amount, userId } = req.body;
   if (!category || !amount) return res.status(400).json({ success: false, message: 'Category and amount are required.' });
-  db.query('INSERT INTO studio_expenses (category, description, amount, created_by, created_at) VALUES (?, ?, ?, ?, NOW())',
-    [category, description || '', parseFloat(amount), userId || null], (err, result) => {
+  db.query('INSERT INTO studio_expenses (category, description, amount, created_by, created_at) VALUES (?, ?, ?, ?, ?)',
+    [category, description || '', parseFloat(amount), userId || null, getLocalDatetime()], (err, result) => {
       if (err) return res.status(500).json({ success: false, message: err.message });
       logAction(userId || null, 'CREATE_MANUAL_EXPENSE', `Logged manual expense: ${category} - ₱${amount}`, req.ip);
       res.json({ success: true, message: 'Expense recorded', id: result.insertId });
@@ -10251,8 +10267,8 @@ app.post('/api/admin/invoices', (req, res) => {
     const nextNum = (invNumErr || !invNumRes[0]?.maxNum) ? 1 : invNumRes[0].maxNum + 1;
     const invoiceNumber = `INV-${String(nextNum).padStart(6, '0')}`;
 
-    const query = 'INSERT INTO invoices (invoice_number, client_name, service_type, amount, discount_amount, discount_type, status, items, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())';
-    db.query(query, [invoiceNumber, client, type, amount, targetDiscount, discount_type || null, status, itemsJson], (err, result) => {
+    const query = 'INSERT INTO invoices (invoice_number, client_name, service_type, amount, discount_amount, discount_type, status, items, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    db.query(query, [invoiceNumber, client, type, amount, targetDiscount, discount_type || null, status, itemsJson, getLocalDatetime()], (err, result) => {
       if (err) return res.status(500).json({ success: false, message: err.message });
       res.json({ success: true, message: 'Invoice created', id: result.insertId, invoiceNumber });
     });
@@ -11421,7 +11437,8 @@ function startRescheduleRequestExpiry() {
        FROM reschedule_requests rr
        JOIN users u ON rr.customer_id = u.id
        JOIN appointments a ON rr.appointment_id = a.id
-       WHERE rr.status = 'pending' AND rr.expires_at <= NOW()`,
+       WHERE rr.status = 'pending' AND rr.expires_at <= ?`,
+      [getLocalDatetime()],
       (err, expired) => {
         if (err || !expired || !expired.length) return;
 
@@ -11429,7 +11446,7 @@ function startRescheduleRequestExpiry() {
 
         expired.forEach(req => {
           // Mark as expired
-          db.query(`UPDATE reschedule_requests SET status = 'expired', decided_at = NOW() WHERE id = ?`, [req.id]);
+          db.query(`UPDATE reschedule_requests SET status = 'expired', decided_at = ? WHERE id = ?`, [getLocalDatetime(), req.id]);
 
           const bookingCode = req.booking_code || `#${req.appointment_id}`;
           const originalDateStr = new Date(req.appointment_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
@@ -11908,8 +11925,8 @@ app.post('/api/admin/inquiries/:id/reply', async (req, res) => {
     // Update the inquiry with the reply
     await new Promise((resolve, reject) => {
       db.query(
-        'UPDATE contact_messages SET admin_reply = ?, replied_at = NOW(), status = ?, is_read = 1 WHERE id = ?',
-        [reply.trim(), 'replied', id],
+        'UPDATE contact_messages SET admin_reply = ?, replied_at = ?, status = ?, is_read = 1 WHERE id = ?',
+        [reply.trim(), getLocalDatetime(), 'replied', id],
         (err) => err ? reject(err) : resolve()
       );
     });
@@ -12076,7 +12093,7 @@ app.put('/api/admin/reports/:id', (req, res) => {
   updates.push('is_read_by_admin = 1');
 
   // If resolved, set resolved_at
-  if (status === 'resolved') { updates.push('resolved_at = NOW()'); }
+  if (status === 'resolved') { updates.push('resolved_at = ?'); params.push(getLocalDatetime()); }
 
   if (updates.length === 0) return res.status(400).json({ success: false, message: 'No fields to update.' });
 
@@ -12119,7 +12136,7 @@ app.post('/api/reports/:id/reply', (req, res) => {
     if (err) return res.status(500).json({ success: false, message: 'Database error' });
 
     // Update the report's updated_at
-    db.query('UPDATE customer_reports SET updated_at = NOW() WHERE id = ?', [id]);
+    db.query('UPDATE customer_reports SET updated_at = ? WHERE id = ?', [getLocalDatetime(), id]);
 
     // If admin replies → mark as read + notify customer
     if (sender_role === 'admin') {

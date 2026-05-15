@@ -727,7 +727,7 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
                 {selectedAppt?.waiver_accepted_at ? (
                   <View style={[styles.waiverBadge, { marginTop: 4 }]}>
                     <ShieldCheck size={11} color="#047857" />
-                    <Text style={styles.waiverBadgeText}>Waiver signed {new Date(selectedAppt.waiver_accepted_at).toLocaleDateString()}</Text>
+                    <Text style={styles.waiverBadgeText}>Waiver signed {new Date(selectedAppt.waiver_accepted_at.replace(' ', 'T') + '+08:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' })}</Text>
                   </View>
                 ) : null}
               </View>
@@ -840,7 +840,7 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
                       <Text style={styles.reschedulePanelTitle}>Pending Reschedule Request</Text>
                     </View>
                     <Text style={styles.reschedulePanelDetail}>
-                      Requested: {pendingReschedule.requested_date || 'N/A'}{pendingReschedule.requested_time ? ` at ${pendingReschedule.requested_time}` : ''}
+                      Requested: {pendingReschedule.requested_date || 'N/A'}{pendingReschedule.requested_time ? ` at ${formatTime(pendingReschedule.requested_time)}` : ''}
                     </Text>
                     {pendingReschedule.reason ? (
                       <Text style={styles.reschedulePanelReason}>"{pendingReschedule.reason}"</Text>
@@ -1029,7 +1029,9 @@ export const AdminAppointmentManagement = ({ navigation, route }) => {
                       fieldErrors.time && !editTime && styles.timeSlotError]}
                     onPress={() => { setEditTime(t); clearError('time'); }}
                   >
-                    <Text style={[styles.timeSlotText, editTime === t && styles.timeSlotTextActive]}>{t}</Text>
+                    <Text style={[styles.timeSlotText, editTime === t && styles.timeSlotTextActive]}>
+                      {formatTime(t)}
+                    </Text>
                   </AnimatedTouchable>
                 ))}
               </View>
