@@ -395,7 +395,9 @@ function CustomerBookings(){
 
     const renderCalendarDays = () => {
         const days = [];
-        const today = new Date();
+        // Use current Manila time so same-day slot logic is timezone-correct
+        const nowManila = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+        const today = new Date(nowManila);
         today.setHours(0,0,0,0);
 
         const maxDate = new Date();
@@ -424,7 +426,8 @@ function CustomerBookings(){
             const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
             const dateObj = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i);
             const isSelected = bookingData.date === dateStr;
-            const isPast = dateObj <= today;
+            // Allow today — only dates strictly before today are "past"
+            const isPast = dateObj < today;
             const isTooFar = dateObj > maxDate;
 
             // For tattoo-type services, block if customer already has a pending tattoo on this date
@@ -2414,8 +2417,16 @@ function CustomerBookings(){
                                                         {['13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'].map(t => {
                                                             let isDisabled = false;
                                                             if (bookingData.date) {
-                                                                const checkDate = new Date(`${bookingData.date}T${t}:00`);
-                                                                if (checkDate <= new Date()) isDisabled = true;
+                                                                // Get current Manila time for same-day cutoff
+                                                                const nowManilaSlt = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+                                                                const todayStrSlt = `${nowManilaSlt.getFullYear()}-${String(nowManilaSlt.getMonth()+1).padStart(2,'0')}-${String(nowManilaSlt.getDate()).padStart(2,'0')}`;
+                                                                if (bookingData.date === todayStrSlt) {
+                                                                    // Same-day: disable slot if current Manila time >= (slot start - 15 min)
+                                                                    const [slotH] = t.split(':').map(Number);
+                                                                    const slotCutoffMs = (slotH * 60 - 15) * 60 * 1000;
+                                                                    const nowMs = (nowManilaSlt.getHours() * 60 + nowManilaSlt.getMinutes()) * 60 * 1000;
+                                                                    if (nowMs >= slotCutoffMs) isDisabled = true;
+                                                                }
                                                                 // Check the correct pool based on service type
                                                                 const pool = derivedType === 'Consultation' ? 'consultationTimes' : 'piercingTimes';
                                                                 if (bookedDates[bookingData.date] && bookedDates[bookingData.date][pool].includes(t)) isDisabled = true;

@@ -407,7 +407,9 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
         const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         
         const days = [];
-        const today = new Date();
+        // Get current Manila time for same-day slot cutoff checks
+        const nowManila = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+        const today = new Date(nowManila);
         today.setHours(0, 0, 0, 0);
         
         const maxDate = new Date();
@@ -422,7 +424,8 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
             const checkDate = new Date(year, month, i);
             const isSelected = formData.date === dateStr;
-            const isPast = checkDate <= today;
+            // Allow today — only dates strictly before today are "past"
+            const isPast = checkDate < today;
             const isTooFar = checkDate > maxDate;
             
             const dateData = bookedDates[dateStr] || { consultationTimes: [], sessionCount: 0 };
@@ -917,8 +920,16 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
                         {['13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'].map(t => {
                             let isDisabled = false;
                             if (formData.date) {
-                                const checkDate = new Date(`${formData.date}T${t}:00`);
-                                if (checkDate <= new Date()) isDisabled = true;
+                                // Get current Manila time for same-day cutoff
+                                const nowManilaSlt = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+                                const todayStrSlt = `${nowManilaSlt.getFullYear()}-${String(nowManilaSlt.getMonth()+1).padStart(2,'0')}-${String(nowManilaSlt.getDate()).padStart(2,'0')}`;
+                                if (formData.date === todayStrSlt) {
+                                    // Same-day: disable slot if current Manila time >= (slot start - 15 min)
+                                    const [slotH, slotM] = t.split(':').map(Number);
+                                    const slotCutoffMs = (slotH * 60 + slotM - 15) * 60 * 1000;
+                                    const nowMs = (nowManilaSlt.getHours() * 60 + nowManilaSlt.getMinutes()) * 60 * 1000;
+                                    if (nowMs >= slotCutoffMs) isDisabled = true;
+                                }
                                 if (bookedDates[formData.date] && bookedDates[formData.date].consultationTimes.includes(t)) isDisabled = true;
                             } else {
                                 isDisabled = true; // Wait for date selection
