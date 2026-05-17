@@ -4020,13 +4020,38 @@ app.post('/api/customer/appointments', async (req, res) => {
       }
     }
 
-    const today = new Date();
+    const nowManila = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    const today = new Date(nowManila);
     today.setHours(0, 0, 0, 0); // Set to beginning of today
     const appointmentDate = new Date(date);
     appointmentDate.setHours(0, 0, 0, 0); // Also zero out time for comparison
 
-    if (appointmentDate <= today) {
-      return res.status(400).json({ success: false, message: 'Appointments cannot be booked for the same day or past dates.' });
+    // Declare finalStartTime/finalEndTime HERE so they're available for same-day checks below
+    const finalStartTime = startTime || null;
+    const finalEndTime = endTime || startTime || null;
+    // If no time provided (Tattoo Session), set status to pending_schedule
+    const bookingStatus = startTime ? 'pending' : 'pending_schedule';
+
+    if (appointmentDate < today) {
+      return res.status(400).json({ success: false, message: 'Appointments cannot be booked for past dates.' });
+    }
+
+    // Check if it's a same-day booking.
+    if (appointmentDate.getTime() === today.getTime()) {
+      if (serviceType !== 'Consultation') {
+        return res.status(400).json({ success: false, message: 'Appointments cannot be booked for the same day or past dates.' });
+      }
+
+      // 15-min buffer check for same-day Consultation
+      if (finalStartTime) {
+        const currentMins = nowManila.getHours() * 60 + nowManila.getMinutes();
+        const [h, m] = finalStartTime.split(':').map(Number);
+        const slotMins = h * 60 + m;
+        
+        if (currentMins >= slotMins - 15) {
+          return res.status(400).json({ success: false, message: 'This time slot is no longer available. Please select a later time.' });
+        }
+      }
     }
 
     const maxBookingDate = new Date();
@@ -4035,12 +4060,6 @@ app.post('/api/customer/appointments', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Appointments can only be booked up to 3 months in advance.' });
     }
     // --- End Validation ---
-
-    // Ensure endTime has a value (default to startTime if missing)
-    const finalStartTime = startTime || null;
-    const finalEndTime = endTime || startTime || null;
-    // If no time provided (Tattoo Session), set status to pending_schedule
-    const bookingStatus = startTime ? 'pending' : 'pending_schedule';
 
     // Double Booking Check (only if they picked a time)
     if (finalStartTime) {
