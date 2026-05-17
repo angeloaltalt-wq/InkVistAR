@@ -441,29 +441,70 @@ function CustomerBookings(){
             // Dynamic evaluation based on selected service type — three independent pools
             let isFull = false;
             let isBusy = false;
+            
+            const isToday = dateObj.getTime() === today.getTime();
+            const currentMins = nowManila.getHours() * 60 + nowManila.getMinutes();
 
             if (selectedService === 'consultation') {
                 // Consultation pool: 7 time slots (1PM–7PM)
-                const slotsTaken = dateData.consultationTimes.length;
+                let slotsTaken = dateData.consultationTimes.length;
+                if (isToday) {
+                    let passedCount = 0;
+                    ['13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'].forEach(slot => {
+                        const [slotH, slotM] = slot.split(':').map(Number);
+                        const slotCutoffMins = slotH * 60 + slotM - 15;
+                        if (currentMins >= slotCutoffMins && !dateData.consultationTimes.includes(slot)) {
+                            passedCount++;
+                        }
+                    });
+                    slotsTaken += passedCount;
+                }
                 isFull = slotsTaken >= 7;
                 isBusy = slotsTaken >= 5;
             } else if (selectedService === 'piercing') {
                 // Piercing pool: 7 time slots (1PM–7PM)
-                const slotsTaken = dateData.piercingTimes.length;
-                isFull = slotsTaken >= 7;
-                isBusy = slotsTaken >= 1; // Show as limited if any slot is taken
+                if (isToday) {
+                    isFull = true;
+                } else {
+                    const slotsTaken = dateData.piercingTimes.length;
+                    isFull = slotsTaken >= 7;
+                    isBusy = slotsTaken >= 1; // Show as limited if any slot is taken
+                }
             } else if (selectedService === 'tattoo + piercing') {
                 // Bundle: must check BOTH tattoo pool AND piercing pool
-                const tattooFull = dateData.sessionCount >= studioCapacity;
-                const piercingFull = dateData.piercingTimes.length >= 7;
-                isFull = tattooFull || piercingFull;
-                isBusy = dateData.sessionCount >= Math.max(1, studioCapacity - 1) || dateData.piercingTimes.length >= 5;
+                if (isToday) {
+                    isFull = true;
+                } else {
+                    const tattooFull = dateData.sessionCount >= studioCapacity;
+                    const piercingFull = dateData.piercingTimes.length >= 7;
+                    isFull = tattooFull || piercingFull;
+                    isBusy = dateData.sessionCount >= Math.max(1, studioCapacity - 1) || dateData.piercingTimes.length >= 5;
+                }
             } else if (selectedService) {
                 // Tattoo Session, Follow-up, Touch-up: artist capacity pool
-                isFull = dateData.sessionCount >= studioCapacity;
-                isBusy = dateData.sessionCount >= Math.max(1, studioCapacity - 1);
+                if (isToday) {
+                    isFull = true;
+                } else {
+                    isFull = dateData.sessionCount >= studioCapacity;
+                    isBusy = dateData.sessionCount >= Math.max(1, studioCapacity - 1);
+                }
+            } else {
+                // No service selected yet -> evaluate consultation slots as a fallback to see if today is totally blocked
+                if (isToday) {
+                    let slotsTaken = dateData.consultationTimes.length;
+                    let passedCount = 0;
+                    ['13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'].forEach(slot => {
+                        const [slotH, slotM] = slot.split(':').map(Number);
+                        const slotCutoffMins = slotH * 60 + slotM - 15;
+                        if (currentMins >= slotCutoffMins && !dateData.consultationTimes.includes(slot)) {
+                            passedCount++;
+                        }
+                    });
+                    if (slotsTaken + passedCount >= 7) {
+                        isFull = true;
+                    }
+                }
             }
-            // If no service selected yet, show all dates as available (no blocking)
 
             const isDisabled = isPast || isTooFar || hasMySession || isFull;
 

@@ -430,7 +430,22 @@ export default function CustomerBookingWizard({ customerId, onBack, isPublic = f
             
             const dateData = bookedDates[dateStr] || { consultationTimes: [], sessionCount: 0 };
             // Wizard is Consultation-only: evaluate only consultation time slots (7 max: 13:00–19:00)
-            const consultationSlotsTaken = dateData.consultationTimes.length;
+            let consultationSlotsTaken = dateData.consultationTimes.length;
+            
+            const isToday = checkDate.getTime() === today.getTime();
+            if (isToday) {
+                const currentMins = nowManila.getHours() * 60 + nowManila.getMinutes();
+                let passedCount = 0;
+                ['13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'].forEach(slot => {
+                    const [h, m] = slot.split(':').map(Number);
+                    const slotCutoffMins = h * 60 + m - 15;
+                    if (currentMins >= slotCutoffMins && !dateData.consultationTimes.includes(slot)) {
+                        passedCount++;
+                    }
+                });
+                consultationSlotsTaken += passedCount;
+            }
+            
             const isFull = consultationSlotsTaken >= 7;
             const isBusy = consultationSlotsTaken >= 5;
 
